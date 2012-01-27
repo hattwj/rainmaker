@@ -1,0 +1,9 @@
+# Unison preferences file
+root = /home/hattb/sync
+root = ssh://rainmaker@192.168.1.9:31415//home/rainmaker/users/hattb/sync
+backup = Path *
+maxbackups = 10
+backuplocation = central
+backupdir = /home/rainmaker/users/hattb/backups
+batch = true
+auto = true
