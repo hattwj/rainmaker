@@ -1,0 +1,55 @@
+# The rainmaker config file
+
+# Icons for the GUI
+icons:
+     0:  ['file','code-0.png','msg','Transfer Successfull']
+     1:  ['file','code-1.png','msg','Some conflicts exist...']
+     2:  ['file','code-2.png','msg','Non fatal error occurred']
+     3:  ['file','code-3.png','msg','Fatal error occurred']
+     90: ['file','code-90.png','msg','Initializing...']
+     91: ['file','code-91.png','msg','Contacting Server...']
+     98: ['file','code-98.png','msg','Unable to contact Server...']
+     99: ['file','code-99.png','msg','Unknown event occurred']
+
+# flags that can be used to construct a command
+cmd_flags:
+    root:           '?root_full?'
+    src_dir_rel:    '?src_dir_rel?'
+    src_dir_full:   '?src_dir_full?'
+    src_file_rel:   '?src_file_rel?'
+    src_file_full:  '?src_file_full?'
+    src_file_name:  '?src_file_name?'
+    src_file_type:  '?src_file_type?'
+    dest_dir_rel:   '?dest_dir_rel?'
+    dest_dir_full:  '?dest_dir_full?'
+    dest_file_rel:  '?dest_file_rel?'
+    dest_file_full: '?dest_file_full?'
+    dest_file_name: '?dest_file_name?'
+    dest_file_type: '?dest_file_type?'
+    event_type: '?event_type?'
+    cmd_macros: '?cmd_macro?'
+
+template:    
+    name: 'Test'
+    description: 'A test watcher'
+    root: '/home/hattb/sync'
+    max_threads: 2
+    auto_start:  true
+    use_cmd_all: false
+    recursive: true
+    cmds:
+        all: '?file? "?src_file_rel?"' 
+        moved: 
+            - '?file? "?src_file_rel?"'
+            - '?file? "?dest_file_rel?"'
+        moved_in:
+        moved_out:
+        moved_within:
+        deleted:
+        created:
+        modified:
+        startup: '?base?' 
+        shutdown:
+    cmd_macros:
+        ?file?: '/usr/bin/unison default1 -ui text -sshargs "-i /home/hattb/.ssh/id_dsa " -path' 
+        ?base?: '/usr/bin/unison default1 -ui text -sshargs "-i /home/hattb/.ssh/id_dsa "'   

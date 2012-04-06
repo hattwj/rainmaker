@@ -2,6 +2,7 @@ import sys
 import os
 import time
 import logging
+import yaml
 
 # Execute Unison
 from subprocess import PIPE, Popen
@@ -20,10 +21,10 @@ try:
 except ImportError:
     from queue import Queue, Empty  # python 3.x
 
-class UnisonWatcher():
-    def __init__(self,conf={}):
-        # load defaults, empty string in events for full sync
-        defaults = {
+class ConfigLoader():
+    # load defaults, empty string in events for full sync
+    """ defaults = {
+        'unison_watcher' : {
             'root_local': '/home/hattb/sync',
             'root_remote': '/home/rainmaker/users/hattb/sync',
             'ssh_key_path': '/home/hattb/.ssh/id_dsa',
@@ -31,8 +32,42 @@ class UnisonWatcher():
             'unison_prf': 'default1',
             'msg_queue': None,
             'events': {}
+        },
+        'gui' : {
         }
-        conf = dict(defaults.items()+conf.items() )
+    }
+        
+    """
+    path = 'rainconf.yaml'
+
+    def default(self,key=None):
+        f = open(self.path,'r')
+        
+        config = yaml.safe_load( f )
+        f.close()
+        if key:
+            return config[key]
+        return config    
+
+    def __init__(self):
+    
+        # find current directory of application
+        # or .rainmaker directory and load config
+        # or load path if passed
+        # load from .rainmaker if just a filename is sent
+        # merge that yaml file with defaults
+        pass
+    
+    # Test config yaml file for misconfiguration and return results
+    def testconf_fail(self, path ):
+         # return false if everything passed
+         # return array of error codes on fail 
+         pass
+
+    
+
+class UnisonWatcher():
+    def __init__(self,conf):
         self.q = Queue()
         self.roots = {}
         basicConfig(level   = logging.DEBUG,
@@ -43,13 +78,14 @@ class UnisonWatcher():
         self.observer.start()
         
     # Add a watch to a directory
-    def add(self,root):
-        self.roots[ root['root_local'] ] = {} #if self.roots.has_key(conf['root_local'])
-        self.roots[ root['root_local'] ] = root
+    def add(self,config):
+        print repr(config)
+        self.roots[ config['root_local'] ] = {} #if self.roots.has_key(conf['root_local'])
+        self.roots[ config['root_local'] ] = config
         # set default command for root
-        self.roots[ root['root_local'] ]['cmd'] = root['unison_path']+' '+root['unison_prf']+' -ui text -sshargs "-i '+root['ssh_key_path']+'"'
-        event_handler = UnisonEventHandler( root['root_local'], self.q )
-        self.observer.schedule( event_handler, root['root_local'], recursive=True )
+        self.roots[ config['root_local'] ]['cmd'] = config['unison_path']+' '+config['unison_prf']+' -ui text -sshargs "-i '+config['ssh_key_path']+'"'
+        event_handler = UnisonEventHandler( config['root_local'], self.q )
+        self.observer.schedule( event_handler, config['root_local'], recursive=True )
     
     # Stop all watches
     def stop(self):
@@ -76,9 +112,12 @@ class UnisonWatcher():
     
     # add empty events to trigget full sync 
     def sync(self,rkey=None):
+        
+        # sync only this one host
         if rkey and self.roots[rkey]:
             self.roots[rkey]['events']['']=''
         else:
+            # sync all unison hosts
             for root in self.roots:
                 self.roots[root]['events']['']=''
         return self.update()
@@ -93,12 +132,12 @@ class UnisonWatcher():
                 event_type = root['events'][path]
                 # run commands to send files for unison
                 cmd = root_cmd
-                # if empty path sync everything
+                print cmd
+                # (by removing the -path flag we are telling unison to do a full sync)
                 if len(path)>0:
                     cmd += ' -path '+path
                 cmd=shlex.split(cmd)
 
-                #Done: Todo: Tokenize arguments -> http://docs.python.org/library/subprocess.html#subprocess.Popen
                 p = Popen(cmd)#, shell=True)#, stdout=PIPE) 
                 p.wait()
                 results.append({
@@ -109,7 +148,7 @@ class UnisonWatcher():
                     'stderr': p.stderr,
                     'returncode': p.returncode,
                     'pid': p.pid
-                })#,'event_type':event_type]})
+                })
         self.roots[rkey]['events']= {}
         return results
                 
@@ -120,7 +159,6 @@ class UnisonEventHandler(FileSystemEventHandler):
 
     """Custom EventHandler"""
     def catch_all_handler(self, event):
-        #logging.debug( [self.root_local,event] )
         self.path_convert( event )
         self.q.put(event)
         
@@ -141,7 +179,14 @@ class UnisonEventHandler(FileSystemEventHandler):
         event.root_local = self.root_local
     
 if __name__ == "__main__":
-    watcher = UnisonWatcher()
+    # load config
+    cl = ConfigLoader()
+    conf = cl.default('rainmaker')    
+
+    # create watcher
+    watcher = UnisonWatcher(conf)
+
+    # start initial sync with server 
     watcher.sync()
 
     try:
