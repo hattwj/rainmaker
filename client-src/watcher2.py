@@ -59,22 +59,20 @@ class W2UConfig(dict):
         
         for key in config.iterkeys():
             self[key] = config[key]
-
+            self[key]['name'] = key
 
     # Test config yaml file for misconfiguration and return results
     def testuconf_fail(self, path ):
          # return false if everything passed
          # return array of error codes on fail 
          pass
-    
-
                 
 class RainmakerEventHandler(FileSystemEventHandler):
-    def __init__(self, uconf, cmd_q):
-        self.cmd_q = cmd_q
+    def __init__(self, conf,uconf, msg_q):
+        self.cmd_q = Queue()
         self.threads_q = Queue()
-        self.msg_q = Queue()
-        self.conf = W2Config()
+        self.msg_q = msg_q
+        self.conf = conf
         self.uconf = uconf.copy()
 
         # Fill out nested macros (max 5 levels deep)
@@ -114,9 +112,15 @@ class RainmakerEventHandler(FileSystemEventHandler):
                 cmd =  self.cmd_q.get_nowait()
             except Empty:
                 continue
-            print cmd
-            #cmd = shlex.split(cmd) 
-            #p = Popen(cmd, stdout = PIPE, stderr=PIPE)
+            #print cmd
+            s_cmd = shlex.split(cmd) 
+            p = Popen(s_cmd, stdout = PIPE, stderr=PIPE)
+            result = {  'stdout':p.stdout.read(),
+                        'stderr':p.stderr.read(),
+                        'returncode':p.returncode,
+                        'cmd':cmd
+                     }
+            self.msg_q.put( result )
             #print p.stdout.read()
             #print p.stderr.read()
             #print p.returncode
@@ -226,38 +230,75 @@ class RainmakerEventHandler(FileSystemEventHandler):
     
     def event_type(self,event):
         return event.event_type
+
+class Rainmaker():
+   
+    def __init__(self, profile = None, conf_path = 'w2conf.yml' ):
+        self.event_handlers = []
+        self.user_configs = W2UConfig(conf_path)
+        self.config = W2Config()
+        self.msg_q = Queue()
+        self.observer = Observer()
+        basicConfig(level   = logging.DEBUG,
+                    format  = '%(asctime)s - %(message)s',
+                    datefmt = '%Y-%m-%d %H:%M:%S')
+        self.observer.start()
+
+        if profile:
+            self.add_watch(profile)
+
+    def add_watch(self,profile):
+        user_config = self.user_configs[profile]
+        event_handler = RainmakerEventHandler( self.config,user_config, self.msg_q )
+        self.event_handlers.append( event_handler )
+
+        rec_flag = True
+        if user_config.has_key('recursive'):
+            rec_flag = bool(user_config['recursive']) 
+        self.observer.schedule( event_handler, user_config['root'], recursive = rec_flag) 
     
- 
+        if user_config['cmds']['startup'] != '':
+            event_handler.startup_cmd()
+
+    def remove_watch(self, profile): 
+        for eh in self.event_handlers:
+            if eh['name'] == profile:
+                self.observer.unschedule(eh)
+                break 
+
+    def messages(self):
+        messages = []
+        try:
+            while True:
+                messages.append( self.msg_q.get_nowait() )
+        except Empty:
+            pass
+
+        return messages
+
+    def shutdown(self):
+        print "Shutting down FSwatcher"
+        self.observer.stop()
+        self.observer.unschedule_all()
+        if self.event_handlers:
+            self.observer.join()
+        print "Shutting down thread and Fork pool"
+        for idx, event_handler in enumerate( self.event_handlers ):
+            event_handler.stop()
+
 if __name__ == "__main__":
 
     try:
         profile = 'default_profile'
         if len(sys.argv)>1:
             profile = sys.argv[1]
-        
-        user_config = W2UConfig('w2conf.yml')[profile]
-        command_queue = Queue()
-        observer = Observer() 
-        basicConfig(level   = logging.DEBUG,
-                    format  = '%(asctime)s - %(message)s',
-                    datefmt = '%Y-%m-%d %H:%M:%S')
-        event_handler = RainmakerEventHandler( user_config, command_queue )
-        rec_flag = True
-        if user_config.has_key('recursive'):
-            rec_flag = bool(user_config['recursive']) 
-        observer.schedule( event_handler, user_config['root'], recursive = rec_flag) 
-        observer.start()
-
-        if user_config['cmds']['startup'] != '':
-            event_handler.startup_cmd()
-
+            rain = Rainmaker(profile)
+        else:
+            rain = Rainmaker()
+            
         while True:
-            time.sleep(1)
-                 
+            time.sleep(2)
+            print  rain.messages()
+ 
     except KeyboardInterrupt:
-        print "Shutting down FSwatcher"
-        observer.stop()
-        observer.unschedule_all()
-        observer.join()
-        print "Shutting down thread and Fork pool" 
-        event_handler.stop()
+        rain.shutdown()

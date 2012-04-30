@@ -20,10 +20,34 @@ default_profile:
         startup: '?base?' 
         shutdown:
     cmd_macros:
+        ?file?: '/usr/bin/unison-2.32.52 default1 -ui text -sshargs "-i /home/hattb/.ssh/id_dsa" -path' 
+        ?base?: '/usr/bin/unison-2.32.52 default1 -ui text -sshargs "-i /home/hattb/.ssh/id_dsa"'  
+
+test:
+    description: 'A test watcher'
+    root: '/home/hattb/sync'
+    max_threads: 2
+    auto_start: true
+    use_cmd_all: false
+    recursive: true
+    cmds:
+        all: '?file? "?src_file_rel?"' 
+        moved: 
+            - '?file? "?src_file_rel?"'
+            - '?file? "?dest_file_rel?"'
+        moved_in:
+        moved_out:
+        moved_within:
+        deleted:
+        created:
+        modified:
+        startup: '?base?'
+        shutdown:
+    cmd_macros:
         ?file?: '/usr/bin/unison default1 -ui text -sshargs "-i /home/hattb/.ssh/id_dsa " -path' 
         ?base?: '/usr/bin/unison default1 -ui text -sshargs "-i /home/hattb/.ssh/id_dsa "'  
 
-test:
+localhost:
     description: 'A test watcher'
     root: '/home/hattb/sync'
     max_threads: 2
@@ -44,6 +68,5 @@ test:
         startup: '?base?' 
         shutdown:
     cmd_macros:
-        ?file?: '/usr/bin/unison default1 -ui text -sshargs "-i /home/hattb/.ssh/id_dsa " -path' 
-        ?base?: '/usr/bin/unison default1 -ui text -sshargs "-i /home/hattb/.ssh/id_dsa "'  
-
+        ?file?: '/usr/bin/unison-2.32.52 localhost -ui text -sshargs "-i /home/hattb/.ssh/id_dsa" -path'
+        ?base?: '/usr/bin/unison-2.32.52 localhost -ui text -sshargs "-i /home/hattb/.ssh/id_dsa"'
