@@ -1,11 +1,12 @@
 # The rainmaker config file  
-default_profile:
-    description: 'A test watcher'
+defaults:
+    description: 'None'
     root: '/home/hattb/sync'
     max_threads: 2
     auto_start: true
     use_cmd_all: false
     recursive: true
+    log_level: false
     cmds:
         all: '?file? "?src_file_rel?"' 
         moved: 
@@ -20,8 +21,8 @@ default_profile:
         startup: '?base?' 
         shutdown:
     cmd_macros:
-        ?file?: '/usr/bin/unison-2.32.52 default1 -ui text -sshargs "-i /home/hattb/.ssh/id_dsa" -path' 
-        ?base?: '/usr/bin/unison-2.32.52 default1 -ui text -sshargs "-i /home/hattb/.ssh/id_dsa"'  
+        ?file?: '/usr/bin/unison-2.32.52 default1 -ui text -sshargs "-i ~/.ssh/id_dsa" -path' 
+        ?base?: '/usr/bin/unison-2.32.52 default1 -ui text -sshargs "-i ~/.ssh/id_dsa"'  
 
 test:
     description: 'A test watcher'
@@ -44,16 +45,17 @@ test:
         startup: '?base?'
         shutdown:
     cmd_macros:
-        ?file?: '/usr/bin/unison default1 -ui text -sshargs "-i /home/hattb/.ssh/id_dsa " -path' 
-        ?base?: '/usr/bin/unison default1 -ui text -sshargs "-i /home/hattb/.ssh/id_dsa "'  
+        ?file?: '/usr/bin/unison default1 -ui text -sshargs "-i ~/.ssh/id_dsa " -path' 
+        ?base?: '/usr/bin/unison default1 -ui text -sshargs "-i ~/.ssh/id_dsa "'  
 
-localhost:
+debug_profile:
     description: 'A test watcher'
     root: '/home/hattb/sync'
     max_threads: 2
     auto_start: true
     use_cmd_all: false
     recursive: true
+    log_level: 'debug'
     cmds:
         all: '?file? "?src_file_rel?"' 
         moved: 

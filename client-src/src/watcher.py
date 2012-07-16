@@ -1,3 +1,20 @@
+#!/usr/bin/python
+"""
+This file is part of Rainmaker.
+
+    Rainmaker is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Rainmaker is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Rainmaker.  If not, see <http://www.gnu.org/licenses/>.
+"""
 import sys
 import os
 import time
@@ -21,14 +38,15 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from watchdog.events import FileSystemEvent
 
+# Queue imports for different python versions
 try:
     from Queue import Queue, Empty
 except ImportError:
     from queue import Queue, Empty  # python 3.x
 
-# Base config class
+# Base config class, subclasses a dict for simple access
 class W2Config(dict):
-    def __init__(self,path='w2.yml'):
+    def __init__(self,path = os.path.join('conf','w2.yml') ):
         self.path = path
         
         f = open(self.path,'r')
@@ -38,7 +56,7 @@ class W2Config(dict):
 
         for key in config.iterkeys():
             self[key] = config[key]
-    
+
 
     # Test config yaml file for misconfiguration and return results
     def testconf_fail(self, path ):
@@ -50,7 +68,7 @@ class W2Config(dict):
 class W2UConfig(dict):
     #profiles
 
-    def __init__(self,path='w2conf.yml'):
+    def __init__(self,path = os.path.join('conf','w2conf.yml') ):
         self.path = path
         f = open(self.path,'r')
         
@@ -61,6 +79,8 @@ class W2UConfig(dict):
             self[key] = config[key]
             self[key]['name'] = key
 
+
+
     # Test config yaml file for misconfiguration and return results
     def testuconf_fail(self, path ):
          # return false if everything passed
@@ -68,12 +88,13 @@ class W2UConfig(dict):
          pass
                 
 class RainmakerEventHandler(FileSystemEventHandler):
-    def __init__(self, conf,uconf, msg_q):
+    def __init__(self, conf,uconf, msg_q, xlogger):
         self.cmd_q = Queue()
         self.threads_q = Queue()
         self.msg_q = msg_q
         self.conf = conf
         self.uconf = uconf.copy()
+        self.log = xlogger
 
         # Fill out nested macros (max 5 levels deep)
         for i in range(1,5):
@@ -233,23 +254,45 @@ class RainmakerEventHandler(FileSystemEventHandler):
 
 class Rainmaker():
    
-    def __init__(self, profile = None, conf_path = 'w2conf.yml' ):
+    def __init__(self, profile = None, conf_path = os.path.join('conf','w2conf.yml') ):
+
         self.event_handlers = []
         self.user_configs = W2UConfig(conf_path)
         self.config = W2Config()
+
         self.msg_q = Queue()
         self.observer = Observer()
-        basicConfig(level   = logging.DEBUG,
-                    format  = '%(asctime)s - %(message)s',
-                    datefmt = '%Y-%m-%d %H:%M:%S')
         self.observer.start()
 
+        # If no profile just wait
         if profile:
             self.add_watch(profile)
 
     def add_watch(self,profile):
         user_config = self.user_configs[profile]
-        event_handler = RainmakerEventHandler( self.config,user_config, self.msg_q )
+
+        log_levels = {
+            'warn':logging.WARN,
+            'info':logging.INFO,
+            'debug':logging.DEBUG,
+            False: logging.WARN 
+        }
+
+        # set up logging to file
+        log_format = logging.format( '%(asctime)s %(name)-12s %(levelname)-8s %(message)s' ) 
+        watch_logger = logging.getLogger(profile)
+        watch_logger.setLevel( log_levels[ user_config['log_level'] ] )
+        watch_logger.setFormatter( log_format )
+
+        logging.basicConfig(
+            level   = log_levels[ user_config['log_level'] ],
+            format  = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+            datefmt = '%H:%M:%S',
+        )
+
+        watch_logger.info( 'Loaded profile: ${profile}'.format(profile=profile) )
+
+        event_handler = RainmakerEventHandler( self.config,user_config, self.msg_q, watch_logger )
         self.event_handlers.append( event_handler )
 
         rec_flag = True
@@ -289,13 +332,13 @@ class Rainmaker():
 if __name__ == "__main__":
 
     try:
-        profile = 'default_profile'
+        profile = 'debug_profile'
+
         if len(sys.argv)>1:
             profile = sys.argv[1]
-            rain = Rainmaker(profile)
-        else:
-            rain = Rainmaker()
-            
+
+        rain = Rainmaker(profile)
+        
         while True:
             time.sleep(2)
             print  rain.messages()

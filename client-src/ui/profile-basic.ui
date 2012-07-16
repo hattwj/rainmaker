@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>603</width>
-    <height>421</height>
+    <width>591</width>
+    <height>330</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -15,6 +15,12 @@
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>0</width>
+    <height>0</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>Frame</string>
@@ -40,43 +46,6 @@
      <item>
       <layout class="QVBoxLayout" name="verticalLayout">
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_7">
-         <property name="topMargin">
-          <number>0</number>
-         </property>
-         <item>
-          <widget class="QLabel" name="label_22">
-           <property name="text">
-            <string>Basic View</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <spacer name="horizontalSpacer_2">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::MinimumExpanding</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pushButton_2">
-           <property name="text">
-            <string>Advanced View</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
         <layout class="QFormLayout" name="formLayout">
          <property name="fieldGrowthPolicy">
           <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
@@ -89,7 +58,7 @@
           </widget>
          </item>
          <item row="0" column="1">
-          <widget class="QLineEdit" name="lineEdit_2">
+          <widget class="QLineEdit" name="txt_name">
            <property name="placeholderText">
             <string>Name of profile</string>
            </property>
@@ -108,7 +77,7 @@
             <enum>QLayout::SetFixedSize</enum>
            </property>
            <item>
-            <widget class="QLineEdit" name="lineEdit">
+            <widget class="QLineEdit" name="txt_local_root">
              <property name="sizePolicy">
               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -127,7 +96,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QToolButton" name="toolButton_2">
+            <widget class="QToolButton" name="btn_local_root">
              <property name="text">
               <string>...</string>
              </property>
@@ -157,7 +126,7 @@
           </widget>
          </item>
          <item row="0" column="1">
-          <widget class="QLineEdit" name="lineEdit_3"/>
+          <widget class="QLineEdit" name="txt_address"/>
          </item>
          <item row="1" column="0">
           <widget class="QLabel" name="label_2">
@@ -167,7 +136,7 @@
           </widget>
          </item>
          <item row="1" column="1">
-          <widget class="QLineEdit" name="lineEdit_7"/>
+          <widget class="QLineEdit" name="txt_remote_root"/>
          </item>
          <item row="2" column="0">
           <widget class="QLabel" name="label_7">
@@ -179,10 +148,10 @@
          <item row="2" column="1">
           <layout class="QHBoxLayout" name="horizontalLayout">
            <item>
-            <widget class="QSpinBox" name="spinBox">
+            <widget class="QSpinBox" name="txt_port">
              <property name="minimumSize">
               <size>
-               <width>97</width>
+               <width>88</width>
                <height>0</height>
               </size>
              </property>
@@ -226,47 +195,11 @@
          <property name="fieldGrowthPolicy">
           <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
          </property>
-         <item row="0" column="0">
-          <widget class="QLabel" name="label_6">
-           <property name="text">
-            <string>ssh client</string>
-           </property>
-          </widget>
-         </item>
          <item row="0" column="1">
           <layout class="QHBoxLayout" name="horizontalLayout_5">
            <property name="sizeConstraint">
             <enum>QLayout::SetFixedSize</enum>
            </property>
-           <item>
-            <widget class="QLineEdit" name="lineEdit_6">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>176</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>ssh</string>
-             </property>
-             <property name="placeholderText">
-              <string>Path to ssh client executable</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QToolButton" name="toolButton_5">
-             <property name="text">
-              <string>...</string>
-             </property>
-            </widget>
-           </item>
           </layout>
          </item>
          <item row="1" column="0">
@@ -282,7 +215,7 @@
             <enum>QLayout::SetFixedSize</enum>
            </property>
            <item>
-            <widget class="QLineEdit" name="lineEdit_5">
+            <widget class="QLineEdit" name="txt_ssh_key">
              <property name="sizePolicy">
               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -304,7 +237,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QToolButton" name="toolButton_4">
+            <widget class="QToolButton" name="btn_ssh_key_dialog">
              <property name="text">
               <string>...</string>
              </property>
@@ -325,7 +258,7 @@
             <enum>QLayout::SetFixedSize</enum>
            </property>
            <item>
-            <widget class="QLineEdit" name="lineEdit_4">
+            <widget class="QLineEdit" name="txt_unison_path">
              <property name="sizePolicy">
               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -347,7 +280,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QToolButton" name="toolButton_3">
+            <widget class="QToolButton" name="btn_unison_path_dialog">
              <property name="text">
               <string>...</string>
              </property>
@@ -371,7 +304,7 @@
             </spacer>
            </item>
            <item>
-            <widget class="QPushButton" name="pushButton_3">
+            <widget class="QPushButton" name="btn_save_2">
              <property name="text">
               <string>Test Connection</string>
              </property>
@@ -380,6 +313,19 @@
           </layout>
          </item>
         </layout>
+       </item>
+       <item>
+        <spacer name="verticalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
        </item>
       </layout>
      </item>
@@ -506,7 +452,10 @@
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_6">
          <item>
-          <widget class="QPushButton" name="pushButton_5">
+          <widget class="QPushButton" name="btn_start">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="text">
             <string>Start</string>
            </property>
@@ -529,7 +478,7 @@
           </spacer>
          </item>
          <item>
-          <widget class="QPushButton" name="pushButton_7">
+          <widget class="QPushButton" name="btn_save">
            <property name="text">
             <string>Save</string>
            </property>
