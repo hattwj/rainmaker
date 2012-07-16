@@ -53,11 +53,14 @@ Tested on 12.04 Desktop
 # Install software
 sudo apt-get install openssh-client openssh-server unison
 
+
 # Create rainmaker user to manage all sync connections
 
 # Add keys to rainmaker user authorized keys files
+# See Client Install Section
 
-# Add SELinux restrictions for unison
+# Add SELinux/AppArmor restrictions for unison
+sudo apt-get install apparmor-utils
 
 ~~~
 
