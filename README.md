@@ -55,6 +55,7 @@ sudo apt-get install openssh-client openssh-server unison
 
 
 # Create rainmaker user to manage all sync connections
+sudo adduser rainmaker --disabled-password
 
 # Add keys to rainmaker user authorized keys files
 # See Client Install Section
