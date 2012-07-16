@@ -23,17 +23,26 @@ Now you should be ready to run rainmaker
 
 ###Windows:###
 Coming Soon
+
 ###Mac OSx:###
 Coming Soon
 
 ## Server Install: ##
 
-There isn't really anything to install on the server as far as rainmaker is concerned, but you do need to have unison and an openssh-server setup and ready to go.
+There isnt really anything to install on the server as far as rainmaker is concerned, but you do need to have unison and an openssh-server setup and ready to go.
 
 ### Ubuntu ###
 Tested on 12.04 Desktop
 ~~~
+# Install software
 sudo apt-get install openssh-client openssh-server unison
+
+# Create rainmaker user to manage all sync connections
+
+# Add keys to rainmaker user authorized keys files
+
+# Add SELinux restrictions for unison
+
 ~~~
 
 ###Windows:###
@@ -43,5 +52,5 @@ Coming Soon
 
 ## Development Notes: ##
 * Unison allows multiple path statements in the command line!
-** This is important because it will allow us to update multiple files per connection
+    * This is important because it will allow us to update multiple files per connection
 
