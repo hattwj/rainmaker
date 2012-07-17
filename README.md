@@ -8,8 +8,11 @@ The UI is not yet fully functional, but feel free to poke around. To start the c
 * Make sure you have unison, an ssh-client, python, python-watchdog, python-yaml installed
 * The python-pip package makes installing yaml and watchdog a breeze
 * execute the following in a terminal:
+
 ~~~
+
 python ./watcher.py
+
 ~~~
 
 
@@ -25,11 +28,10 @@ From a terminal run the following commands
 # Some day we might take care of these steps in an installer
 
 # Install unison and ssh-client
-sudo apt-get install unison openssh-client python-pip
+sudo apt-get install unison openssh-client python-pip python-yaml
 
 # Install python libraries 
 sudo pip install watchdog
-sudo pip install yaml
 
 # Create a rainmaker only ssh-key
 ssh-keygen -f rainamker -t rsa -b 2048 -C "SSH Key for rainmaker"
