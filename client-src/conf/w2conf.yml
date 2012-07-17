@@ -1,6 +1,7 @@
 # The rainmaker config file  
 defaults:
     description: 'None'
+    type: 'unison'
     root: '/home/hattb/sync'
     max_threads: 2
     auto_start: true
@@ -26,6 +27,7 @@ defaults:
 
 test:
     description: 'A test watcher'
+    type: 'unison'
     root: '/home/hattb/sync'
     max_threads: 2
     auto_start: true
@@ -50,6 +52,7 @@ test:
 
 debug_profile:
     description: 'A test watcher'
+    type: 'unison'
     root: '/home/hattb/sync'
     max_threads: 2
     auto_start: true
