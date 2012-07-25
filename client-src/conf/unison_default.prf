@@ -1,6 +1,6 @@
 # Unison preferences file
-root = /home/hattb/sync
-root = ssh://rainmaker@192.168.1.9:31415//home/rainmaker/users/hattb/sync
+root = ?local_root?
+root = ssh://?user?@?address?:?port?/?remote_root?/sync
 
 ignore = Name .DS_Store
 ignore = Name Thumbs.db
@@ -19,8 +19,7 @@ backup = Name *
 backupprefix = $VERSION.
 #backup = Path *
 backuplocation = central
-backupdir = /home/rainmaker/users/hattb/backups
-
+backupdir = ?remote_root?/backups
 maxbackups = 10
 batch = true
 auto = true

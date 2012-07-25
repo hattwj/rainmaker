@@ -1,0 +1,160 @@
+debug:
+  auto_start: true
+  cmd_macros: {'?base?': '?unison? ?prf? -ui text -sshargs "-i ?ssh_key? "', '?file?': '?unison?
+      ?prf? -ui text -sshargs "-i ?ssh_key? " -path', '?unison?': unison}
+  cmds:
+    all: ?file? "?src_file_rel?"
+    created: null
+    deleted: null
+    modified: null
+    moved: ['?file? "?src_file_rel?"', '?file? "?dest_file_rel?"']
+    moved_in: null
+    moved_out: null
+    moved_within: null
+    shutdown: null
+    startup: ?base?
+  description: ''
+  max_threads: 2
+  name: ''
+  prf: rainmaker-dfg
+  recursive: true
+  type: unison
+  use_cmd_all: false
+rainmaker-ggg1:
+  auto_start: true
+  autostart: true
+  cmd_macros: {'?base?': '?unison? ?prf_f? -ui text -sshargs "-i ?ssh_key? "', '?file?': '?unison?
+      ?prf_f? -ui text -sshargs "-i ?ssh_key? " -path'}
+  cmds:
+    all: ?file? "?src_file_rel?"
+    created: null
+    deleted: null
+    modified: null
+    moved: ['?file? "?src_file_rel?"', '?file? "?dest_file_rel?"']
+    moved_in: null
+    moved_out: null
+    moved_within: null
+    shutdown: null
+    startup: ?base?
+  description: ''
+  max_threads: 2
+  name: ''
+  prf: rainmaker-ggg1
+  recursive: true
+  type: unison
+  use_cmd_all: false
+rainmaker-hhh5:
+  auto_start: true
+  autostart: true
+  cmd_macros: {'?base?': '?unison? ?prf_f? -ui text -sshargs "-i ?ssh_key? "', '?file?': '?unison?
+      ?prf_f? -ui text -sshargs "-i ?ssh_key? " -path'}
+  cmds:
+    all: ?file? "?src_file_rel?"
+    created: null
+    deleted: null
+    modified: null
+    moved: ['?file? "?src_file_rel?"', '?file? "?dest_file_rel?"']
+    moved_in: null
+    moved_out: null
+    moved_within: null
+    shutdown: null
+    startup: ?base?
+  description: ''
+  max_threads: 2
+  name: ''
+  prf: rainmaker-hhh5
+  recursive: true
+  type: unison
+  use_cmd_all: false
+rainmaker-hhh6:
+  auto_start: true
+  autostart: true
+  cmd_macros: {'?base?': '?unison? ?prf_f? -ui text -sshargs "-i ?ssh_key? "', '?file?': '?unison?
+      ?prf_f? -ui text -sshargs "-i ?ssh_key? " -path'}
+  cmds:
+    all: ?file? "?src_file_rel?"
+    created: null
+    deleted: null
+    modified: null
+    moved: ['?file? "?src_file_rel?"', '?file? "?dest_file_rel?"']
+    moved_in: null
+    moved_out: null
+    moved_within: null
+    shutdown: null
+    startup: ?base?
+  description: ''
+  max_threads: 2
+  name: ''
+  prf: rainmaker-hhh6
+  recursive: true
+  type: unison
+  use_cmd_all: false
+rainmaker-hhh7:
+  auto_start: true
+  autostart: true
+  cmd_macros: {'?base?': '?unison? ?prf_f? -ui text -sshargs "-i ?ssh_key? "', '?file?': '?unison?
+      ?prf_f? -ui text -sshargs "-i ?ssh_key? " -path'}
+  cmds:
+    all: ?file? "?src_file_rel?"
+    created: null
+    deleted: null
+    modified: null
+    moved: ['?file? "?src_file_rel?"', '?file? "?dest_file_rel?"']
+    moved_in: null
+    moved_out: null
+    moved_within: null
+    shutdown: null
+    startup: ?base?
+  description: ''
+  max_threads: 2
+  name: ''
+  prf: rainmaker-hhh7
+  recursive: true
+  type: unison
+  use_cmd_all: false
+rainmaker-hhh9:
+  auto_start: true
+  autostart: true
+  cmd_macros: {'?base?': '?unison? ?prf_f? -ui text -sshargs "-i ?ssh_key? "', '?file?': '?unison?
+      ?prf_f? -ui text -sshargs "-i ?ssh_key? " -path'}
+  cmds:
+    all: ?file? "?src_file_rel?"
+    created: null
+    deleted: null
+    modified: null
+    moved: ['?file? "?src_file_rel?"', '?file? "?dest_file_rel?"']
+    moved_in: null
+    moved_out: null
+    moved_within: null
+    shutdown: null
+    startup: ?base?
+  description: ''
+  max_threads: 2
+  name: ''
+  prf: rainmaker-hhh9
+  recursive: true
+  type: unison
+  use_cmd_all: false
+rainmaker-klh:
+  auto_start: true
+  cmd_macros: {
+      '?base?': '?unison? ?prf_f? -ui text -sshargs "-i ?ssh_key? "', 
+      '?file?': '?unison? ?prf_f? -ui text -sshargs "-i ?ssh_key? " -path'}
+  cmds:
+    all: ?file? "?src_file_rel?"
+    created: null
+    deleted: null
+    modified: null
+    moved: ['?file? "?src_file_rel?"', '?file? "?dest_file_rel?"']
+    moved_in: null
+    moved_out: null
+    moved_within: null
+    shutdown: null
+    startup: ?base?
+  description: null
+  max_threads: 2
+  name: null
+  prf: rainmaker-klh
+  recursive: true
+  type: unison
+  use_cmd_all: false

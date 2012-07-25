@@ -1,4 +1,5 @@
 # The rainmaker config file
+uconf_path:  '~/.rainmaker/conf.yml'
 
 # Icons for the GUI
 icons:
@@ -47,12 +48,14 @@ cmd_flags:
 
 profile_flags:
     local_root: '?local_root?'
+    ssh_key: '?ssh_key?'
 
-linux_templates:
+templates:
     unison:    
-        name: 'Test'
-        description: 'A test watcher'
-        root: '/home/hattb/sync'
+        name: ''
+        type: unison
+        description: ''
+        prf: ''
         max_threads: 2
         auto_start:  true
         use_cmd_all: false
@@ -71,17 +74,6 @@ linux_templates:
             startup: '?base?' 
             shutdown:
         cmd_macros:
-            ?file?: '/usr/bin/unison default1 -ui text -sshargs "-i /home/hattb/.ssh/id_dsa " -path' 
-            ?base?: '/usr/bin/unison default1 -ui text -sshargs "-i /home/hattb/.ssh/id_dsa "'   
-
-unison_profile:
-    root: '?local_root?'
-    root: 'ssh://?user?@?address?:?port?/?remote_root?'
-    backup: 'Path *'
-    maxbackups: '?max_backups?'
-    backuplocation: 'central'
-    backupdir: '?remote_root_backups?'
-    batch: 'true'
-    auto: 'true'
-    confirmbigdel: 'false'
-
+            ?unison?: unison
+            ?file?: '?unison? ?prf? -ui text -sshargs "-i ?ssh_key? " -path' 
+            ?base?: '?unison? ?prf? -ui text -sshargs "-i ?ssh_key? "'

@@ -44,45 +44,66 @@ try:
 except ImportError:
     from queue import Queue, Empty  # python 3.x
 
-# Base config class, subclasses a dict for simple access
-class W2Config(dict):
-    def __init__(self,path = os.path.join('conf','w2.yml') ):
-        self.path = path
-        
-        f = open(self.path,'r')
-        
-        config = yaml.safe_load( f )
-        f.close()
+import copy
 
-        for key in config.iterkeys():
-            self[key] = config[key]
-
-
-    # Test config yaml file for misconfiguration and return results
-    def testconf_fail(self, path ):
-         # return false if everything passed
-         # return array of error codes on fail 
-         pass
-
-# User config class
+#config class
 class W2UConfig(dict):
-    #profiles
+    profiles = {}
+    def __init__(self,path = ''): 
+        self.home = os.path.expanduser('~')
+        self.rain_dir = os.path.join(self.home,'.rainmaker')
+        self.unison_dir = os.path.join(self.home,'.unison')
+        self.profiles_f = 'profiles.yml'
+        self.profiles_path=os.path.join(self.rain_dir,self.profiles_f)
+        self.config_f = 'config.yml'
+        self.config_path=os.path.join(self.rain_dir,self.config_f)
+        self.app_dir = os.path.abspath(os.path.join(sys.path[0],'..'))
+        self.config_path_ro=os.path.join(self.app_dir,'conf',self.config_f)
+        print self.config_path_ro       
+        if not os.path.isdir(self.rain_dir):
+            os.path.mkdir(self.rain_dir)
+        if not os.path.isdir(self.unison_dir):
+            os.path.mkdir(self.unison_dir)
+        if not os.path.isfile(self.config_path):
+            if not os.path.isfile(self.config_path_ro):
+                print 'err'
+                sys.exit()
+            self.config_path=self.config_path_ro
 
-    def __init__(self,path = os.path.join('conf','w2conf.yml') ):
-        self.path = path
-        f = open(self.path,'r')
-        
-        config = yaml.safe_load( f )
+        f = open(self.config_path,'r')
+        self.config = yaml.safe_load( f )
         f.close()
         
-        for key in config.iterkeys():
-            self[key] = config[key]
-            self[key]['name'] = key
+        if os.path.isfile(self.profiles_path):
+            f = open(self.profiles_path,'r')
+            self.profiles = yaml.safe_load( f )
+            f.close()
+        if self.profiles == None:
+            self.profiles={}
 
+    def __getitem__(self, key):
+        val = self.config.__getitem__( key)
+        return val
 
+    def __setitem__(self, key, val):
+        self.config.__setitem__( key, val)
+
+    def save_profiles(self):
+        f = open(self.profiles_path,'w')
+        yaml.dump(self.profiles, f)
+        return f.close()
+
+    def start(self, prf_f):
+        return 'Not implemented'
+
+    def templates(self,key):
+        val = None
+        if key in self.config['templates']:
+            val = copy.deepcopy(self.config['templates'][key])
+        return val
 
     # Test config yaml file for misconfiguration and return results
-    def testuconf_fail(self, path ):
+    def test(self):
          # return false if everything passed
          # return array of error codes on fail 
          pass
@@ -257,8 +278,8 @@ class Rainmaker():
     def __init__(self, profile = None, conf_path = os.path.join('conf','w2conf.yml') ):
 
         self.event_handlers = []
-        self.user_configs = W2UConfig(conf_path)
         self.config = W2Config()
+        self.profiles = self.config.profiles
 
         self.msg_q = Queue()
         self.observer = Observer()
@@ -268,8 +289,8 @@ class Rainmaker():
         if profile:
             self.add_watch(profile)
 
-    def add_watch(self,profile):
-        user_config = self.user_configs[profile]
+    def add_watch(self,key):
+        profile = self.profiles[key]
 
         log_levels = {
             'warn':logging.WARN,
@@ -281,26 +302,26 @@ class Rainmaker():
         # set up logging to file
         log_format = logging.format( '%(asctime)s %(name)-12s %(levelname)-8s %(message)s' ) 
         watch_logger = logging.getLogger(profile)
-        watch_logger.setLevel( log_levels[ user_config['log_level'] ] )
+        watch_logger.setLevel( log_levels[ profile['log_level'] ] )
         watch_logger.setFormatter( log_format )
 
         logging.basicConfig(
-            level   = log_levels[ user_config['log_level'] ],
+            level   = log_levels[ profile['log_level'] ],
             format  = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
             datefmt = '%H:%M:%S',
         )
 
         watch_logger.info( 'Loaded profile: ${profile}'.format(profile=profile) )
 
-        event_handler = RainmakerEventHandler( self.config,user_config, self.msg_q, watch_logger )
+        event_handler = RainmakerEventHandler( self.config,profile, self.msg_q, watch_logger )
         self.event_handlers.append( event_handler )
 
         rec_flag = True
-        if user_config.has_key('recursive'):
-            rec_flag = bool(user_config['recursive']) 
-        self.observer.schedule( event_handler, user_config['root'], recursive = rec_flag) 
+        if profile.has_key('recursive'):
+            rec_flag = bool(profile['recursive']) 
+        self.observer.schedule( event_handler, profile['root'], recursive = rec_flag) 
     
-        if user_config['cmds']['startup'] != '':
+        if profile['cmds']['startup'] != '':
             event_handler.startup_cmd()
 
     def remove_watch(self, profile): 
@@ -332,7 +353,7 @@ class Rainmaker():
 if __name__ == "__main__":
 
     try:
-        profile = 'debug_profile'
+        profile = 'debug'
 
         if len(sys.argv)>1:
             profile = sys.argv[1]
