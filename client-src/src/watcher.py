@@ -47,9 +47,10 @@ except ImportError:
 import copy
 
 #config class
-class W2UConfig(dict):
+class RainmakerConfig(dict):
     profiles = {}
-    def __init__(self,path = ''): 
+    def __init__(self):
+        
         self.home = os.path.expanduser('~')
         self.rain_dir = os.path.join(self.home,'.rainmaker')
         self.unison_dir = os.path.join(self.home,'.unison')
@@ -58,15 +59,16 @@ class W2UConfig(dict):
         self.config_f = 'config.yml'
         self.config_path=os.path.join(self.rain_dir,self.config_f)
         self.app_dir = os.path.abspath(os.path.join(sys.path[0],'..'))
+        self.app_conf_dir=os.path.join(self.app_dir,'conf')
         self.config_path_ro=os.path.join(self.app_dir,'conf',self.config_f)
-        print self.config_path_ro       
+               
         if not os.path.isdir(self.rain_dir):
             os.path.mkdir(self.rain_dir)
         if not os.path.isdir(self.unison_dir):
             os.path.mkdir(self.unison_dir)
         if not os.path.isfile(self.config_path):
             if not os.path.isfile(self.config_path_ro):
-                print 'err'
+                print 'Unable to find config file'
                 sys.exit()
             self.config_path=self.config_path_ro
 
@@ -90,8 +92,22 @@ class W2UConfig(dict):
 
     def save_profiles(self):
         f = open(self.profiles_path,'w')
-        yaml.dump(self.profiles, f)
+        yaml.safe_dump(self.profiles, f)
         return f.close()
+
+    def find(self,fname):
+        paths=[
+            self.rain_dir,
+            self.unison_dir,
+            self.app_dir,
+            self.app_conf_dir
+        ]
+
+        for path in paths:
+            result = os.path.join(path,fname)
+            if os.path.isfile(result):
+                return result
+        return None
 
     def start(self, prf_f):
         return 'Not implemented'

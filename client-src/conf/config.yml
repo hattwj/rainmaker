@@ -50,6 +50,54 @@ profile_flags:
     local_root: '?local_root?'
     ssh_key: '?ssh_key?'
 
+questions:
+    unison:
+        title:
+            ans: null
+            default: rainmaker-unison
+            type: str
+            q: 'profile name:'
+        user:
+            ans: null
+            default: null
+            type: str
+            q: 'server user name:'
+        port:
+            ans: null
+            default: 22
+            type: int
+            q: 'server ssh port:'
+        address:
+            ans: null
+            default: localhost 
+            type: str
+            q: 'server address:'
+        ssh_key_path:
+            ans: null
+            default: id_rsa
+            type: str
+            q: 'ssh private key (path optional):'
+        local_root:
+            ans: null
+            default: ~/sync
+            type: str
+            q: 'local root:'
+        remote_path:
+            ans: null
+            default: /home/rainmaker/?user?
+            type: str
+            q: 'remote root:'
+        remote_root:
+            ans: null
+            default: 'ssh://?user?@?address?:?port?/?remote_path?'
+            type: str
+            q: null
+        max_backups:
+            ans: null
+            default: 10
+            type: int
+            q: 'max backups:'
+
 templates:
     unison:    
         name: ''

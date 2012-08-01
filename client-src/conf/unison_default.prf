@@ -1,6 +1,6 @@
 # Unison preferences file
 root = ?local_root?
-root = ssh://?user?@?address?:?port?/?remote_root?/sync
+root = ?remote_root?
 
 ignore = Name .DS_Store
 ignore = Name Thumbs.db
