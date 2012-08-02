@@ -10,7 +10,7 @@ def ask(q):
         print('')
         if q['default']:
             print('Default: '+str(q['default']) ) 
-        q['ans']=raw_input( q['q']+' ' ) or q['default']
+        q['ans']=raw_input( q['q']+': ' ) or q['default']
         valid = validate(q)
     return q
 
@@ -29,12 +29,48 @@ def validate(q):
     else:
         return False
 
-def do_unison(conf,args):
+def update_profile(conf,args):
+    profile=conf.profiles[args.update_profile]
+    did_update=False
+    for attr, val in vars(args).items():
+        if not val:
+            continue
+        if attr.startswith('update_var_'):
+            attr=attr.replace('update_var_','')
+            
+        if attr.startswith('str_'):
+            attr=attr.replace('str_','')
+            profile[attr]=str(val)
+        elif attr.startswith('int_'):
+            attr=attr.replace('int_','')
+            profile[attr]=int(val)
+
+        elif attr.startswith('bool_'):
+            attr=attr.replace('bool_','')
+            if val.lower() == 'true' or val.lower() == 't' or val == '1':
+                val=True    
+            elif val.lower() == 'false' or val.lower() == 'f' or val == '0':
+                val=False
+            else:
+                print 'Error: %s not bool %s' % (attr,val)
+                continue
+            profile[attr]=bool(val)
+        else:
+            print 'bad var %s %s' % (attr,val)
+            continue
+        did_update=True
+    if did_update:
+        print 'Saved changes'
+        conf.save_profiles() 
+    
+    print profile
+
+def create_profile(conf,args):
     questions=conf['questions']['unison']
     qkeys=['title','user','local_root','max_backups',
         'ssh_key_path','port','address','remote_path']
             
-    profile = {}
+    profile = conf['templates']['unison']
     for q in questions:
         profile[q]=questions[q]['default']
 
@@ -61,27 +97,38 @@ def do_unison(conf,args):
             user=profile[key]
             questions['remote_path']['default'] = questions['remote_path']['default'].replace('?%s?' % key ,profile[key])
 
-    print profile
+        answered=False
+
+    while True:
+        if args.quiet or not profile['title'] in conf.profiles:
+            break
+
+        ans=raw_input('Profile: "%s" already exists. Overwrite y/n ' % profile['title']).lower()
+        
+        if ans=='y' or ans == 'yes':
+            break
+        elif ans == 'n' or ans == 'no':
+            q=ask(questions['title'])
+            profile['title']=q['ans']
 
     # do string subst
     for key in profile:
         for q in profile:
             #profile[q]=profile[q].replace( '?%s?' % key, profile[key] )
             unison_prf=unison_prf.replace( '?%s?' % key, str(profile[key]) )
-     
-    prf_f=profile['title']
+    
+    # set path for unison profile
+    prf_f=profile['prf'] or profile['title']
     prf=os.path.abspath( os.path.join(conf.unison_dir,prf_f+'.prf') )
     
-    # create unison profile 
+    # create seperate unison prf file 
     f = open(prf,'w')
     f.write(unison_prf)
     f.close()
     
     # create profile
     uconf=conf.templates('unison')
-    uconf['prf']=prf_f
-    uconf['auto_start']=True
-    conf.profiles[prf_f]=uconf
+    conf.profiles[ profile['title'] ]=profile
     conf.save_profiles()
     #Rainmaker.restart()
 
@@ -153,20 +200,28 @@ else:
         profile_data = conf.profiles[profile]
         for key in profile_data:
             if isinstance(profile_data[key],str):
-                group.add_argument('--update_var_'+key, action="store", dest=key,default='',help=str(profile_data[key]))
+                group.add_argument('--'+key, action="store", dest='update_var_str_%s' % key, help=str(profile_data[key]))
             elif isinstance(profile_data[key],bool):
-                group.add_argument('--update_var_'+key, action="store_true", dest=key,default=profile_data[key],help=str(profile_data[key]))
+                group.add_argument('--'+key, action="store", dest='update_var_bool_%s' % key, help=str(profile_data[key]))
+            elif isinstance(profile_data[key],int):
+                group.add_argument('--'+key, action="store", dest='update_var_int_%s' % key, help=str(profile_data[key]))
 
     else:
         perr = 'Unknown profile'
+        parser.add_argument('-u', action="store",default=False,dest='update_profile',metavar='[PROFILE]', help='[PROFILE] [OPTIONS]')
 
 args = parser.parse_args()
 
 print args
+
+######
+#error
 if perr:
     print perr
     sys.exit()
 
+#####
+#List
 if args.list==True:
     print 'Profiles: '
     if len(conf.profiles)==0:
@@ -180,20 +235,34 @@ elif args.list in conf.profiles.keys():
     for key in conf.profiles[args.list]:
         print "\t%s: %s" % ( str(key), str(conf.profiles[args.list][key]) )
     sys.exit()
+
 elif args.list:
     print 'Unkown profile: %s' % str(args.list)
 
+#######
+#Update
 if args.update_profile:
-    print 'not implemented'
+    update_profile(conf,args)
     sys.exit()
 
+#######
+#Delete
 if len(args.del_profiles)>0:
     did_delete=False
     for arg in args.del_profiles:
+                
         if arg in conf.profiles:
 
             p=conf.profiles.pop(arg)
-            if p['type']=='unison':
+            do_prf_del=p['type']=='unison'
+            for key in conf.profiles:
+                op=conf.profiles[key]
+                if op['type'] != 'unison':
+                    continue
+                if op['prf']==p['prf']:
+                    do_prf_del = False
+
+            if do_prf_del:
                 path =  os.path.join(conf.unison_dir, '%s.prf' % p['prf'] )
                 if os.path.isfile(path):
                     print 'Deleting file: %s' % path
@@ -212,10 +281,14 @@ if len(args.del_profiles)>0:
             print 'No changes to save'
     sys.exit()
 
+#######
+#Create
 if args.create:
-    do_unison(conf,args)
+    create_profile(conf,args)
     sys.exit()
 
+######
+#Start
 if args.auto_start:
     for key in conf.profiles:
         if conf.profiles[key]['auto_start']==True:    
@@ -230,3 +303,4 @@ if not args.start_profiles:
 for i in args.start_profiles:
     print "Starting:\t%s" % i
 
+sys.exit()

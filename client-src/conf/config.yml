@@ -56,37 +56,42 @@ questions:
             ans: null
             default: rainmaker-unison
             type: str
-            q: 'profile name:'
+            q: 'profile name'
+        prf:
+            ans: null
+            default: null
+            type: str
+            q: 'unison profile name'
         user:
             ans: null
             default: null
             type: str
-            q: 'server user name:'
+            q: 'server user name'
         port:
             ans: null
             default: 22
             type: int
-            q: 'server ssh port:'
+            q: 'server ssh port'
         address:
             ans: null
             default: localhost 
             type: str
-            q: 'server address:'
+            q: 'server address'
         ssh_key_path:
             ans: null
             default: id_rsa
             type: str
-            q: 'ssh private key (path optional):'
+            q: 'ssh private key (path optional)'
         local_root:
             ans: null
             default: ~/sync
             type: str
-            q: 'local root:'
+            q: 'local root'
         remote_path:
             ans: null
             default: /home/rainmaker/?user?
             type: str
-            q: 'remote root:'
+            q: 'remote root'
         remote_root:
             ans: null
             default: 'ssh://?user?@?address?:?port?/?remote_path?'
@@ -96,7 +101,7 @@ questions:
             ans: null
             default: 10
             type: int
-            q: 'max backups:'
+            q: 'max backups'
 
 templates:
     unison:    
