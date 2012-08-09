@@ -47,63 +47,147 @@ cmd_flags:
     cmd_macros: '?cmd_macro?'
 
 profile_flags:
-    local_root: '?local_root?'
-    ssh_key: '?ssh_key?'
-
-questions:
-    unison:
-        title:
-            ans: null
-            default: rainmaker-unison
-            type: str
-            q: 'profile name'
-        prf:
-            ans: null
-            default: null
-            type: str
-            q: 'unison profile name'
-        user:
-            ans: null
-            default: null
-            type: str
-            q: 'server user name'
-        port:
-            ans: null
-            default: 22
-            type: int
-            q: 'server ssh port'
-        address:
-            ans: null
-            default: localhost 
-            type: str
-            q: 'server address'
-        ssh_key_path:
-            ans: null
-            default: id_rsa
-            type: str
-            q: 'ssh private key (path optional)'
-        local_root:
-            ans: null
-            default: ~/sync
-            type: str
-            q: 'local root'
-        remote_path:
-            ans: null
-            default: /home/rainmaker/?user?
-            type: str
-            q: 'remote root'
-        remote_root:
-            ans: null
-            default: 'ssh://?user?@?address?:?port?/?remote_path?'
-            type: str
-            q: null
-        max_backups:
-            ans: null
-            default: 10
-            type: int
-            q: 'max backups'
+    type: rainmaker_data
+    desc: dynamic profile variables
+    default: null
+    val:
+        current_user: {default: null, desc: current user name, type: flag, val: null}
 
 templates:
+    unison:
+        type: rainmaker_data
+        desc: unison template profile
+        default: null
+        val:
+            title:
+                val: null
+                default: rainmaker-unison
+                type: str
+                desc: 'profile name'
+            prf:
+                val: null
+                default: null
+                type: str
+                desc: 'unison profile name'
+            user:
+                val: null
+                default: '?current_user?'
+                type: str
+                desc: 'server user name'
+            port:
+                val: null
+                default: 22
+                type: int
+                desc: 'server ssh port'
+            address:
+                val: null
+                default: localhost 
+                type: str
+                desc: 'server address'
+            ssh_key_path:
+                val: null
+                default: id_rsa
+                type: str
+                desc: 'ssh private key (path optional)'
+            local_root:
+                val: null
+                default: ~/sync
+                type: str
+                desc: 'local root'
+            remote_path:
+                val: null
+                default: /home/rainmaker/?user?
+                type: str
+                desc: 'remote root'
+            remote_root:
+                val: null
+                default: 'ssh://?user?@?address?:?port?/?remote_path?'
+                type: str
+                desc: null
+            max_backups:
+                val: null
+                default: 10
+                type: int
+                desc: 'max backups'
+            cmds:
+                type: rainmaker_data
+                default:
+                val:
+                    all: 
+                        type: str
+                        val: null
+                        default: '?file? "?src_file_rel?"'
+                        desc: 'all file system events'
+                    moved: 
+                        type: arr
+                        val:
+                        default:
+                            - '?file? "?src_file_rel?"'
+                            - '?file? "?dest_file_rel?"'
+                        desc: 'file moved events'
+                    moved_in:
+                        type: arr
+                        val: null
+                        default: null
+                        desc: 'file moved into sync path'
+                    moved_out:
+                        type: arr
+                        val: null
+                        default: null
+                        desc: 'file moved out of sync path'
+                    moved_within:
+                        type: arr
+                        val: null
+                        default: null
+                        desc: 'file moved within sync path'
+                    deleted:
+                        type: arr
+                        val: null
+                        default: null
+                        desc: 'file deleted'
+                    created:
+                        type: arr
+                        val: null
+                        default: null
+                        desc: 'file created'
+                    modified:
+                        type: arr
+                        val: null
+                        default: null
+                        desc: 'file modified'
+                    startup: 
+                        type: arr
+                        val: null
+                        default:
+                            - '?base?'
+                        desc: 'startup commands'
+                    shutdown:
+                        type: arr
+                        val: null
+                        default: null
+                        desc: 'shutdown commands'
+                desc: 'file system event flags'
+            cmd_macros:
+                type: rainmaker_data
+                default:
+                val:
+                    ?unison?:
+                        type: str
+                        val:
+                        default: unison
+                        desc: 'Unison command path'
+                    ?file?:
+                        type: str
+                        val:
+                        default: '?unison? ?prf? -ui text -sshargs "-i ?ssh_key? " -path' 
+                        desc: 'Unison command for file system event'
+                    ?base?:
+                        type: str
+                        val:
+                        default: '?unison? ?prf? -ui text -sshargs "-i ?ssh_key? "'
+                        desc: 'Unison command for full sync'
+                desc: 'command macros'
+templates_old:
     unison:    
         name: ''
         type: unison

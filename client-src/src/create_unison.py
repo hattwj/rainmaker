@@ -10,21 +10,21 @@ def ask(q):
         print('')
         if q['default']:
             print('Default: '+str(q['default']) ) 
-        q['ans']=raw_input( q['q']+': ' ) or q['default']
+        q['val']=raw_input( q['desc']+': ' ) or q['default']
         valid = validate(q)
     return q
 
 def validate(q):
     if q['type']=='str':
-        return len(str(q['ans'] or ''))>0
+        return len(str(q['val'] or ''))>0
     elif q['type']=='int':
-        return 65536>=int(q['ans'])>0
+        return 65536>=int(q['val'])>0
 
     elif q['type']=='host':
-        return len(str(q['ans']))>0
+        return len(str(q['val']))>0
 
     elif q['type']=='localpath':
-        return len(str(q['ans']))>0
+        return len(str(q['val']))>0
 
     else:
         return False
@@ -66,13 +66,10 @@ def update_profile(conf,args):
     print profile
 
 def create_profile(conf,args):
-    questions=conf['questions']['unison']
     qkeys=['title','user','local_root','max_backups',
         'ssh_key_path','port','address','remote_path']
             
-    profile = conf['templates']['unison']
-    for q in questions:
-        profile[q]=questions[q]['default']
+    profile = conf.templates['unison']
 
     for attr,val in vars(args).items():
         if attr.startswith('create_var_') and val:
@@ -88,14 +85,15 @@ def create_profile(conf,args):
 
     # ask 
     for key  in qkeys:
+        q=profile.meta(key) 
         if not args.quiet:
-            q = ask(questions[key])
-            print 'Using: '+str(q['ans'])+"\n"
-            profile[key]=q['ans']
+            q = ask(q)
+            print 'Using: '+str(q['val'])+"\n"
+            profile[key]=q['val']
         
         if key == 'user':
             user=profile[key]
-            questions['remote_path']['default'] = questions['remote_path']['default'].replace('?%s?' % key ,profile[key])
+            profile.meta('remote_path')['default'] = profile.meta('remote_path')['default'].replace('?%s?' % key ,user)
 
         answered=False
 
@@ -108,8 +106,7 @@ def create_profile(conf,args):
         if ans=='y' or ans == 'yes':
             break
         elif ans == 'n' or ans == 'no':
-            q=ask(questions['title'])
-            profile['title']=q['ans']
+            ask(profile.meta('title'))
 
     # do string subst
     for key in profile:
@@ -118,7 +115,7 @@ def create_profile(conf,args):
             unison_prf=unison_prf.replace( '?%s?' % key, str(profile[key]) )
     
     # set path for unison profile
-    prf_f=profile['prf'] or profile['title']
+    prf_f = profile['prf'] = profile['title']
     prf=os.path.abspath( os.path.join(conf.unison_dir,prf_f+'.prf') )
     
     # create seperate unison prf file 
@@ -127,9 +124,10 @@ def create_profile(conf,args):
     f.close()
     
     # create profile
-    uconf=conf.templates('unison')
-    conf.profiles[ profile['title'] ]=profile
+    uconf=conf.templates['unison']
+    conf.profiles[prf_f]=profile
     conf.save_profiles()
+    
     #Rainmaker.restart()
 
 
@@ -154,7 +152,7 @@ else:
     
     template='unison'
     if len(sys.argv) >= idx + 2 and sys.argv[idx+1][0] != '-':
-        if sys.argv[idx+1] in conf['templates']:
+        if sys.argv[idx+1] in conf.templates:
             template=sys.argv[idx+1]
         else:
             perr = 'Unknown profile type: %s' % sys.argv[idx+1]
@@ -165,11 +163,12 @@ else:
     
     if not perr:
         group=parser.add_argument_group('-c [TYPE=%s] [[OPTIONS]]' % template)
-        
-        questions = conf['questions'][template]
-        for key in questions:
-            q=questions[key]
-            group.add_argument('--'+key, action="store", dest='create_var_%s' %key,help=q['q'])
+       
+        # options
+        opts = conf.templates[template]
+        for key in opts:
+            q=opts.meta(key)['desc']
+            group.add_argument('--'+key, action="store", dest='create_var_%s' %key,help=q)
 
 if not '-l' in sys.argv:
     parser.add_argument('-l', action="store_true",default=False,dest='list', help='List all profiles or list settings for specicific profile')
@@ -211,8 +210,6 @@ else:
         parser.add_argument('-u', action="store",default=False,dest='update_profile',metavar='[PROFILE]', help='[PROFILE] [OPTIONS]')
 
 args = parser.parse_args()
-
-print args
 
 ######
 #error

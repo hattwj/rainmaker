@@ -44,11 +44,103 @@ try:
 except ImportError:
     from queue import Queue, Empty  # python 3.x
 
-import copy
+#import copy
+import collections
+
+class RainmakerFlags():
+    def subst(self,val):
+        
+
+# a collection to hold rainmakerdata classes
+class RainmakerDataCollection(collections.MutableMapping):
+    def __init__(self,data):
+        self.data=data
+        self.d={}
+            
+        for k in self.data:
+            if self.data[k]['type']=='rainmaker_data':
+                self.d[k]=RainmakerData(self.data[k])
+
+    def __getitem__(self,key):
+        return self.d[key]
+
+    def __setitem__(self,key,value):
+        if value.__class__.__name__==RainmakerData.__name__:
+            self.d[key]=value.d
+            self.data[key]=value.data
+        else:
+            print 'error'
+            sys.exit()
+    def __delitem__(self,key):
+        del self.data[key]
+        if key in self.d:
+            del self.d[key]
+    def __iter__(self):
+        return iter(self.data)
+    def __len__(self):
+        return len(self.data)
+
+# dict with keys - type,val,desc,default
+class RainmakerData(collections.MutableMapping):
+    def __init__(self,data=None):
+        self.data=data or self.new_data()
+        self.d={}
+            
+        for k in self.data['val']:
+            if data['val'][k]['type']=='rainmaker_data':
+                self.d[k]=RainmakerData(self.data['val'][k])
+
+    def __getitem__(self,key):
+        if key in self.d:
+            return self.d[key]
+        else:
+            return self.data['val'][key]['val']
+
+    def __setitem__(self,key,value):
+        if value.__class__.__name__==self.__class__.__name__:
+            self.d[key]=value.d
+            self.data[key]=value.data
+        else:
+            if self.validate(self.data['val'][key],value):
+                self.data['val'][key]['val']=value
+    
+    def new_data(self,val=None):
+        return {'val':val,'type':'rainmaker_data','desc':None,'default':None,}
+
+    def meta(self,key):
+            return self.data['val'][key]
+
+    def __delitem__(self,key):
+        del self.data['val'][key]
+        if key in self.d:
+            del self.d[key]
+    def __iter__(self):
+        return iter(self.data['val'])
+    def __len__(self):
+        return len(self.data)
+
+    def validate(self,q,val):
+        if q['type']=='str':
+            return len(str(val or ''))>0
+        elif q['type']=='int':
+            return 65536>=int(val)>0
+        elif q['type']=='port':
+            return 65536>=int(val)>0
+        elif q['type']=='host':
+            return len(str(val))>0
+    
+        elif q['type']=='localpath':
+            return len(str(val))>0
+    
+        else:
+            return False
+
 
 #config class
 class RainmakerConfig(dict):
     profiles = {}
+    templates = {}
+    profiles_data={}
     def __init__(self):
         
         self.home = os.path.expanduser('~')
@@ -73,26 +165,32 @@ class RainmakerConfig(dict):
             self.config_path=self.config_path_ro
 
         f = open(self.config_path,'r')
-        self.config = yaml.safe_load( f )
+        self.config_data = yaml.safe_load( f )
         f.close()
-        
+                
+        self.templates=RainmakerDataCollection(self.config_data['templates'])
+
         if os.path.isfile(self.profiles_path):
             f = open(self.profiles_path,'r')
-            self.profiles = yaml.safe_load( f )
+            self.profiles_data = yaml.safe_load( f )
             f.close()
-        if self.profiles == None:
-            self.profiles={}
+
+        if self.profiles_data == None:
+            self.profiles_data={}
+        
+        self.profiles=RainmakerDataCollection(self.profiles_data)
 
     def __getitem__(self, key):
-        val = self.config.__getitem__( key)
+        val = self.config_data.__getitem__( key)
         return val
 
     def __setitem__(self, key, val):
-        self.config.__setitem__( key, val)
+        self.config_data.__setitem__( key, val)
 
     def save_profiles(self):
+        print self.profiles_path
         f = open(self.profiles_path,'w')
-        yaml.safe_dump(self.profiles, f)
+        yaml.safe_dump(self.profiles_data, f)
         return f.close()
 
     def find(self,fname):
@@ -111,12 +209,6 @@ class RainmakerConfig(dict):
 
     def start(self, prf_f):
         return 'Not implemented'
-
-    def templates(self,key):
-        val = None
-        if key in self.config['templates']:
-            val = copy.deepcopy(self.config['templates'][key])
-        return val
 
     # Test config yaml file for misconfiguration and return results
     def test(self):
