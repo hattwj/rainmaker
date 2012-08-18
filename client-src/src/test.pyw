@@ -3,11 +3,8 @@ from watcher import *
 
 def main():
     conf=RainmakerConfig()
-    p=conf.templates['unison']
-    p['local_root']='voltr555555n'
-    print p.data
-    conf.profiles['test' ]=p
-    conf.save_profiles()
-
+    p=conf.profiles['test']
+    p.subst_all()
+    print p
 if __name__ == '__main__':
     main()

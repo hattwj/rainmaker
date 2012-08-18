@@ -47,11 +47,7 @@ cmd_flags:
     cmd_macros: '?cmd_macro?'
 
 profile_flags:
-    type: rainmaker_data
-    desc: dynamic profile variables
-    default: null
-    val:
-        current_user: {default: null, desc: current user name, type: flag, val: null}
+    current_user: {default: null, desc: current user name, type: flag, val: null}
 
 templates:
     unison:
@@ -59,6 +55,16 @@ templates:
         desc: unison template profile
         default: null
         val:
+            use_cmd_all:
+                val: null
+                default: True 
+                type: bool
+                desc: use same command for all events 
+            auto_start:
+                val: null
+                default: True 
+                type: bool
+                desc: automatically start syncing 
             title:
                 val: null
                 default: rainmaker-unison
@@ -104,6 +110,8 @@ templates:
                 default: 'ssh://?user?@?address?:?port?/?remote_path?'
                 type: str
                 desc: null
+            recursive: {default: True, desc: recursive sync, type: int, val: True}
+            max_threads: {default: 5, desc: max threads, type: int, val: 5}
             max_backups:
                 val: null
                 default: 10
@@ -111,7 +119,7 @@ templates:
                 desc: 'max backups'
             cmds:
                 type: rainmaker_data
-                default:
+                default: null
                 val:
                     all: 
                         type: str
@@ -120,7 +128,7 @@ templates:
                         desc: 'all file system events'
                     moved: 
                         type: arr
-                        val:
+                        val: null
                         default:
                             - '?file? "?src_file_rel?"'
                             - '?file? "?dest_file_rel?"'

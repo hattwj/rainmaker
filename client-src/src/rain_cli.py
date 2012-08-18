@@ -83,6 +83,8 @@ def create_profile(conf,args):
     unison_prf = f.read()
     f.close()
 
+    profile.set_default()
+    
     # ask 
     for key  in qkeys:
         q=profile.meta(key) 
@@ -111,7 +113,6 @@ def create_profile(conf,args):
     # do string subst
     for key in profile:
         for q in profile:
-            #profile[q]=profile[q].replace( '?%s?' % key, profile[key] )
             unison_prf=unison_prf.replace( '?%s?' % key, str(profile[key]) )
     
     # set path for unison profile
@@ -127,7 +128,8 @@ def create_profile(conf,args):
     uconf=conf.templates['unison']
     conf.profiles[prf_f]=profile
     conf.save_profiles()
-    
+
+    print 'bug: create local root if not exist' 
     #Rainmaker.restart()
 
 
@@ -210,6 +212,7 @@ else:
         parser.add_argument('-u', action="store",default=False,dest='update_profile',metavar='[PROFILE]', help='[PROFILE] [OPTIONS]')
 
 args = parser.parse_args()
+print args
 
 ######
 #error
@@ -251,7 +254,7 @@ if len(args.del_profiles)>0:
         if arg in conf.profiles:
 
             p=conf.profiles.pop(arg)
-            do_prf_del=p['type']=='unison'
+            do_prf_del=p.data['type']=='unison'
             for key in conf.profiles:
                 op=conf.profiles[key]
                 if op['type'] != 'unison':
@@ -286,18 +289,22 @@ if args.create:
 
 ######
 #Start
-if args.auto_start:
-    for key in conf.profiles:
-        if conf.profiles[key]['auto_start']==True:    
-            args.start_profiles.append(key)
 
-if not args.start_profiles:
+if not args.auto_start:
     #start service with no active profiles
     print 'Starting with no profiles'
-    sys.exit()
 
+try:
 
-for i in args.start_profiles:
-    print "Starting:\t%s" % i
+    rain = Rainmaker(conf,args.auto_start)
+    for i in args.start_profiles:
+        print "Starting:\t%s" % i
+        rain.add_watch(i)
 
-sys.exit()
+    while True:
+        time.sleep(2)
+        print  rain.messages()
+
+except KeyboardInterrupt:
+    rain.shutdown()
+

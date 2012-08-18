@@ -49,7 +49,7 @@ import collections
 
 class RainmakerFlags():
     def subst(self,val):
-        
+       pass 
 
 # a collection to hold rainmakerdata classes
 class RainmakerDataCollection(collections.MutableMapping):
@@ -80,35 +80,88 @@ class RainmakerDataCollection(collections.MutableMapping):
     def __len__(self):
         return len(self.data)
 
+import re
 # dict with keys - type,val,desc,default
 class RainmakerData(collections.MutableMapping):
+    read_only=False
+
     def __init__(self,data=None):
+        self.re = re.compile('\?([a-z_]+)\?')
         self.data=data or self.new_data()
         self.d={}
             
         for k in self.data['val']:
             if data['val'][k]['type']=='rainmaker_data':
                 self.d[k]=RainmakerData(self.data['val'][k])
+    
+    #add def __keys__?
+    def set_default(self):
+        for k in self:
+            if k in self.d:
+                self.d[k].set_default()
+            else:
+                print self.meta(k)
+                self[k]=self.meta(k)['default']
+                print self.meta(k)
+        
+    # eval all values and substitute them
+    def subst_all(self):
+        self.read_only=True
+        for k in self.d:
+            self.d[k].subst_all
+        for k in self:
+            if self.data['val'][k]['type']=='rainmaker_data':
+                next
+            if self.data['val'][k]['type']=='arr':
+                next
+            self[k]=self.subst(self[k])
+
+    #substitute values between variables 
+    def subst(self,val):
+        if not val:
+            return val
+        val = str(val)
+        m=self.re.search(val)
+        c = 0
+        while m and c<5:
+            c+=1
+            for g in m.groups():
+                print g
+                if g in self:
+                    val=val.replace('?%s?' % g, str(self[g]))
+                else:
+                    pass
+                    #print 'no key:'+g
+            m=self.re.search(val)
+
+        return val
+
+    # allow printing like a normal dictionary 
+    def __repr__(self):
+        return repr(self.data)
 
     def __getitem__(self,key):
+
         if key in self.d:
             return self.d[key]
         else:
             return self.data['val'][key]['val']
 
     def __setitem__(self,key,value):
+        #nest a rainmakerdata item
         if value.__class__.__name__==self.__class__.__name__:
             self.d[key]=value.d
             self.data[key]=value.data
         else:
+            #validate new val
             if self.validate(self.data['val'][key],value):
                 self.data['val'][key]['val']=value
     
     def new_data(self,val=None):
-        return {'val':val,'type':'rainmaker_data','desc':None,'default':None,}
-
+        return {'val':val,'type':'rainmaker_data','desc':None,'default':None}
+    
     def meta(self,key):
-            return self.data['val'][key]
+        return self.data['val'][key]
 
     def __delitem__(self,key):
         del self.data['val'][key]
@@ -119,6 +172,9 @@ class RainmakerData(collections.MutableMapping):
     def __len__(self):
         return len(self.data)
 
+    def has_key(self,key):
+        return self.data.has_key(key)
+
     def validate(self,q,val):
         if q['type']=='str':
             return len(str(val or ''))>0
@@ -127,14 +183,23 @@ class RainmakerData(collections.MutableMapping):
         elif q['type']=='port':
             return 65536>=int(val)>0
         elif q['type']=='host':
-            return len(str(val))>0
-    
+            return len(str(val))>0 
+        elif q['type']=='arr':
+            return isinstance(val,list)
         elif q['type']=='localpath':
             return len(str(val))>0
+        elif q['type']=='bool':
+            if val == True or val.lower()=='true' or val.lower()=='t':
+                return True
+        return False
     
-        else:
-            return False
-
+    @staticmethod
+    def new(vals):
+        result={}
+        for key in data:
+            val=data[key]
+            result[key] = RainmakerData({'val':val,'type':'rainmaker_data','desc':None,'default':None})
+        return result
 
 #config class
 class RainmakerConfig(dict):
@@ -155,9 +220,10 @@ class RainmakerConfig(dict):
         self.config_path_ro=os.path.join(self.app_dir,'conf',self.config_f)
                
         if not os.path.isdir(self.rain_dir):
-            os.path.mkdir(self.rain_dir)
+            os.mkdir(self.rain_dir)
         if not os.path.isdir(self.unison_dir):
-            os.path.mkdir(self.unison_dir)
+            os.mkdir(self.unison_dir)
+
         if not os.path.isfile(self.config_path):
             if not os.path.isfile(self.config_path_ro):
                 print 'Unable to find config file'
@@ -217,39 +283,39 @@ class RainmakerConfig(dict):
          pass
                 
 class RainmakerEventHandler(FileSystemEventHandler):
-    def __init__(self, conf,uconf, msg_q, xlogger):
+    def __init__(self, conf, profile, msg_q, xlogger):
         self.cmd_q = Queue()
         self.threads_q = Queue()
         self.msg_q = msg_q
         self.conf = conf
-        self.uconf = uconf.copy()
+        self.profile = profile
         self.log = xlogger
 
         # Fill out nested macros (max 5 levels deep)
         for i in range(1,5):
             found_macro = False
-            for flag in self.uconf['cmd_macros']:
-                new_macro = self.do_macro(self.uconf['cmd_macros'][flag])
-                if self.uconf['cmd_macros'][flag] != new_macro:
+            for flag in self.profile['cmd_macros']:
+                new_macro = self.do_macro(self.profile['cmd_macros'][flag])
+                if self.profile['cmd_macros'][flag] != new_macro:
                     found_macro = True
             if not found_macro:
                 break
 
         # Add macros to commands
-        for cmd_key,cmd_val in self.uconf['cmds'].items():
+        for cmd_key,cmd_val in self.profile['cmds'].items():
             # process command list
             if isinstance(cmd_val, list): 
                 for idx,item in enumerate(cmd_val):
-                    self.uconf['cmds'][cmd_key][idx]=self.do_macro(item)
+                    self.profile['cmds'][cmd_key][idx]=self.do_macro(item)
             # process single command
             else:
-                self.uconf['cmds'][cmd_key] = self.do_macro(cmd_val)
+                self.profile['cmds'][cmd_key] = self.do_macro(cmd_val)
 
         self.running = True
         self.start_threads()
 
     def start_threads(self):
-        for i in range( int(self.uconf['max_threads']) ):
+        for i in range( int(self.profile['max_threads']) ):
             t = Thread(target=self.cmd_worker)
             t.daemon = True
             t.start()
@@ -280,13 +346,15 @@ class RainmakerEventHandler(FileSystemEventHandler):
     def cmd_create(self, event):
  
         #Start building command
-        if self.uconf['use_cmd_all'] and event.event_type != 'startup':
-            cmd = self.uconf['cmds']['all']
+        if self.profile['use_cmd_all'] and event.event_type != 'startup':
+            cmd = self.profile['cmds']['all']
         else:
-            cmd = self.uconf['cmds'][event.event_type]
+            cmd = self.profile['cmds'][event.event_type]
         
-        if cmd == '':
-            cmd = self.uconf['cmds']['all']
+        # use base if none exists 
+        if cmd == '' or cmd is None:
+            print 'no command for event: %s' % event.event_type
+            return
         # process command list
         if isinstance(cmd, list): 
             for item in cmd:
@@ -297,6 +365,7 @@ class RainmakerEventHandler(FileSystemEventHandler):
 
     def do_cmd(self,cmd,event):       
         # Insert placeholder values
+        cmd = self.profile.subst(cmd)
         for key in self.conf['cmd_flags']:
             flag = self.conf['cmd_flags'][key]
             if cmd.find( flag ) != -1:
@@ -308,8 +377,8 @@ class RainmakerEventHandler(FileSystemEventHandler):
     def do_macro(self,cmd):
         if str(cmd) == '' or cmd is None:
             return ''
-        for flag in self.uconf['cmd_macros']:
-            val = self.uconf['cmd_macros'][flag]
+        for flag in self.profile['cmd_macros']:
+            val = self.profile['cmd_macros'][flag]
             if cmd.find( flag ) != -1:
                 cmd = cmd.replace( flag , val )
         return cmd
@@ -321,7 +390,7 @@ class RainmakerEventHandler(FileSystemEventHandler):
         #self.threads_q.join()
              
     def startup_cmd(self):
-        event =FileSystemEvent('startup',self.uconf['root'],True)
+        event =FileSystemEvent('startup',self.profile['local_root'],True)
         self.cmd_create(event)
 
     """ File System Events """
@@ -339,7 +408,7 @@ class RainmakerEventHandler(FileSystemEventHandler):
 
     """ Available Event properties """
     def root(self,event):
-        return self.uconf['root'] 
+        return self.profile['local_root'] 
 
     def src_dir_rel(self,event):
         return '' 
@@ -349,7 +418,7 @@ class RainmakerEventHandler(FileSystemEventHandler):
 
     # return event file path relative to root
     def src_file_rel(self,event):
-        return event.src_path.replace(self.uconf['root']+os.sep,'')  
+        return event.src_path.replace(self.profile['local_root']+os.sep,'')  
 
     def src_file_full(self,event):
         return ''
@@ -367,7 +436,7 @@ class RainmakerEventHandler(FileSystemEventHandler):
         return ''
 
     def dest_file_rel(self,event):
-        return event.dest_path.replace(self.uconf['root']+os.sep,'')  
+        return event.dest_path.replace(self.profile['local_root']+os.sep,'')  
     
     def dest_file_full(self,event):
         return ''
@@ -383,21 +452,26 @@ class RainmakerEventHandler(FileSystemEventHandler):
 
 class Rainmaker():
    
-    def __init__(self, profile = None, conf_path = os.path.join('conf','w2conf.yml') ):
+    def __init__(self,config=None, auto_start=True ):
 
         self.event_handlers = []
-        self.config = W2Config()
+        self.config = config if config else  RainmakerConfig()
         self.profiles = self.config.profiles
 
         self.msg_q = Queue()
         self.observer = Observer()
         self.observer.start()
 
-        # If no profile just wait
-        if profile:
-            self.add_watch(profile)
+        if not auto_start:
+            return
+
+        for k in self.profiles:
+            if self.profiles[k]['auto_start']==True:
+                self.add_watch(k)
+            
 
     def add_watch(self,key):
+        print 'Starting profile: %s' % key
         profile = self.profiles[key]
 
         log_levels = {
@@ -406,28 +480,31 @@ class Rainmaker():
             'debug':logging.DEBUG,
             False: logging.WARN 
         }
-
+        log_level= 'warn' 
         # set up logging to file
-        log_format = logging.format( '%(asctime)s %(name)-12s %(levelname)-8s %(message)s' ) 
-        watch_logger = logging.getLogger(profile)
-        watch_logger.setLevel( log_levels[ profile['log_level'] ] )
-        watch_logger.setFormatter( log_format )
-
+        #log_format = logging.format( '%(asctime)s %(name)-12s %(levelname)-8s %(message)s' ) 
+        #watch_logger = logging.getLogger(profile)
+        #watch_logger.setLevel( log_levels[ profile['log_level'] ] )
+        #watch_logger.setFormatter( log_format )
+        watch_logger=None
         logging.basicConfig(
-            level   = log_levels[ profile['log_level'] ],
+            level   = log_levels[ log_level ],
             format  = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
             datefmt = '%H:%M:%S',
         )
 
-        watch_logger.info( 'Loaded profile: ${profile}'.format(profile=profile) )
+        #watch_logger.info( 'Loaded profile: ${profile}'.format(profile=profile) )
+        profile['local_root'] = os.path.abspath(os.path.expanduser(profile['local_root']))
+        if not os.path.isdir(profile['local_root']):
+            os.mkdir(profile['local_root'])
 
-        event_handler = RainmakerEventHandler( self.config,profile, self.msg_q, watch_logger )
+        event_handler = RainmakerEventHandler( self.config, profile, self.msg_q, watch_logger )
         self.event_handlers.append( event_handler )
 
         rec_flag = True
         if profile.has_key('recursive'):
             rec_flag = bool(profile['recursive']) 
-        self.observer.schedule( event_handler, profile['root'], recursive = rec_flag) 
+        self.observer.schedule( event_handler, profile['local_root'], recursive = rec_flag) 
     
         if profile['cmds']['startup'] != '':
             event_handler.startup_cmd()
@@ -452,12 +529,10 @@ class Rainmaker():
         print "Shutting down FSwatcher"
         self.observer.stop()
         self.observer.unschedule_all()
-        if self.event_handlers:
-            self.observer.join()
+        self.observer.join()
         print "Shutting down thread and Fork pool"
-        for idx, event_handler in enumerate( self.event_handlers ):
-            event_handler.stop()
-
+        for idx in self.event_handlers:
+            self.event_handlers[idx].stop()
 if __name__ == "__main__":
 
     try:
