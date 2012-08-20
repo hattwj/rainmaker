@@ -110,10 +110,11 @@ def create_profile(conf,args):
         elif ans == 'n' or ans == 'no':
             ask(profile.meta('title'))
 
-    # do string subst
-    for key in profile:
-        for q in profile:
-            unison_prf=unison_prf.replace( '?%s?' % key, str(profile[key]) )
+    # unison prf file alter: do string subst
+    unison_prf=profile.subst(unison_prf)
+    #for key in profile:
+    #    for q in profile:
+    #        unison_prf=unison_prf.replace( '?%s?' % key, str(profile[key]) )
     
     # set path for unison profile
     prf_f = profile['prf'] = profile['title']
@@ -129,7 +130,6 @@ def create_profile(conf,args):
     conf.profiles[prf_f]=profile
     conf.save_profiles()
 
-    print 'bug: create local root if not exist' 
     #Rainmaker.restart()
 
 
@@ -303,8 +303,9 @@ try:
 
     while True:
         time.sleep(2)
-        print  rain.messages()
-
+        msgs=  rain.messages()
+        if msgs:
+            print msgs
 except KeyboardInterrupt:
     rain.shutdown()
 

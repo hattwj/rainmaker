@@ -47,9 +47,35 @@ except ImportError:
 #import copy
 import collections
 
-class RainmakerFlags():
-    def subst(self,val):
-       pass 
+import getpass
+class RainmakerUtils():
+    
+    # find path of app
+    @staticmethod
+    def which(program):
+        
+        def is_exe(fpath):
+            return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+    
+        fpath, fname = os.path.split(program)
+        if fpath:
+            if is_exe(program):
+                return program
+        else:
+            for path in os.environ["PATH"].split(os.pathsep):
+                exe_file = os.path.join(path, program)
+                if is_exe(exe_file):
+                    return exe_file
+    
+        return None
+
+    @staticmethod
+    def cmd_unison():
+        return RainmakerUtils.which('unison')
+
+    @staticmethod
+    def cmd_current_user():
+        return getpass.getuser()
 
 # a collection to hold rainmakerdata classes
 class RainmakerDataCollection(collections.MutableMapping):
@@ -100,39 +126,46 @@ class RainmakerData(collections.MutableMapping):
             if k in self.d:
                 self.d[k].set_default()
             else:
-                print self.meta(k)
                 self[k]=self.meta(k)['default']
-                print self.meta(k)
         
     # eval all values and substitute them
     def subst_all(self):
         self.read_only=True
-        for k in self.d:
-            self.d[k].subst_all
         for k in self:
-            if self.data['val'][k]['type']=='rainmaker_data':
+            print k
+            if k in self.d:
+                self.d[k].subst_all()
+            elif self.meta(k)['type']=='arr':
+                print 'subst for arr not implemented'
                 next
-            if self.data['val'][k]['type']=='arr':
-                next
-            self[k]=self.subst(self[k])
+            else:
+                self[k]=self.subst(self[k])
 
     #substitute values between variables 
     def subst(self,val):
         if not val:
             return val
         val = str(val)
-        m=self.re.search(val)
+        m=self.re.findall(val)
         c = 0
+        print 'key: %s' % val
         while m and c<5:
             c+=1
-            for g in m.groups():
-                print g
+            print m
+            for g in m:
+                print 'group: %s' % g
+                substr=None
                 if g in self:
-                    val=val.replace('?%s?' % g, str(self[g]))
+                    substr= self[g]
                 else:
-                    pass
-                    #print 'no key:'+g
-            m=self.re.search(val)
+                    if hasattr(RainmakerUtils, 'cmd_%s' % g):
+                        substr=getattr(RainmakerUtils,'cmd_%s' % g)() 
+                print substr
+                if substr:
+                    val=val.replace('?%s?' % g, str(substr))
+                else:
+                    print 'raise substr error'
+            m=self.re.findall(val)
 
         return val
 
@@ -176,6 +209,7 @@ class RainmakerData(collections.MutableMapping):
         return self.data.has_key(key)
 
     def validate(self,q,val):
+        print q
         if q['type']=='str':
             return len(str(val or ''))>0
         elif q['type']=='int':
@@ -328,7 +362,7 @@ class RainmakerEventHandler(FileSystemEventHandler):
                 cmd =  self.cmd_q.get_nowait()
             except Empty:
                 continue
-            #print cmd
+            print cmd
             s_cmd = shlex.split(cmd) 
             p = Popen(s_cmd, stdout = PIPE, stderr=PIPE)
             result = {  'stdout':p.stdout.read(),
@@ -383,7 +417,6 @@ class RainmakerEventHandler(FileSystemEventHandler):
                 cmd = cmd.replace( flag , val )
         return cmd
             
-
     """ Available client methods """
     def stop(self):
         self.running = False
@@ -495,6 +528,9 @@ class Rainmaker():
 
         #watch_logger.info( 'Loaded profile: ${profile}'.format(profile=profile) )
         profile['local_root'] = os.path.abspath(os.path.expanduser(profile['local_root']))
+        
+        profile.subst_all()
+
         if not os.path.isdir(profile['local_root']):
             os.mkdir(profile['local_root'])
 
@@ -532,7 +568,8 @@ class Rainmaker():
         self.observer.join()
         print "Shutting down thread and Fork pool"
         for idx in self.event_handlers:
-            self.event_handlers[idx].stop()
+            idx.stop()
+            #self.event_handlers[idx].stop()
 if __name__ == "__main__":
 
     try:
@@ -545,7 +582,9 @@ if __name__ == "__main__":
         
         while True:
             time.sleep(2)
-            print  rain.messages()
+            msg=rain.messages()
+            if msg:
+                print msg
  
     except KeyboardInterrupt:
         rain.shutdown()

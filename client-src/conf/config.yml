@@ -110,7 +110,7 @@ templates:
                 default: 'ssh://?user?@?address?:?port?/?remote_path?'
                 type: str
                 desc: null
-            recursive: {default: True, desc: recursive sync, type: int, val: True}
+            recursive: {default: True, desc: recursive sync, type: bool, val: True}
             max_threads: {default: 5, desc: max threads, type: int, val: 5}
             max_backups:
                 val: null
@@ -187,12 +187,12 @@ templates:
                     ?file?:
                         type: str
                         val:
-                        default: '?unison? ?prf? -ui text -sshargs "-i ?ssh_key? " -path' 
+                        default: '?unison? ?prf? -ui text -sshargs "-i ?ssh_key_path? " -path' 
                         desc: 'Unison command for file system event'
                     ?base?:
                         type: str
                         val:
-                        default: '?unison? ?prf? -ui text -sshargs "-i ?ssh_key? "'
+                        default: '?unison? ?prf? -ui text -sshargs "-i ?ssh_key_path? "'
                         desc: 'Unison command for full sync'
                 desc: 'command macros'
 templates_old:
