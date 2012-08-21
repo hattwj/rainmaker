@@ -121,18 +121,20 @@ class RainmakerData(collections.MutableMapping):
                 self.d[k]=RainmakerData(self.data['val'][k])
     
     #add def __keys__?
+
+    # set val=default for all keys recursively
     def set_default(self):
         for k in self:
             if k in self.d:
                 self.d[k].set_default()
             else:
                 self[k]=self.meta(k)['default']
-        
+                if self.meta(k)['type'] != 'arr':
+                    self[k]=self.subst(self[k])
     # eval all values and substitute them
     def subst_all(self):
         self.read_only=True
         for k in self:
-            print k
             if k in self.d:
                 self.d[k].subst_all()
             elif self.meta(k)['type']=='arr':
@@ -141,30 +143,32 @@ class RainmakerData(collections.MutableMapping):
             else:
                 self[k]=self.subst(self[k])
 
+            if self.meta(k)['type']=='localpath':
+                self[k]=os.path.abspath( os.path.expanduser(self[k]) )
+
     #substitute values between variables 
     def subst(self,val):
-        if not val:
+        if val is None or val ==False or val==True:
             return val
         val = str(val)
         m=self.re.findall(val)
         c = 0
-        print 'key: %s' % val
+        print 'val: %s' % val
         while m and c<5:
             c+=1
-            print m
             for g in m:
-                print 'group: %s' % g
+                #print 'group: %s' % g
                 substr=None
                 if g in self:
                     substr= self[g]
                 else:
                     if hasattr(RainmakerUtils, 'cmd_%s' % g):
                         substr=getattr(RainmakerUtils,'cmd_%s' % g)() 
-                print substr
+                
                 if substr:
                     val=val.replace('?%s?' % g, str(substr))
                 else:
-                    print 'raise substr error'
+                    pass #print 'raise substr error'
             m=self.re.findall(val)
 
         return val
@@ -209,7 +213,6 @@ class RainmakerData(collections.MutableMapping):
         return self.data.has_key(key)
 
     def validate(self,q,val):
-        print q
         if q['type']=='str':
             return len(str(val or ''))>0
         elif q['type']=='int':

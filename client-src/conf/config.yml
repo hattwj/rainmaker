@@ -46,15 +46,13 @@ cmd_flags:
     event_type: '?event_type?'
     cmd_macros: '?cmd_macro?'
 
-profile_flags:
-    current_user: {default: null, desc: current user name, type: flag, val: null}
-
 templates:
     unison:
         type: rainmaker_data
         desc: unison template profile
         default: null
         val:
+            profile_type: {default: rainmaker_unison, desc: profile type, type: str, val: None}
             use_cmd_all:
                 val: null
                 default: True 
@@ -92,19 +90,21 @@ templates:
                 desc: 'server address'
             ssh_key_path:
                 val: null
-                default: id_rsa
-                type: str
-                desc: 'ssh private key (path optional)'
+                default: ~/.ssh/id_rsa
+                type: localpath
+                desc: 'ssh private key (full path)'
             local_root:
                 val: null
                 default: ~/sync
-                type: str
+                type: localpath
                 desc: 'local root'
             remote_path:
                 val: null
                 default: /home/rainmaker/?user?
                 type: str
                 desc: 'remote root'
+            remote_sync: {default: '?remote_root?/sync', type: str, val: null, desc: path to sync}
+            remote_backups: {default: '?remote_root?/backups', type: str, val: null, desc: path to store file versions}
             remote_root:
                 val: null
                 default: 'ssh://?user?@?address?:?port?/?remote_path?'
@@ -195,30 +195,3 @@ templates:
                         default: '?unison? ?prf? -ui text -sshargs "-i ?ssh_key_path? "'
                         desc: 'Unison command for full sync'
                 desc: 'command macros'
-templates_old:
-    unison:    
-        name: ''
-        type: unison
-        description: ''
-        prf: ''
-        max_threads: 2
-        auto_start:  true
-        use_cmd_all: false
-        recursive: true
-        cmds:
-            all: '?file? "?src_file_rel?"' 
-            moved: 
-                - '?file? "?src_file_rel?"'
-                - '?file? "?dest_file_rel?"'
-            moved_in:
-            moved_out:
-            moved_within:
-            deleted:
-            created:
-            modified:
-            startup: '?base?' 
-            shutdown:
-        cmd_macros:
-            ?unison?: unison
-            ?file?: '?unison? ?prf? -ui text -sshargs "-i ?ssh_key? " -path' 
-            ?base?: '?unison? ?prf? -ui text -sshargs "-i ?ssh_key? "'
