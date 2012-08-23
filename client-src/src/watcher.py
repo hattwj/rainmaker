@@ -49,6 +49,19 @@ import collections
 
 import getpass
 class RainmakerUtils():
+    @staticmethod
+    def create_logger(name):
+        formatter = logging.Formatter(
+            fmt='%(asctime)s - %(levelname)s - %(module)s - %(message)s'
+        )
+    
+        handler = logging.StreamHandler()
+        handler.setFormatter(formatter)
+    
+        logger = logging.getLogger(name)
+        logger.setLevel(logging.DEBUG)
+        logger.addHandler(handler)
+        return logger
     
     # find path of app
     @staticmethod
@@ -153,7 +166,6 @@ class RainmakerData(collections.MutableMapping):
         val = str(val)
         m=self.re.findall(val)
         c = 0
-        print 'val: %s' % val
         while m and c<5:
             c+=1
             for g in m:
@@ -320,14 +332,13 @@ class RainmakerConfig(dict):
          pass
                 
 class RainmakerEventHandler(FileSystemEventHandler):
-    def __init__(self, conf, profile, msg_q, xlogger):
+    def __init__(self, conf, profile, msg_q, xlog):
         self.cmd_q = Queue()
         self.threads_q = Queue()
         self.msg_q = msg_q
         self.conf = conf
         self.profile = profile
-        self.log = xlogger
-
+        self.log = logging.getLogger('main')
         # Fill out nested macros (max 5 levels deep)
         for i in range(1,5):
             found_macro = False
@@ -346,6 +357,7 @@ class RainmakerEventHandler(FileSystemEventHandler):
                     self.profile['cmds'][cmd_key][idx]=self.do_macro(item)
             # process single command
             else:
+
                 self.profile['cmds'][cmd_key] = self.do_macro(cmd_val)
 
         self.running = True
@@ -365,8 +377,9 @@ class RainmakerEventHandler(FileSystemEventHandler):
                 cmd =  self.cmd_q.get_nowait()
             except Empty:
                 continue
-            print cmd
+            self.log.info('exec cmd: %s' % cmd)
             s_cmd = shlex.split(cmd) 
+            
             p = Popen(s_cmd, stdout = PIPE, stderr=PIPE)
             result = {  'stdout':p.stdout.read(),
                         'stderr':p.stderr.read(),
@@ -374,14 +387,13 @@ class RainmakerEventHandler(FileSystemEventHandler):
                         'cmd':cmd
                      }
             self.msg_q.put( result )
-            #print p.stdout.read()
-            #print p.stderr.read()
-            #print p.returncode
-        
+            self.log.info('finished cmd: %s' % cmd)
+            if result['stderr']:
+                self.log.debug(result['stderr']) 
 
     """EventHandler"""
     def cmd_create(self, event):
- 
+        self.log.debug('event fired: %s' % event.event_type) 
         #Start building command
         if self.profile['use_cmd_all'] and event.event_type != 'startup':
             cmd = self.profile['cmds']['all']
@@ -390,7 +402,7 @@ class RainmakerEventHandler(FileSystemEventHandler):
         
         # use base if none exists 
         if cmd == '' or cmd is None:
-            print 'no command for event: %s' % event.event_type
+            self.log.warn( 'no command for event: %s' % event.event_type)
             return
         # process command list
         if isinstance(cmd, list): 
@@ -422,8 +434,16 @@ class RainmakerEventHandler(FileSystemEventHandler):
             
     """ Available client methods """
     def stop(self):
+        print 'stopping'
         self.running = False
         #self.threads_q.join()
+        while True:
+            try:
+                t =  self.threads_q.get_nowait()
+                print t.name
+                t.join()
+            except Empty:
+                break
              
     def startup_cmd(self):
         event =FileSystemEvent('startup',self.profile['local_root'],True)
@@ -489,7 +509,7 @@ class RainmakerEventHandler(FileSystemEventHandler):
 class Rainmaker():
    
     def __init__(self,config=None, auto_start=True ):
-
+        self.log=logging.getLogger('main')
         self.event_handlers = []
         self.config = config if config else  RainmakerConfig()
         self.profiles = self.config.profiles
@@ -507,27 +527,26 @@ class Rainmaker():
             
 
     def add_watch(self,key):
-        print 'Starting profile: %s' % key
+        self.log.info('Starting profile: %s' % key)
         profile = self.profiles[key]
 
-        log_levels = {
-            'warn':logging.WARN,
-            'info':logging.INFO,
-            'debug':logging.DEBUG,
-            False: logging.WARN 
-        }
-        log_level= 'warn' 
-        # set up logging to file
-        #log_format = logging.format( '%(asctime)s %(name)-12s %(levelname)-8s %(message)s' ) 
-        #watch_logger = logging.getLogger(profile)
-        #watch_logger.setLevel( log_levels[ profile['log_level'] ] )
-        #watch_logger.setFormatter( log_format )
+        #log_levels = {
+        #    'warn':logging.WARN,
+        #    'info':logging.INFO,
+        #    'debug':logging.DEBUG,
+        #    False: logging.WARN 
+        #}
+        #log_level= 'debug' 
+        ## set up logging to file
+        ##log_format = logging.format( '%(asctime)s %(name)-12s %(levelname)-8s %(message)s' ) 
+        ##watch_logger.setLevel( log_levels[ profile['log_level'] ] )
+        ##watch_logger.setFormatter( log_format )
         watch_logger=None
-        logging.basicConfig(
-            level   = log_levels[ log_level ],
-            format  = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-            datefmt = '%H:%M:%S',
-        )
+        #logging.basicConfig(
+        #    level   = log_levels[ log_level ],
+        #    format  = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+        #    datefmt = '%H:%M:%S',
+        #)
 
         #watch_logger.info( 'Loaded profile: ${profile}'.format(profile=profile) )
         profile['local_root'] = os.path.abspath(os.path.expanduser(profile['local_root']))
@@ -544,6 +563,8 @@ class Rainmaker():
         if profile.has_key('recursive'):
             rec_flag = bool(profile['recursive']) 
         self.observer.schedule( event_handler, profile['local_root'], recursive = rec_flag) 
+        
+        logging.info('started profile: %s' % key)
     
         if profile['cmds']['startup'] != '':
             event_handler.startup_cmd()
@@ -565,11 +586,11 @@ class Rainmaker():
         return messages
 
     def shutdown(self):
-        print "Shutting down FSwatcher"
+        self.log.info( "Shutting down FSwatcher")
         self.observer.stop()
         self.observer.unschedule_all()
         self.observer.join()
-        print "Shutting down thread and Fork pool"
+        self.log.info("Shutting down thread and Fork pool")
         for idx in self.event_handlers:
             idx.stop()
             #self.event_handlers[idx].stop()

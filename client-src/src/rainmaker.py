@@ -128,10 +128,15 @@ def create_profile(conf,args):
     conf.profiles[prf_f]=profile
     conf.save_profiles()
 
-    #Rainmaker.restart()
-
+log_levels = {
+    'warn':logging.WARN,
+    'info':logging.INFO,
+    'debug':logging.DEBUG,
+    False: logging.WARN 
+}
 
 conf=RainmakerConfig()
+
 
 parser = argparse.ArgumentParser(version='0.1',add_help=True)
 parser.add_argument('-d','--delete', action="append", dest='del_profiles', choices=conf.profiles.keys(), metavar='PROFILE',default=[])
@@ -140,6 +145,7 @@ parser.add_argument('--stop', action="append", dest='stop_profiles', choices=con
 parser.add_argument('-t','--test', action="append", dest='test_profiles', choices=conf.profiles.keys(), metavar='PROFILE',default=[])
 parser.add_argument('-a','--auto', action="store_true", dest='auto_start', default=True)
 parser.add_argument('-q','--quiet', action="store_true", dest='quiet',default=False)
+parser.add_argument('--log', action="store", dest='log_level', choices=log_levels.keys(), default='warn')
 
 # profile error?
 perr=None
@@ -209,7 +215,13 @@ else:
         perr = 'Unknown profile'
         parser.add_argument('-u', action="store",default=False,dest='update_profile',metavar='[PROFILE]', help='[PROFILE] [OPTIONS]')
 
+# process cli args
 args = parser.parse_args()
+
+#########
+# logging
+logger=RainmakerUtils.create_logger('main')
+
 print args
 
 ######
@@ -284,20 +296,20 @@ if args.create:
 
 if not args.auto_start:
     #start service with no active profiles
-    print 'Starting with no profiles'
+    logger.info('Starting with no profiles')
 
 try:
 
     rain = Rainmaker(conf,args.auto_start)
     for i in args.start_profiles:
-        print "Starting:\t%s" % i
+        logger.info("Starting profile:\t%s" % i)
         rain.add_watch(i)
 
     while True:
         time.sleep(2)
         msgs=  rain.messages()
         if msgs:
-            print msgs
+            logging.info(msgs)
 except KeyboardInterrupt:
     rain.shutdown()
 
