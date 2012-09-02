@@ -71,7 +71,39 @@ sudo apt-get install apparmor-utils
 Coming Soon
 ###Mac OSx:###
 Coming Soon
+##Client Usage##
+---
+Not all features are implemented
 
+usage: rainmaker.py [-h] [-v] [-d PROFILE] [--start PROFILE] [--stop PROFILE]
+                    [-t PROFILE] [-a] [-q] [--log {warn,info,debug,False}]
+                    [-c] [-l] [-u [PROFILE]]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -v, --version         show program's version number and exit
+  -d PROFILE, --delete PROFILE
+  --start PROFILE
+  --stop PROFILE
+  -t PROFILE, --test PROFILE
+  -a, --auto
+  -q, --quiet
+  --log {warn,info,debug,False}
+  -c                    [TYPE] [OPTIONS]
+  -l                    List all profiles or list settings for specicific
+                        profile
+  -u [PROFILE]          [PROFILE] [OPTIONS]
+---
+### Getting Started ###
+---
+#The first thing to do after installing the client is to create a profile. The
+#following command will gather the required information to create a profile.
+python ./rainmaker -c
+# once you have created a profile you can start up rainmaker and begin syncing your files
+# by default profiles are configured to automatically start syncing when you start rainmaker
+python ./rainmaker.py
+
+---
 ## Development Notes: ##
 * Unison allows multiple path statements in the command line!
     * This is important because it will allow us to update multiple files per connection

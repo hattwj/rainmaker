@@ -357,7 +357,6 @@ class RainmakerEventHandler(FileSystemEventHandler):
                     self.profile['cmds'][cmd_key][idx]=self.do_macro(item)
             # process single command
             else:
-
                 self.profile['cmds'][cmd_key] = self.do_macro(cmd_val)
 
         self.running = True
@@ -434,7 +433,7 @@ class RainmakerEventHandler(FileSystemEventHandler):
             
     """ Available client methods """
     def stop(self):
-        print 'stopping'
+        print 'stopping threads'
         self.running = False
         #self.threads_q.join()
         while True:
@@ -571,7 +570,8 @@ class Rainmaker():
 
     def remove_watch(self, profile): 
         for eh in self.event_handlers:
-            if eh['name'] == profile:
+            if eh.profile == profile:
+                self.log.info('Stopping profile:')
                 self.observer.unschedule(eh)
                 break 
 
@@ -591,8 +591,9 @@ class Rainmaker():
         self.observer.unschedule_all()
         self.observer.join()
         self.log.info("Shutting down thread and Fork pool")
-        for idx in self.event_handlers:
-            idx.stop()
+        for eh in self.event_handlers:
+            self.log.info('Stopping profile: %s' % eh.profile)
+            eh.stop()
             #self.event_handlers[idx].stop()
 if __name__ == "__main__":
 
