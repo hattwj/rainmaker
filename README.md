@@ -10,13 +10,16 @@ The UI is not yet fully functional, but feel free to poke around. To start the c
 * execute the following in a terminal:
 
 ~~~
+`
+#The first thing to do after installing the client is to create a profile. The
+#following command will gather the required information to create a profile.
+python ./rainmaker -c
 
-python ./watcher.py
-
+# once you have created a profile you can start up rainmaker and begin syncing your files
+# by default profiles are configured to automatically start syncing when you start rainmaker
+python ./rainmaker.py
+`
 ~~~
-
-
-
 
 **Be sure that you install the same version of unison on all clients and the server**
 
@@ -24,7 +27,7 @@ python ./watcher.py
 ### Ubuntu ###
 
 From a terminal run the following commands
-~~~
+`
 # Some day we might take care of these steps in an installer
 
 # Install unison and ssh-client
@@ -35,7 +38,7 @@ sudo pip install watchdog
 
 # Create a rainmaker only ssh-key
 ssh-keygen -f rainamker -t rsa -b 2048 -C "SSH Key for rainmaker"
-~~~
+`
 Now you should be ready to run rainmaker
 
 
@@ -48,13 +51,14 @@ Coming Soon
 ## Server Install: ##
 
 There isnt really anything to install on the server as far as rainmaker is concerned, but you do need to have unison and an openssh-server setup and ready to go.
+Server side changes will be supported soon.
 
 ### Ubuntu ###
 Tested on 12.04 Desktop
 ~~~
+`
 # Install software
 sudo apt-get install openssh-client openssh-server unison
-
 
 # Create rainmaker user to manage all sync connections
 sudo adduser rainmaker --disabled-password
@@ -63,9 +67,9 @@ sudo adduser rainmaker --disabled-password
 # See Client Install Section
 
 # Add SELinux/AppArmor restrictions for unison
+# not yet implemented, needed for untrusted clients
 sudo apt-get install apparmor-utils
-
-~~~
+`
 
 ###Windows:###
 Coming Soon
@@ -73,6 +77,7 @@ Coming Soon
 Coming Soon
 ##Client Usage##
 ---
+`
 Not all features are implemented
 
 usage: rainmaker.py [-h] [-v] [-d PROFILE] [--start PROFILE] [--stop PROFILE]
@@ -93,17 +98,8 @@ optional arguments:
   -l                    List all profiles or list settings for specicific
                         profile
   -u [PROFILE]          [PROFILE] [OPTIONS]
----
-### Getting Started ###
----
-#The first thing to do after installing the client is to create a profile. The
-#following command will gather the required information to create a profile.
-python ./rainmaker -c
-# once you have created a profile you can start up rainmaker and begin syncing your files
-# by default profiles are configured to automatically start syncing when you start rainmaker
-python ./rainmaker.py
+`
 
----
 ## Development Notes: ##
 * Unison allows multiple path statements in the command line!
     * This is important because it will allow us to update multiple files per connection
