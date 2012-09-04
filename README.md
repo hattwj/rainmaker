@@ -10,7 +10,7 @@ The UI is not yet fully functional, but feel free to poke around. To start the c
 * execute the following in a terminal:
 
 ~~~
-`
+
 #The first thing to do after installing the client is to create a profile. The
 #following command will gather the required information to create a profile.
 python ./rainmaker -c
@@ -18,7 +18,7 @@ python ./rainmaker -c
 # once you have created a profile you can start up rainmaker and begin syncing your files
 # by default profiles are configured to automatically start syncing when you start rainmaker
 python ./rainmaker.py
-`
+
 ~~~
 
 **Be sure that you install the same version of unison on all clients and the server**
