@@ -17,8 +17,8 @@ following command will gather the required information to create a profile.
 python ./rainmaker -c
 ~~~
 
-once you have created a profile you can start up rainmaker and begin syncing your files
-by default profiles are configured to automatically start syncing when you start rainmaker
+once you have created a profile you can start up rainmaker and begin syncing your files.
+By default profiles are configured to automatically start syncing when you start rainmaker
 ~~~
 python ./rainmaker.py
 ~~~
