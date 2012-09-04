@@ -27,7 +27,7 @@ python ./rainmaker.py
 ### Ubuntu ###
 
 From a terminal run the following commands
-`
+~~~
 # Some day we might take care of these steps in an installer
 
 # Install unison and ssh-client
@@ -38,7 +38,8 @@ sudo pip install watchdog
 
 # Create a rainmaker only ssh-key
 ssh-keygen -f rainamker -t rsa -b 2048 -C "SSH Key for rainmaker"
-`
+~~~
+
 Now you should be ready to run rainmaker
 
 
@@ -56,7 +57,7 @@ Server side changes will be supported soon.
 ### Ubuntu ###
 Tested on 12.04 Desktop
 ~~~
-`
+
 # Install software
 sudo apt-get install openssh-client openssh-server unison
 
@@ -69,17 +70,19 @@ sudo adduser rainmaker --disabled-password
 # Add SELinux/AppArmor restrictions for unison
 # not yet implemented, needed for untrusted clients
 sudo apt-get install apparmor-utils
-`
+~~~
 
 ###Windows:###
 Coming Soon
+
 ###Mac OSx:###
 Coming Soon
+
 ##Client Usage##
----
-`
+
 Not all features are implemented
 
+~~~
 usage: rainmaker.py [-h] [-v] [-d PROFILE] [--start PROFILE] [--stop PROFILE]
                     [-t PROFILE] [-a] [-q] [--log {warn,info,debug,False}]
                     [-c] [-l] [-u [PROFILE]]
@@ -98,7 +101,7 @@ optional arguments:
   -l                    List all profiles or list settings for specicific
                         profile
   -u [PROFILE]          [PROFILE] [OPTIONS]
-`
+~~~
 
 ## Development Notes: ##
 * Unison allows multiple path statements in the command line!
