@@ -9,8 +9,33 @@ The UI is not yet fully functional, but feel free to poke around. To start the c
 * The python-pip package makes installing yaml and watchdog a breeze
 * execute the following in a terminal:
 
+##Client Usage##
+
+Not all features are implemented
+
+~~~
+usage: rainmaker.py [-h] [-v] [-d PROFILE] [--start PROFILE] [--stop PROFILE]
+                    [-t PROFILE] [-a] [-q] [--log {warn,info,debug,False}]
+                    [-c] [-l] [-u [PROFILE]]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -v, --version         show program's version number and exit
+  -d PROFILE, --delete PROFILE
+  --start PROFILE
+  --stop PROFILE
+  -t PROFILE, --test PROFILE
+  -a, --auto
+  -q, --quiet
+  --log {warn,info,debug,False}
+  -c                    [TYPE] [OPTIONS]
+  -l                    List all profiles or list settings for specicific
+                        profile
+  -u [PROFILE]          [PROFILE] [OPTIONS]
 ~~~
 
+## Getting Started ##
+~~~
 #The first thing to do after installing the client is to create a profile. The
 #following command will gather the required information to create a profile.
 python ./rainmaker -c
@@ -78,30 +103,7 @@ Coming Soon
 ###Mac OSx:###
 Coming Soon
 
-##Client Usage##
 
-Not all features are implemented
-
-~~~
-usage: rainmaker.py [-h] [-v] [-d PROFILE] [--start PROFILE] [--stop PROFILE]
-                    [-t PROFILE] [-a] [-q] [--log {warn,info,debug,False}]
-                    [-c] [-l] [-u [PROFILE]]
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -v, --version         show program's version number and exit
-  -d PROFILE, --delete PROFILE
-  --start PROFILE
-  --stop PROFILE
-  -t PROFILE, --test PROFILE
-  -a, --auto
-  -q, --quiet
-  --log {warn,info,debug,False}
-  -c                    [TYPE] [OPTIONS]
-  -l                    List all profiles or list settings for specicific
-                        profile
-  -u [PROFILE]          [PROFILE] [OPTIONS]
-~~~
 
 ## Development Notes: ##
 * Unison allows multiple path statements in the command line!
