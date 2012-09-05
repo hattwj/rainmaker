@@ -151,7 +151,7 @@ class RainmakerData(collections.MutableMapping):
             if k in self.d:
                 self.d[k].subst_all()
             elif self.meta(k)['type']=='arr':
-                print 'subst for arr not implemented'
+                #print 'subst for arr not implemented'
                 next
             else:
                 self[k]=self.subst(self[k])
@@ -322,8 +322,8 @@ class RainmakerConfig(dict):
                 return result
         return None
 
-    def start(self, prf_f):
-        return 'Not implemented'
+ #   def start(self, prf_f):
+ #       return 'Not implemented'
 
     # Test config yaml file for misconfiguration and return results
     def test(self):
@@ -387,8 +387,8 @@ class RainmakerEventHandler(FileSystemEventHandler):
                      }
             self.msg_q.put( result )
             self.log.info('finished cmd: %s' % cmd)
-            if result['stderr']:
-                self.log.debug(result['stderr']) 
+            #if result['stderr']:
+            #    self.log.debug(result['stderr']) 
 
     """EventHandler"""
     def cmd_create(self, event):
@@ -433,9 +433,8 @@ class RainmakerEventHandler(FileSystemEventHandler):
             
     """ Available client methods """
     def stop(self):
-        print 'stopping threads'
+        self.log.info( 'stopping threads' )
         self.running = False
-        #self.threads_q.join()
         while True:
             try:
                 t =  self.threads_q.get_nowait()
@@ -526,6 +525,9 @@ class Rainmaker():
             
 
     def add_watch(self,key):
+        if not key in self.profiles:
+            self.log.error('unknown profile %s' % key)
+
         self.log.info('Starting profile: %s' % key)
         profile = self.profiles[key]
 

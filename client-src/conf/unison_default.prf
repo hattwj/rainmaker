@@ -23,3 +23,4 @@ backupdir = ?remote_backups?
 maxbackups = 10
 batch = true
 auto = true
+confirmbigdel = false
