@@ -49,19 +49,6 @@ import collections
 
 import getpass
 class RainmakerUtils():
-    @staticmethod
-    def create_logger(name):
-        formatter = logging.Formatter(
-            fmt='%(asctime)s - %(levelname)s - %(module)s - %(message)s'
-        )
-    
-        handler = logging.StreamHandler()
-        handler.setFormatter(formatter)
-    
-        logger = logging.getLogger(name)
-        logger.setLevel(logging.DEBUG)
-        logger.addHandler(handler)
-        return logger
     
     # find path of app
     @staticmethod
@@ -122,9 +109,9 @@ class RainmakerDataCollection(collections.MutableMapping):
 import re
 # dict with keys - type,val,desc,default
 class RainmakerData(collections.MutableMapping):
-    read_only=False
 
     def __init__(self,data=None):
+        self.log = logging.getLogger('data')
         self.re = re.compile('\?([a-z_]+)\?')
         self.data=data or self.new_data()
         self.d={}
@@ -132,8 +119,6 @@ class RainmakerData(collections.MutableMapping):
         for k in self.data['val']:
             if data['val'][k]['type']=='rainmaker_data':
                 self.d[k]=RainmakerData(self.data['val'][k])
-    
-    #add def __keys__?
 
     # set val=default for all keys recursively
     def set_default(self):
@@ -205,7 +190,9 @@ class RainmakerData(collections.MutableMapping):
             #validate new val
             if self.validate(self.data['val'][key],value):
                 self.data['val'][key]['val']=value
-    
+            else:
+                self.log.error('invalid data: %s - %s' % ( str(key), str(value) ))
+
     def new_data(self,val=None):
         return {'val':val,'type':'rainmaker_data','desc':None,'default':None}
     
@@ -238,7 +225,9 @@ class RainmakerData(collections.MutableMapping):
         elif q['type']=='localpath':
             return len(str(val))>0
         elif q['type']=='bool':
-            if val == True or val.lower()=='true' or val.lower()=='t':
+            if val == False or val == True: 
+                return True
+            if val.lower()=='false' or val.lower()=='f' or val.lower()=='true' or val.lower()=='t':
                 return True
         return False
     
@@ -255,10 +244,12 @@ class RainmakerConfig(dict):
     profiles = {}
     templates = {}
     profiles_data={}
-    def __init__(self):
-        
+    def __init__(self):        
+        self.log = logging.getLogger('config')
         self.home = os.path.expanduser('~')
         self.rain_dir = os.path.join(self.home,'.rainmaker')
+        self.log_f='rainmaker.log'
+        self.log_path=os.path.join(self.rain_dir,self.log_f)
         self.unison_dir = os.path.join(self.home,'.unison')
         self.profiles_f = 'profiles.yml'
         self.profiles_path=os.path.join(self.rain_dir,self.profiles_f)
@@ -275,7 +266,7 @@ class RainmakerConfig(dict):
 
         if not os.path.isfile(self.config_path):
             if not os.path.isfile(self.config_path_ro):
-                print 'Unable to find config file'
+                self.log.error( 'Unable to find config file' )
                 sys.exit()
             self.config_path=self.config_path_ro
 
@@ -303,10 +294,35 @@ class RainmakerConfig(dict):
         self.config_data.__setitem__( key, val)
 
     def save_profiles(self):
-        print self.profiles_path
         f = open(self.profiles_path,'w')
         yaml.safe_dump(self.profiles_data, f)
-        return f.close()
+        f.close()
+        self.log.info('Changes saved to: %s ' % self.profiles_path)
+        return
+
+    def delete_profile(self,k):
+        if not k in self.profiles:
+            self.log.error('Unknown profile, can\'t delete: %s' % k)
+            return
+        
+        p=self.profiles.pop(k)
+
+        do_prf_del=p['profile_type']=='rainmaker_unison'
+
+        if do_prf_del:
+            path =  os.path.join(self.unison_dir, '%s.prf' % p['prf'] )
+            if os.path.isfile(path):
+                self.log.info( 'Deleting unison profile: %s' % path )
+                os.remove(path)
+            else:
+                self.log.info( 'Unable to delete unison profile - %s' % path )
+        did_delete=True
+        self.log.info('Removed profile: %s' % k)
+
+        if did_delete:
+            self.save_profiles()
+        else:
+            self.log.warn( 'No changes to save' )
 
     def find(self,fname):
         paths=[
@@ -322,23 +338,23 @@ class RainmakerConfig(dict):
                 return result
         return None
 
- #   def start(self, prf_f):
- #       return 'Not implemented'
-
     # Test config yaml file for misconfiguration and return results
     def test(self):
          # return false if everything passed
          # return array of error codes on fail 
+         self.log.warn('profile testing not implemented')
          pass
                 
 class RainmakerEventHandler(FileSystemEventHandler):
-    def __init__(self, conf, profile, msg_q, xlog):
+    def __init__(self, conf, profile, msg_q, name):
         self.cmd_q = Queue()
         self.threads_q = Queue()
         self.msg_q = msg_q
         self.conf = conf
         self.profile = profile
-        self.log = logging.getLogger('main')
+        self.log = logging.getLogger('eh_%s' % name)
+        self.name = name
+
         # Fill out nested macros (max 5 levels deep)
         for i in range(1,5):
             found_macro = False
@@ -438,7 +454,7 @@ class RainmakerEventHandler(FileSystemEventHandler):
         while True:
             try:
                 t =  self.threads_q.get_nowait()
-                print t.name
+                self.log.info('Stopping thread: %s' % t.name)
                 t.join()
             except Empty:
                 break
@@ -522,7 +538,9 @@ class Rainmaker():
         for k in self.profiles:
             if self.profiles[k]['auto_start']==True:
                 self.add_watch(k)
-            
+
+        if not self.event_handlers:            
+            self.log.warn('No running profiles')
 
     def add_watch(self,key):
         if not key in self.profiles:
@@ -531,33 +549,15 @@ class Rainmaker():
         self.log.info('Starting profile: %s' % key)
         profile = self.profiles[key]
 
-        #log_levels = {
-        #    'warn':logging.WARN,
-        #    'info':logging.INFO,
-        #    'debug':logging.DEBUG,
-        #    False: logging.WARN 
-        #}
-        #log_level= 'debug' 
-        ## set up logging to file
-        ##log_format = logging.format( '%(asctime)s %(name)-12s %(levelname)-8s %(message)s' ) 
-        ##watch_logger.setLevel( log_levels[ profile['log_level'] ] )
-        ##watch_logger.setFormatter( log_format )
-        watch_logger=None
-        #logging.basicConfig(
-        #    level   = log_levels[ log_level ],
-        #    format  = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-        #    datefmt = '%H:%M:%S',
-        #)
-
-        #watch_logger.info( 'Loaded profile: ${profile}'.format(profile=profile) )
         profile['local_root'] = os.path.abspath(os.path.expanduser(profile['local_root']))
         
         profile.subst_all()
 
         if not os.path.isdir(profile['local_root']):
+            self.log.info('creating dir: %s' % profile['local_root'])
             os.mkdir(profile['local_root'])
 
-        event_handler = RainmakerEventHandler( self.config, profile, self.msg_q, watch_logger )
+        event_handler = RainmakerEventHandler( self.config, profile, self.msg_q, key )
         self.event_handlers.append( event_handler )
 
         rec_flag = True
@@ -565,15 +565,15 @@ class Rainmaker():
             rec_flag = bool(profile['recursive']) 
         self.observer.schedule( event_handler, profile['local_root'], recursive = rec_flag) 
         
-        logging.info('started profile: %s' % key)
+        logging.info('Started profile: %s' % key)
     
         if profile['cmds']['startup'] != '':
             event_handler.startup_cmd()
 
-    def remove_watch(self, profile): 
+    def remove_watch(self, k): 
         for eh in self.event_handlers:
-            if eh.profile == profile:
-                self.log.info('Stopping profile:')
+            if eh.name == k:
+                self.log.info('Stopping profile: %s' % k)
                 self.observer.unschedule(eh)
                 break 
 
@@ -594,24 +594,6 @@ class Rainmaker():
         self.observer.join()
         self.log.info("Shutting down thread and Fork pool")
         for eh in self.event_handlers:
-            self.log.info('Stopping profile: %s' % eh.profile)
+            self.log.info('Stopping profile: %s' % eh.name)
             eh.stop()
-            #self.event_handlers[idx].stop()
-if __name__ == "__main__":
 
-    try:
-        profile = 'debug'
-
-        if len(sys.argv)>1:
-            profile = sys.argv[1]
-
-        rain = Rainmaker(profile)
-        
-        while True:
-            time.sleep(2)
-            msg=rain.messages()
-            if msg:
-                print msg
- 
-    except KeyboardInterrupt:
-        rain.shutdown()
