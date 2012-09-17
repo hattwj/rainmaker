@@ -112,3 +112,8 @@ Coming Soon
 * Unison allows multiple path statements in the command line!
     * This is important because it will allow us to update multiple files per connection
 
+##References##
+*[Unison][www.cis.upenn.edu/~bcpierce/unison/]
+*[OpenSSH][http://www.openssh.org/]
+*[Watchdog][http://packages.python.org/watchdog/]
+*[Paramiko][http://www.lag.net/paramiko/]
