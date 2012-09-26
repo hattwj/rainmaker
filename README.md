@@ -1,13 +1,14 @@
 #rainmaker #
 ## About ##
 
-Rainmaker is a qt4/python wrapper for unison that aims to provide a simple way of providing a bidirectional file synchronization service. Rainmaker uses the python watchdog library to gain cross platform FSMonitoring capabilities. Because of this you only need to do a full sync when you start rainmaker. Afterwards the watchdog filesystem monitor will track the changes that occur within your sync directory and only invoke unison to update them when there is a change.
+Rainmaker aims to provide a simple bidirectional file synchronization service by using common programs already installed on most computers. Rainmaker uses the python watchdog library to gain cross platform FSMonitoring capabilities, and utilizes Unison for file transfer. Because of the watchdog library you only need to do a full sync when you start rainmaker. Afterwards the watchdog filesystem monitor will track the changes that occur within your sync directory and only invoke unison to update them when there is a change.
 
-The UI is not yet fully functional, but feel free to poke around. To start the client you first need to:
+The UI is not yet functional, but feel free to poke around. To start the client you first need to:
 
 * Make sure you have unison, an ssh-client, python, python-watchdog, python-yaml installed
 * The python-pip package makes installing yaml and watchdog a breeze
 
+A web based interface is in development, more information coming soon.
 
 ## Getting Started ##
 
@@ -111,3 +112,8 @@ Coming Soon
 * Unison allows multiple path statements in the command line!
     * This is important because it will allow us to update multiple files per connection
 
+##References##
+* [Unison] (http://www.cis.upenn.edu/~bcpierce/unison/)
+* [OpenSSH] (http://www.openssh.org/)
+* [Watchdog] (http://packages.python.org/watchdog/)
+* [Paramiko] (http://www.lag.net/paramiko/)
