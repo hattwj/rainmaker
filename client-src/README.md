@@ -6,6 +6,6 @@ TODO items:
 - GUI for starting stopping profiles
 - GUI for viewing Events
 - Regex for processing pipe output for errors/success/conflicts etc...
-- watcher2 logfile creation
+- watcher logfile creation
 - Linux based installer script
 
