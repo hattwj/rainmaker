@@ -15,31 +15,25 @@ This file is part of Rainmaker.
     You should have received a copy of the GNU General Public License
     along with Rainmaker.  If not, see <http://www.gnu.org/licenses/>.
 """
-import logging
 import os
-import re
 import sys
-
 from subprocess import call
 import datetime
-
-import lib._ssh
-import sys
 import time
-import logging
+import argparse
 
-from lib._ssh import SSHConnInfo
-from lib._fsmon import Tail
-import lib._conf as conf
+import app
+from app.lib._ssh import SSHConnInfo
+from app.lib._fsmon import Tail
 
-def run():
-    conn = SSHConnInfo.current()
-    if 'menu' in sys.argv:
-        conn.port = conf.menu_port
+def run(user,mode,port=None):
+    if port is None:
+        port = app.lib._ssh.SSHConnInfo.current_port()
+    conn = app.lib._ssh.SSHConnInfo(user, port, mode)
 
-    if conn.port == conf.menu_port:
+    if conn.port == app.config.menu_port or mode == 'menu':
         run_menu(conn)
-    elif conn.port == conf.sync_port:
+    elif conn.port == app.config.sync_port:
         run_subprocess(conn)
     else:
         RuntimeError('unkmown ssh port,')
@@ -65,9 +59,17 @@ def run_menu(conn):
                 print line
             f.close()
 
-if __name__ == "__main__":
 
-    try:
-        run()
-    except KeyboardInterrupt:
-        print 'Bye!'
+
+parser = argparse.ArgumentParser(version='0.2012.09.10',add_help=True)
+parser.add_argument('--user', action="store", required=True)
+parser.add_argument('--mode', action="store", required=True)
+parser.add_argument('--port', action="store", type=int)
+args = parser.parse_args()
+
+
+
+try:
+    run(args.user, args.mode, args.port)
+except KeyboardInterrupt:
+    print 'Bye!'

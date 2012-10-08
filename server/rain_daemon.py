@@ -17,43 +17,52 @@ This file is part of Rainmaker.
 """
 
 """
-    Monitor server files
+    rain_daemon.py
+    Monitor user data files and record events to log files for each user
 """
 
 import os
 import time
+import base64
 
 # Watchdog
 from watchdog.observers import Observer
+#from watchdog.events import FileSystemEventHandler
 
-import lib._log as _log
-import lib._conf as _conf
-from lib._fsmon import RainmakerEventHandler
+import app
+import app.lib._log as _log
+from app.lib._fsmon import RainmakerEventHandler
 
 
-def fs_event(event,eh):
+def user_fs_event(self,event):
+    msg = "SRC=%s" % base64.standard_b64encode(event.src_path_rel)
+
     if event.event_type == 'moved':
-        msg = "SRC=%s DEST=%s" % (eh.src_file_rel(event),eh.dest_file_rel(event) )  
-    else:
-        msg = "SRC=%s" % eh.src_file_rel(event)
+        msg += " DEST=%s" % base64.standard_b64encode(event.dest_path_rel)  
+    
+    self.log.info( "EVENT=%s %s" % (event.event_type, msg) )
 
-    eh.log.info( "EVENT=%s %s" % (event.event_type, msg) )
-
-base_path = _conf.base_path
-xstyle=_conf.daemon_log_style
+base_path = app.config.data_path
+xstyle = app.config.daemon_log_style
 
 observer = Observer()
 _log.init_logger(style=xstyle)
+
+
+
 #iterate through accounts, add monitors
 for p_rel in os.listdir(base_path):
     p=os.path.join(base_path, p_rel)
-    watch_path = os.path.join(p,'sync') 
+    watch_path = os.path.join(p,'sync')
+    
+    if not os.path.isdir(watch_path):
+        os.mkdir(watch_path)
+
     log_path = os.path.join(p,'file_status.log') 
     log_f = _log.init_file_logger(fpath=log_path, name=p_rel, style=xstyle)
-    eh = RainmakerEventHandler(watch_path)
+    eh = RainmakerEventHandler(watch_path,ignore_patterns=app.config.ignore_patterns)
     eh.log = log_f
-    eh.add_callback(fs_event)
-
+    eh.add_callback(user_fs_event)
     observer.schedule(eh, watch_path, recursive=True)
 
 observer.start()

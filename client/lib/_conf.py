@@ -203,7 +203,9 @@ class RainmakerConfig(dict):
         self.profiles_path=os.path.join(self.rain_dir,self.profiles_f)
         self.config_f = 'config.yml'
         self.config_path=os.path.join(self.rain_dir,self.config_f)
-        self.app_dir = os.path.abspath(os.path.join(sys.path[0],'..'))
+        app_dir = os.path.join(os.path.dirname(__file__),'..')
+        
+        self.app_dir = os.path.abspath(app_dir)
         self.app_conf_dir=os.path.join(self.app_dir,'conf')
         self.config_path_ro=os.path.join(self.app_dir,'conf',self.config_f)
                
@@ -285,11 +287,4 @@ class RainmakerConfig(dict):
             if os.path.isfile(result):
                 return result
         return None
-
-    # Test config yaml file for misconfiguration and return results
-    def test(self):
-         # return false if everything passed
-         # return array of error codes on fail 
-         self.log.warn('profile testing not implemented')
-         pass
 

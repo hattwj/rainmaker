@@ -1,0 +1,25 @@
+## data_path ##
+# Path to base directory where all data for all users will be stored
+# default = <home directory> of whoever executed the daemon process
+data_path: null
+
+## menu_port ##
+# SSH port to expect requests for server side file system events to come from
+# default is 248
+menu_port: 248
+
+## sync_port ##
+# SSH port to expect normal request for file transfers and syncronization to come from
+# default is 22
+sync_port: 22
+
+## authorized_keys_file
+# 
+
+## exec_daemon_user
+#
+
+## deamon_ignore_patterns
+# ignore fs events with these regex patterns
+ignore_patterns:
+    - '*.unison.tmp'

@@ -16,16 +16,33 @@ This file is part of Rainmaker.
     along with Rainmaker.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import sys
 import os
+import argparse
+import app
 
 
-root=os.path.dirname(os.path.dirname( os.path.realpath(__file__)))
+def do_config():
+    print '''
+        Not implemented
+        Setting up config file for rainmaker server
+            in conf/config.yml
+    '''
+    q = [
+        'port',
+        'menu_port',
+        'data_dir',
+        'authorized_keys_file'
+    ]
 
-sync_port = 22
-menu_port = 248
-base_path = '/home/rainmaker'
-auth_keys_path = os.path.join( base_path, '.ssh', 'authorized_keys')
-log_path = os.path.join( root, 'log', 'rainmaker.log')
-daemon_log_style='%(asctime)s %(name)-12s: %(levelname)-8s %(message)s'
+    port = raw_input('SSH port:') 
+    port = raw_input('SSH menu port:') 
+
+parser = argparse.ArgumentParser(version=app.version, add_help=True)
+parser.add_argument('config', nargs='?', action="store")
+args = parser.parse_args()
+
+print args
+
+if not args.config is None:
+    do_config()
 

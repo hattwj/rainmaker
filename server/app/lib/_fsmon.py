@@ -35,7 +35,7 @@ from logging import INFO, basicConfig
 # Watchdog
 from watchdog.observers import Observer
 #from watchdog.events import LoggingEventHandler
-from watchdog.events import FileSystemEventHandler
+from watchdog.events import PatternMatchingEventHandler
 from watchdog.events import FileSystemEvent
 
 # Queue imports for different python versions
@@ -128,44 +128,29 @@ class Tail(object):
         else:
             return None
 
-class RainmakerEventHandler(FileSystemEventHandler):
-    def __init__(self,  base_path):
-        self.base_path = base_path
+class RainmakerEventHandler(PatternMatchingEventHandler):
+    def __init__(self,  root, patterns=None, ignore_patterns=None, ignore_directories=False, case_sensitive=False):
+        self.root = root
         self.callbacks = []
+        super(RainmakerEventHandler,self).__init__( patterns=patterns, ignore_patterns=ignore_patterns, ignore_directories=ignore_directories, case_sensitive=case_sensitive)
 
     """EventHandler"""
-    def event_handler(self, event):
+    def on_any_event(self, event):
+        if hasattr(event,'src_path'):
+            print 99
+            event.src_path_rel = self.rel_path(event.src_path)
+        if hasattr(event, 'dest_path'):
+            event.dest_path_rel = self.rel_path(event.dest_path)
         for func in self.callbacks:
-            func(event,self)
+            func(self,event)
 
     def add_callback(self,func):
         self.callbacks.append(func)
-
-    """ File System Events """
-    def on_moved(self, event):
-        self.event_handler(event)
-
-    def on_created(self, event):
-        self.event_handler(event)
-
-    def on_deleted(self, event):
-        self.event_handler(event)
-
-    def on_modified(self, event):
-		self.event_handler(event)
     
-    """ Available Event properties """
-
+    """ Available methods """
     # return event file path relative to root
-    def src_file_rel(self,event):
-        return quote( event.src_path.replace(self.base_path+os.sep,'') )  
-
-    def dest_file_rel(self,event):
-        return quote( event.dest_path.replace(self.base_path+os.sep,'') )
-     
-    def event_type(self,event):
-        return event.event_type
-
+    def rel_path(self,path):
+        return quote( path.replace(self.root+os.sep,'') )  
 
 class Rainmaker():
    

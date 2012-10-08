@@ -17,9 +17,12 @@ This file is part of Rainmaker.
 """
 import sys
 import os
+import re
+import datetime
 import time
 import logging
 import yaml
+import base64
 
 # threaded shell execution
 from subprocess import PIPE, Popen
@@ -37,6 +40,7 @@ from watchdog.observers import Observer
 #from watchdog.events import LoggingEventHandler
 from watchdog.events import FileSystemEventHandler
 from watchdog.events import FileSystemEvent
+from watchdog.events import FileSystemMovedEvent
 
 # Queue imports for different python versions
 try:
@@ -46,52 +50,110 @@ except ImportError:
 
 #import copy
 
-import getpass
 from _conf import RainmakerConfig
+import _ssh
 
-class RainmakerLoggingEventHandler(FileSystemEventHandler):
-    def __init__(self, log, base_path):
-        self.log = log
-        self.base_path = base_path
+class Tail(object):
+    "monitor a file for new lines"
+    def __init__(self,fin):
+        self.fin = fin
+        self.running = False
+        self.where = None
 
-    """EventHandler"""
-    def log_event(self, event):
-        if event.event_type == 'moved':
-            msg = "SRC=%s DEST=%s" % (self.src_file_rel(event),self.dest_file_rel(event) )  
-        else:
-            msg = "SRC=%s" % self.src_file_rel(event)
 
-        self.log.info( "EVENT=%s %s" % (event.event_type, msg) )
-
-    """ File System Events """
-    def on_moved(self, event):
-        self.log_event(event)
-
-    def on_created(self, event):
-        self.log_event(event)
-
-    def on_deleted(self, event):
-        self.log_event(event)
-
-    def on_modified(self, event):
-		self.log_event(event)
-    
-    """ Available Event properties """
-
-    # return event file path relative to root
-    def src_file_rel(self,event):
-        return quote( event.src_path.replace(self.base_path+os.sep,'') )  
-
-    def dest_file_rel(self,event):
-        return quote( event.dest_path.replace(self.base_path+os.sep,'') )
+    def readlines_then_tail(self):
+        "Iterate through lines and then tail for further lines."
+        self.running = True
+        while self.running==True:
+            line = self.fin.readline()
+            if line:
+                line = self.filter(line)
+                if line:
+                    yield line
+            else:
+                self.tail()
      
-    def event_type(self,event):
-        return event.event_type
+    def tail(self,break_on_empty=False):
+        "Listen for new lines added to file."
+        while self.running==True:
+            self.where = self.fin.tell()
+            print 55
+            line = self.fin.readline()
+            print 66
+            if not line:
+                self.fin.seek(self.where)
+                if break_on_empty:
+                    break
+                time.sleep(1)
+            else:
+                line = self.filter(line)
+                if line:
+                    yield line
 
+    def filter(self,line):
+        "replace this function to provide custom formatting"
+        "returning False prevents the line from yielding"
+        return line
+
+    def new_lines(self):
+        "yield newlines and return"
+        self.running = True
+        for line in self.tail(break_on_empty=True):
+            yield line
+    
+    @staticmethod
+    def get_log_filter(filter_type='ts',**kwargs):
+        'returns function for filtering the file lines'
+        
+        def log_ts_filter(line):
+            "func for filtering log lines by timestamp"
+            m = props['re_line'].match(line)
+            print line
+            
+            if not m:
+                return False
+            try:
+                print m.groups()
+                ts = datetime.datetime.strptime(m.group(1), "%Y-%m-%d %H:%M:%S,%f")
+            except ValueError as e:
+                print 'no match'
+                return false            
+             
+            if filter_type == 'groups':
+                line = m.groups()
+
+            if props['min_date'] is None:
+                return line
+            elif ts > props['min_date']:
+                return line
+            else:
+                return False
+        
+        "properties"
+        str_min_ts = '2012-09-20 08:08:08,123'
+        p_ts = '(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})'
+        p_ts += '\s+([a-zA-Z0-9]+)'
+        p_ts += '\s+:\s+[a-zA-Z0-9]+\s+'
+        p_ts += '\s+EVENT=([a-zA-Z0-9]+)'
+        p_ts += '\s+SRC=([a-zA-Z0-9\+\/]+={0,3})'
+        p_ts += '(?:\s+DEST=)?([a-zA-Z0-9\/\+]+={0,3})?'
+
+        props={
+            'filter_type':'ts',
+            're_line' : re.compile("^%s" % p_ts ),
+            'min_date' : datetime.datetime.strptime(str_min_ts, "%Y-%m-%d %H:%M:%S,%f")
+        }
+        
+        for k in kwargs:
+            props[k] = kwargs[k]
+
+        return log_ts_filter
 
 
 class RainmakerEventHandler(FileSystemEventHandler):
-    def __init__(self, conf, profile, msg_q, name):
+
+    def init2(self, conf, profile, msg_q, name):
+        
         self.cmd_q = Queue()
         self.threads_q = Queue()
         self.msg_q = msg_q
@@ -124,19 +186,67 @@ class RainmakerEventHandler(FileSystemEventHandler):
         self.start_threads()
 
     def start_threads(self):
-        
+        target = self.ssh_worker 
         for i in range( int(self.profile['max_threads']) ):
-            t = Thread(target=self.cmd_worker)
+            t = Thread(target=target)
             t.daemon = True
             t.start()
             self.threads_q.put( t )
-    # run
+            target = self.cmd_worker
+
+    # Listen on server for fs events
+    def ssh_worker(self):
+        
+        opts={
+            'port' : int(self.profile['port_menu']),
+            'user' : self.profile['user'],
+            'host' : self.profile['address'],
+            'private_key' : self.profile['ssh_key_path']
+        }
+        
+        ln_filter=Tail.get_log_filter('groups',min_date=None)
+        
+        c = _ssh.Client(**opts)
+        
+        c.connect()
+        c.list()
+        while self.running == True:
+            time.sleep(1) 
+            for line in c.new_lines():
+
+                m = ln_filter(line)
+                if not m:
+                    continue
+                                
+                dest_path = None
+                src_path = None
+                event = None
+
+                if len(m) >=4:
+                    src_path = base64.standard_b64decode(m[3])
+                    src_path = os.path.join(self.profile['local_root'],src_path)
+                    event =FileSystemEvent(m[2], src_path ,True)
+
+                if len(m) >=5 and not m[4] is None:
+                    dest_path = base64.standard_b64decode(m[3])
+                    dest_path = os.path.join(self.profile['local_root'],dest_path)
+                    event =FileSystemMovedEvent(src_path, dest_path ,True)
+                
+
+
+                if not event is None: 
+                    self.cmd_create(event)
+        self.log.info( 'ssh_worker shutting down' )
+        if c.running:
+            c.close()
+
+    # Thread to run command queue
     def cmd_worker(self):
         while self.running==True:
-            time.sleep(1)
             try:
                 cmd =  self.cmd_q.get_nowait()
             except Empty:
+                time.sleep(1)
                 continue
             self.log.info('exec cmd: %s' % cmd)
             s_cmd = shlex.split(cmd) 
@@ -148,13 +258,16 @@ class RainmakerEventHandler(FileSystemEventHandler):
                         'cmd':cmd
                      }
             self.msg_q.put( result )
-            self.log.info('finished cmd: %s' % cmd)
-            #if result['stderr']:
-            #    self.log.debug(result['stderr']) 
+            self.log.debug('finished cmd: %s' % cmd)
 
     """EventHandler"""
     def cmd_create(self, event):
         self.log.debug('event fired: %s' % event.event_type)
+
+        if event.src_path.endswith('.unison.tmp'):
+            self.log.debug('Ignoring event: %s : %s' % (event.event_type, event.src_path))
+            return
+
         #Start building command
         if self.profile['use_cmd_all'] and event.event_type != 'startup':
             cmd = self.profile['cmds']['all']
@@ -163,7 +276,7 @@ class RainmakerEventHandler(FileSystemEventHandler):
         
         # use base if none exists 
         if cmd == '' or cmd is None:
-            self.log.warn( 'no command for event: %s' % event.event_type)
+            self.log.debug( 'no command for event: %s' % event.event_type)
             return
         # process command list
         if isinstance(cmd, list): 
@@ -225,9 +338,6 @@ class RainmakerEventHandler(FileSystemEventHandler):
     """ Available Event properties """
     def root(self,event):
         return self.profile['local_root'] 
-
-    def src_dir_rel(self,event):
-        return '' 
     
     def src_dir_full(self,event):
         return quote( event.src_path )
@@ -236,33 +346,9 @@ class RainmakerEventHandler(FileSystemEventHandler):
     def src_file_rel(self,event):
         return event.src_path.replace(self.profile['local_root']+os.sep,'')  
 
-    def src_file_full(self,event):
-        return ''
-
-    def src_file_name(self,event):
-        return ''
-
-    def src_file_type(self,event):
-        return ''
-
-    def dest_dir_rel(self,event):
-        return ''
-
-    def dest_dir_full(self,event):
-        return ''
-
     def dest_file_rel(self,event):
         return event.dest_path.replace(self.profile['local_root']+os.sep,'')  
-    
-    def dest_file_full(self,event):
-        return ''
-    
-    def dest_file_name(self,event):
-        return ''
 
-    def dest_file_type(self,event):
-        return ''
-    
     def event_type(self,event):
         return event.event_type
 
@@ -302,8 +388,9 @@ class Rainmaker():
         if not os.path.isdir(profile['local_root']):
             self.log.info('creating dir: %s' % profile['local_root'])
             os.mkdir(profile['local_root'])
-
-        event_handler = RainmakerEventHandler( self.config, profile, self.msg_q, key )
+        patterns=['*.unison.tmp']     
+        event_handler = RainmakerEventHandler()
+        event_handler.init2( self.config, profile, self.msg_q, key )
         self.event_handlers.append( event_handler )
 
         rec_flag = True

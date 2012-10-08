@@ -83,6 +83,7 @@ templates:
                 default: 22
                 type: int
                 desc: 'server ssh port'
+            port_menu: {default: 248, desc: server ssh port for listing fs events, type: int, val: null}
             address:
                 val: null
                 default: localhost 

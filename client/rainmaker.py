@@ -16,24 +16,26 @@ This file is part of Rainmaker.
     along with Rainmaker.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import _lib
+import lib._log
+import lib._conf
+import lib._cli
 
 if __name__ == "__main__":
     #########
-    # logging
-    logger = _lib._log.init_logger()
+    # start logging
+    logger = lib._log.init_logger()
     
     #########
-    # config
-    conf= _lib._conf.RainmakerConfig()
+    # loaf config
+    conf= lib._conf.RainmakerConfig()
     
     #################
-    # logging to file
-    _lib._log.init_file_logger(conf.log_path)
+    # start logging to file
+    lib._log.init_file_logger(conf.log_path)
     
     #################
-    # command line arguments
-    parser = _lib._cli.init_parser(conf)
+    # process command line arguments
+    parser = lib._cli.init_parser(conf)
     args = parser.parse_args()
-    _lib._cli.process_args(conf,args)
+    lib._cli.process_args(conf,args)
 

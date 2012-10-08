@@ -18,6 +18,7 @@ This file is part of Rainmaker.
 
 import os
 import re
+import getpass
 
 
 home = os.path.expanduser('~')
@@ -41,7 +42,7 @@ def which(program):
     return None
     
 def cmd_unison():
-    return RainmakerUtils.which('unison')
+    return which('unison')
 
 def cmd_current_user():
     return getpass.getuser()

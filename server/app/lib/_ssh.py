@@ -21,10 +21,9 @@ import re
 import sys
 
 from _user import User
+import _conf
 
-
-# modified in __init__.py
-authorized_keys_path = '/home/rainmaker/.ssh/authorized_keys'
+User.base_path = _conf.data_path
 
 class SSHConnInfo(object):
     "hold information regarding an ssh connection"
@@ -35,7 +34,7 @@ class SSHConnInfo(object):
         self.user = User.find_by_name(name)
 
     @staticmethod
-    def current():
+    def current_port():
         "return info about current connection"
         conn_info = os.environ['SSH_CONNECTION']
         port_re = re.compile('([0-9]+)$')
@@ -48,61 +47,94 @@ class SSHConnInfo(object):
             port = int(g)
             break
 
-        user_id = sys.argv[1]
-        mode = sys.argv[2]
+        return port
 
-        conn = SSHConnInfo(name=user_id,port=port, mode=mode)
-        return conn
+class AuthorizedKeys(object):
+    def __init__(self,path):
+        "init"
+        self.path = path
+        self.r = re.compile('^(ssh-dss|ssh-rsa) ([A-Za-z0-9\/\+]+={0,3}) ?([A-Za-z0-9\/\+@]+)?')
+   
 
-
-def parse_key(val,user):
-    p3=re.compile('^(ssh-dss|ssh-rsa) ([A-Za-z0-9\/\+]+={0,3}) ?([A-Za-z0-9\/\+@]+)?')
-    m=p3.findall(val)
+    def parse_key(self,val):
+        note = None
+        
+        m=self.r.findall(val)
+        
+        if not m:
+            raise RuntimeError('malformed or unsupported key')
     
-    if not m:
-        raise RuntimeError('malformed or unsupported key')
-
-    if not m[0][0]:
-        raise RuntimeError('missing key type')
+        if not m[0][0]:
+            raise RuntimeError('missing key type')
+        
+        if not m[0][1]:
+            raise RuntimeError('missing key')
+        
+        if m[0][2]:
+            note=m[0][2]
+        
+        keytype=m[0][0]
+        pubkey=m[0][1]
     
-    if not m[0][1]:
-        raise RuntimeError('missing key')
+        if len(pubkey)%4 < 0:
+            raise RuntimeError('key is invalid base 64')
+        
+        if 30 > len(pubkey):
+            raise RuntimeError('key too short')
+        
+        if 1000 < len(pubkey):
+            raise RuntimeError('key too long') 
     
-    if not m[0][2]:
-        note = ''
-        print('missing note')
-    else:
-        note=m[0][2]
+        result = { 
+            'key_type': keytype,
+            'pub_key' : pubkey,
+            'note' : note,
+            'opts' : [],
+            'command' : None
+            }
+        return result
     
-    keytype=m[0][0]
-    pubkey=m[0][1]
+    def backup_keys(self):
+        pass
+        print 'not implemented'
 
-    if len(pubkey)%4 < 0:
-        raise RuntimeError('key is invalid base 64')
-    
-    if 30 > len(pubkey):
-        raise RuntimeError('key too short')
-    
-    if 1000 < len(pubkey):
-        raise RuntimeError('key too long')
-    note='user=%s' % user
-    result = 'no-X11-forwarding command="unison -server" %s %s %s' % (keytype,pubkey,note)
-    return result
+    def key_unique(self,key):
+        result = True
 
-def backup_keys(self):
-    pass
-    #os.path.copy(p,)
+        f = open(self.path,'r')
+        for line in f.readlines():
+            if key['pub_key'] in line:
+                result = False
+        f.close()
+        return result
 
-def add_key(key,user):
-    global key_file
-    line = parse_key(key,user)
-    print "Key: %s" % line
+    def format_line(self,key):
+        
+        line = '%s %s %s' % (key['key_type'], key['pub_key'],key['note'])
+        
+        if key['opts']:
+            line = '%s %s' % (' '.join(key['opts']), line )
 
-    #add to authorized keys
-    f=open(key_file,'a')
-    f.write("%s\n" % line)
-    f.close()
-    print "Written to: %s" % key_file
+        if key['command']:
+            line = 'command="%s" %s' % (key['command'], line)
+        
+        return line
+
+    def add_key(self, line, user, command):
+        key = self.parse_key(line)
+        key['opts'].append('no-x11-forwarding')
+        key['command'] = command
+
+        if not self.key_unique(key):
+            raise RuntimeError('Key exists already')
+        auth_line = self.format_line(key)
+        print auth_line
+        
+        #add to authorized keys
+        f=open(self.path,'a')
+        f.write("%s\n" % auth_line)
+        f.close()
+        print "Written to: %s" % self.path
 
 import paramiko
 import time
