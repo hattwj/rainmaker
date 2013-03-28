@@ -1,0 +1,103 @@
+for_each_event_created:
+    type: str
+    desc: test
+    default: 'path ${event_src_path_rel}'
+ignore_patterns:
+    type: array_fnmatch
+    default:
+        - '*unison.tmp' 
+    desc: 'patterns for fs monitor to ignore'
+guid: 
+    type: str
+    default: null 
+    desc: 'profile global id'
+fsmon_log: 
+    type: str
+    default: '${name}-${guid}.log' 
+    desc: 'file for sending fs events'
+profile_type: {default: unison, desc: profile type, type: str}
+use_cmd_all:
+    default: True 
+    type: bool
+    desc: use same command for all events 
+auto_start:
+    default: True 
+    type: bool
+    desc: automatically start syncing 
+title:
+    default: unison
+    type: str
+    desc: 'profile name'
+user:
+    default: '${current_user}'
+    type: str
+    desc: 'server user name'
+port:
+    default: 22
+    type: int
+    desc: 'server ssh port'
+address:
+    default: localhost 
+    type: str
+    desc: 'server address'
+ssh_key_path:
+    default: ~/.ssh/rain
+    type: localpath
+    desc: 'ssh private key {full path}'
+local_root:
+    default: ~/sync
+    type: localpath
+    desc: 'local root'
+remote_path:
+    default: '/home/${user}/rainmaker_sync'
+    type: str
+    desc: 'remote root'
+remote_sync: {default: '${remote_root}/sync', type: str, desc: path to sync}
+remote_events: {default: '${remote_root}/events', type: str, desc: path to store fs events}
+remote_backups: {default: '${remote_root}/backups', type: str, desc: path to store file versions}
+remote_root:
+    default: 'ssh://${user}@${address}:${port}/${remote_path}'
+    type: str
+    desc: null
+recursive: {default: True, desc: recursive sync, type: bool}
+max_threads: {default: 5, desc: max threads, type: int}
+max_backups:
+    default: 10
+    type: int
+    desc: 'max backups'
+moved: 
+    type: str
+    default:  'path ${event_src_path_rel} path ${event_dest_path_rel}'
+    desc: 'file moved events'
+moved_in:
+    type: str
+    default: 'path ${event_dest_path_rel}'
+    desc: 'file moved into sync path'
+moved_out:
+    type: str
+    default:  'path ${event_src_path_rel}'
+    desc: 'file moved out of sync path'
+moved_within:
+    type: str
+    default:  'path ${event_src_path_rel} path ${event_dest_path_rel}'
+    desc: 'file moved within sync path'
+deleted:
+    type: str
+    default: 'path ${event_src_path_rel}'
+    desc: 'file deleted'
+created:
+    type: str
+    default: 'base ${for_each_event_created}'
+    desc: 'file created'
+modified:
+    type: str
+    default: 'path ${event_src_path_rel}'
+    desc: 'file modified'
+startup: 
+    type: str
+    default: '${base}'
+    desc: 'startup commands'
+shutdown:
+    type: str
+    default: null
+    desc: 'shutdown commands'

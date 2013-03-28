@@ -1,0 +1,21 @@
+app:
+    - init
+profile:
+    - save
+    - delete
+    - validate
+    - update
+    - create
+    - init
+loop:
+    - startup
+    - shutdown
+file_system:
+    - create
+    - modify
+    - move
+    - delete
+    - command
+plugin:
+    - load
+    - unload

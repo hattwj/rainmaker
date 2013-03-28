@@ -1,0 +1,97 @@
+output_dict:
+    type: regex_dict
+    desc: Patterns for Unison stdout and stderr
+    default:
+        archives_locked: 'Fatal error: Warning: the archives are locked.'
+        first_run: 'Warning: No archive files were found for these roots, whose canonical names are:'
+        normal: 'Nothing to do'
+        fatal_error: 'Fatal error'
+        warning: 'Warning:'
+        syntax: 'too many roots'
+ignore_patterns:
+    type: array_fnmatch
+    default:
+        - '*unison.tmp' 
+    desc: 'patterns for fs monitor to ignore'
+guid: 
+    type: str
+    default: null 
+    desc: 'profile global id'
+fsmon_log: 
+    type: str
+    default: '${name}-${guid}.log' 
+    desc: 'file for sending fs events'
+profile_type: {default: unison, desc: profile type, type: str}
+auto_start:
+    default: True 
+    type: bool
+    desc: automatically start syncing 
+title:
+    default: unison
+    type: str
+    desc: 'profile name'
+user:
+    default: '${current_user}'
+    type: str
+    desc: 'server user name'
+port:
+    default: 22
+    type: int
+    desc: 'server ssh port'
+address:
+    default: localhost 
+    type: str
+    desc: 'server address'
+ssh_key_path:
+    default: /home/${user}/.ssh/rain
+    type: localpath
+    desc: 'ssh private key {full -path}'
+local_root:
+    default: /home/${user}/sync
+    type: localpath
+    desc: 'local root'
+remote_events: {default: '${remote_root}/../events', type: str, desc: -path to store fs events}
+backupdir: {default: '${remote_root}/../backups', type: str, desc: -path to store file versions}
+remote_uri:
+    default: 'ssh://${user}@${address}:${port}'
+    type: str
+    desc: null
+remote_root:
+    default: '/home/${user}/sync'
+    type: str
+    desc: null
+recursive: {default: True, desc: recursive sync, type: bool}
+max_threads: {default: 5, desc: max threads, type: int}
+max_backups:
+    default: 10
+    type: int
+    desc: 'max backups'
+cmd_for_deleted_group:
+    type: str
+    desc: execute a single command after several events occurred
+    default: '${unison_base} ${for_each:[events," -path ${quote:${event_src_path_rel}}"]}'
+cmd_for_modified_group:
+    type: str
+    desc: execute a single command after several events occurred
+    default: '${unison_base} ${for_each:[events," -path ${quote:${event_src_path_rel}}"]}'
+cmd_for_moved_group:
+    type: str
+    desc: execute a single command after several events occurred
+    default: '${unison_base} ${for_each:[events," -path ${quote:${event_src_path_rel}} -path ${quote:${event_src_path_rel}}"]}'
+cmd_for_created_group:
+    type: str
+    desc: execute a single command after several events occurred
+    default: '${unison_base} ${for_each:[events," -path ${quote:${event_src_path_rel}}"]}'
+startup: 
+    type: str
+    default: '${unison_base}'
+    desc: 'startup command'
+shutdown:
+    type: str
+    default: null
+    desc: 'shutdown commands'
+do_ignores: "${for_each:[ignore_patterns,' -ignore=\"Name ${pattern}\"',pattern]}"
+unison_base:
+    type: str
+    desc: base unison cmd
+    default: "${which:unison} ${local_root} ${remote_uri}/${remote_root} -ui text -auto -batch -sshargs '-i ${ssh_key_path}' -backuplocation 'central' -backup 'Name *' -backupprefix '$VERSION.' -backupdir='${backupdir}' -maxbackups=${max_backups} -confirmbigdel=false"

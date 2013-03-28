@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+unison \
+    %{local_root} \
+    %{remote_root} \
+    -ui text \
+    -auto \
+    -batch \
+    -sshargs "-i %{ssh_key_path}" \
+    -ignore 'Name .DS_Store' \
+    -ignore 'Name Thumbs.db' \
+    -ignore 'Name .*' \
+    -ignore 'Name temp.*' \
+    -ignore 'Name *~' \
+    -ignore 'Name .*~' \
+    -ignore 'Name *.o' \
+    -ignore 'Name *.tmp' \
+    -ignore 'Name lost+found' \
+    -ignore 'Name LOST.DIR' \
+    -ignore 'Name temp_*' \
+    -backuplocation 'central' \
+    -backup 'Name *' \
+    -backupprefix '$VERSION.' \
+    -backupdir '%{remote_root}' \
+    -maxbackups  10 \
+    -confirmbigdel=false
