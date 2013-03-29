@@ -66,7 +66,7 @@ sudo apt-get install unison openssh-client python-pip python-yaml
 sudo pip install watchdog
 
 # Create a rainmaker only ssh-key
-ssh-keygen -f rainamker -t rsa -b 2048 -C "SSH Key for rainmaker"
+ssh-keygen -f rainmaker -t rsa -b 2048 -C "SSH Key for rainmaker"
 ~~~
 
 Now you should be ready to run rainmaker
