@@ -1,0 +1,79 @@
+base:
+    args:
+        -   
+            - 'action'
+            -
+                help: 'Action to perform (default="auto")'
+                choices: ['create','delete','list','update','start','stop','status','auto']
+                default: 'auto'
+                nargs: '?'
+                action: 'store'
+        -
+            - '-h'
+            - 
+                dest: 'print_help'
+                help: 'Show help and exit'
+                action: 'store_true'
+        -
+            - '--log'
+            - 
+                help: 'Set log level'
+                choices: ['debug','info','warn','error','none']
+                dest: 'log_level'
+                default: 'info'
+            
+create:
+    questions: 
+        unison: ['title','user','local_root','max_backups',
+        'ssh_key_path','port','address','remote_path']
+
+    args:
+        -
+            - 'type'
+            -
+                choices: ['unison','basic']
+                help: 'Type of profile to create. Basic creates a generic profile. Unison creates a Unison sync profile.'
+                default: 'unison'
+                action: 'store'
+                nargs: '?'
+list:
+    args:
+        -
+            - '-n'
+            -
+                action: 'store'
+                help: 'Profile number'
+delete:
+    args:
+        - 
+            - 'title'
+            -   
+                help: 'Title of profile to delete'
+                action: 'store'
+update:
+    args:
+        - 
+            - 'profile'
+            -   
+                help: 'Profile name'
+                action: 'store'
+        - 
+            - 'attrs'
+            -
+                help: 'Profile attributes'
+                nargs: '*'
+start:
+    args:
+        - 
+            - 'profile'
+            -   
+                help: 'Profile name'
+                action: 'store'
+stop:
+    args:
+        - 
+            - 'profile'
+            -   
+                help: 'Profile name'
+                action: 'store'
+

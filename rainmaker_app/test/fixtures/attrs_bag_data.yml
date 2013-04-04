@@ -1,0 +1,26 @@
+# Icons for the GUI
+icons:
+    0:
+        file: 'code-0.png'
+        msg: 'Transfer Successfull'
+    1:
+        file: 'code-1.png'
+        msg: 'Some conflicts exist...'
+    2:
+        file: 'code-2.png'
+        msg: 'Non fatal error occurred'
+    3:  
+        file: 'code-3.png'
+        msg: 'Fatal error occurred'
+    90: 
+        file: 'code-90.png'
+        msg: 'Initializing...'
+    91: 
+        file: 'code-91.png'
+        msg: 'Contacting Server...'
+    98: 
+        file: 'code-98.png'
+        msg: 'Unable to contact Server...'
+    99: 
+        file: 'code-99.png'
+        msg: 'Unknown event occurred'
