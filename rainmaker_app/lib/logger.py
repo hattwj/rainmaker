@@ -1,20 +1,28 @@
 import logging
 
+from rainmaker_app.conf import load
+config=load('logger.yml')
+
 init_done = False
 base_style = '%(name)-12s %(levelname)-8s %(message)s' 
 base_level = logging.INFO
-levels = ['debug','info','warn','error']
+levels = {
+    'debug':logging.DEBUG,
+    'info':logging.INFO,
+    'warn':logging.WARN,
+    'error':logging.ERROR,
+    'none':logging.NOTSET
+    }
+
 # log to console
-def do_init(style=None, level=None,name=''):
+def do_init(style=None,level=None):
     global init_done
-    global base_style
-    global base_level
-    
-    level = level or base_level
-    style = style or base_style
+    level = levels[level] if level else levels[config['level']]
+    style = style or config['style']
 
     if init_done == True:
         return
+
     init_done = True
     # set up logging to console
     logging.basicConfig(
@@ -23,15 +31,10 @@ def do_init(style=None, level=None,name=''):
     )
 
 
-def create(name='',level=None,style=None):
-    do_init()
-    global base_style
-    global base_level
-    
-    level = level or base_level
-    style = style or base_style
-    
+def create(name='',style=None,level=None):
     do_init(level=level,style=style)
+    level = levels[level] if level else levels[config['level']]
+    style = style or config['style']
 
     log = logging.getLogger(name)
     
@@ -51,20 +54,18 @@ def create(name='',level=None,style=None):
     return log
 
 # also log output to a file
-def send_log_to_file(fpath, log,level=None, style=None):
-    do_init()
-    global base_style
-    global base_level
-    
-    level = level or base_level
-    style = style or base_style
+def send_log_to_file(fpath, log,level=None, style=None,date_style=None):
+    do_init(style,level)
+    level = levels[level] if level else levels[config['level']]
+    date_style = date_style if date_style else config['date_style']
+    style = style or config['style']
 
     # define a Handler
     handler = logging.FileHandler(fpath)
     handler.setLevel( level )
     
     # set a format which is simpler for handler use
-    formatter = logging.Formatter(style)
+    formatter = logging.Formatter(style,date_style)
     
     # tell the handler to use this format
     handler.setFormatter(formatter)

@@ -1,3 +1,7 @@
+output_dict:
+    type: regex_dict
+    desc: Patterns for Unison stdout and stderr
+    default: {}
 for_each_event_created:
     type: str
     desc: test
@@ -15,12 +19,12 @@ fsmon_log:
     type: str
     default: '${name}-${guid}.log' 
     desc: 'file for sending fs events'
-profile_type: {default: unison, desc: profile type, type: str}
+type: {default: base, desc: profile type, type: str}
 use_cmd_all:
     default: True 
     type: bool
     desc: use same command for all events 
-auto_start:
+auto:
     default: True 
     type: bool
     desc: automatically start syncing 

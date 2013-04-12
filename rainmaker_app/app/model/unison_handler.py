@@ -20,7 +20,7 @@ except ImportError:
 from watchdog.events import PatternMatchingEventHandler
 from watchdog.events import FileSystemEvent
 
-from lib import logger
+from rainmaker_app.lib import logger
 
 class UnisonHandler(PatternMatchingEventHandler):
     def __init__(self,*args,**kwargs):

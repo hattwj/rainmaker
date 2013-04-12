@@ -2,11 +2,9 @@ from os import remove
 from string import Template
 from yaml import safe_dump
 
-from lib import RecordHooks
-import app
-
-from conf.model import unison_profile
-from unison_handler import UnisonHandler
+from rainmaker_app.lib import RecordHooks
+from rainmaker_app.conf.model import unison_profile
+from .unison_handler import UnisonHandler
 
 class UnisonProfile(RecordHooks):
 

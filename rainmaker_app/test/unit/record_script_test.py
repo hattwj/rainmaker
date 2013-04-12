@@ -1,8 +1,8 @@
 import unittest
 import os
 
-from lib import RecordScript
-from lib import path
+from rainmaker_app.lib import RecordScript
+from rainmaker_app.lib import path
 
 class TestRecordScript(unittest.TestCase):
 

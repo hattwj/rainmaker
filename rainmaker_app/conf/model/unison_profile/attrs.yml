@@ -15,14 +15,14 @@ ignore_patterns:
     desc: 'patterns for fs monitor to ignore'
 guid: 
     type: str
-    default: null 
+    default: '${rand:10}' 
     desc: 'profile global id'
 fsmon_log: 
     type: str
-    default: '${name}-${guid}.log' 
+    default: '${guid}.log' 
     desc: 'file for sending fs events'
-profile_type: {default: unison, desc: profile type, type: str}
-auto_start:
+type: {val: unison,default: unison, desc: profile type, type: str}
+auto:
     default: True 
     type: bool
     desc: automatically start syncing 
@@ -50,8 +50,10 @@ local_root:
     default: /home/${user}/sync
     type: localpath
     desc: 'local root'
-remote_events: {default: '${remote_root}/../events', type: str, desc: -path to store fs events}
-backupdir: {default: '${remote_root}/../backups', type: str, desc: -path to store file versions}
+local_tmp_dir: {default: '${rain_dir}/tmp', type: path, desc: path for importing server events}
+local_events_dir: {default: '${rain_dir}/events', type: path, desc: path for local fs events}
+remote_events_dir: {default: '${abs_path:${remote_root}/../events}', type: path, desc: path to retrieve fs events from server}
+backupdir: {default: '${abs_path:${remote_root}/../backups}', type: path, desc: path to store file versions}
 remote_uri:
     default: 'ssh://${user}@${address}:${port}'
     type: str
@@ -82,6 +84,14 @@ cmd_for_created_group:
     type: str
     desc: execute a single command after several events occurred
     default: '${unison_base} ${for_each:[events," -path ${quote:${event_src_path_rel}}"]}'
+cmd_sync_send: 
+    type: str
+    default: "${which:unison} ${local_events_dir} ${remote_uri}/${remote_events_dir} ${unison_options} -force ${local_events_dir} -path ${fsmon_log}"
+    desc: 'server side event sync command - send events'
+cmd_sync_recieve: 
+    type: str
+    default: "${which:unison} ${local_tmp_dir} ${remote_uri}/${remote_events_dir} -force ${remote_uri}/${remote_events_dir} ${unison_options} -ignore 'Name ${fsmon_log}'"
+    desc: 'server side event sync command - recieve events'
 startup: 
     type: str
     default: '${unison_base}'
@@ -90,8 +100,19 @@ shutdown:
     type: str
     default: null
     desc: 'shutdown commands'
-do_ignores: "${for_each:[ignore_patterns,' -ignore=\"Name ${pattern}\"',pattern]}"
+do_ignores: 
+    desc: Add ignore paths
+    type: str
+    default: "${for_each:[ignore_patterns,' -ignore=\"Name ${pattern}\"',pattern]}"
+unison_sync:
+    type: str
+    desc: base cmd for server sync
+    default: "${which:unison} ${local_events_dir} ${remote_uri}/${remote_events_dir} ${unison_options}"
 unison_base:
     type: str
     desc: base unison cmd
-    default: "${which:unison} ${local_root} ${remote_uri}/${remote_root} -ui text -auto -batch -sshargs '-i ${ssh_key_path}' -backuplocation 'central' -backup 'Name *' -backupprefix '$VERSION.' -backupdir='${backupdir}' -maxbackups=${max_backups} -confirmbigdel=false"
+    default: "${which:unison} ${local_root} ${remote_uri}/${remote_root} ${unison_options}"
+unison_options:
+    type: str
+    desc: standard flags used for all unison sync commands
+    default: "-ui text -auto -batch -sshargs '-i ${ssh_key_path}' -backuplocation 'central' -backup 'Name *' -backupprefix '$VERSION.' -backupdir='${backupdir}' -maxbackups=${max_backups} -confirmbigdel=false ${do_ignores}"

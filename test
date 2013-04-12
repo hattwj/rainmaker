@@ -4,10 +4,10 @@ import unittest
 import logging
 
 # 
-from lib import logger
+from rainmaker_app.lib import logger
 logger.base_level = logging.DEBUG
 
-from test.unit import *
+from rainmaker_app.test.unit import *
 
 unittest.main()
 

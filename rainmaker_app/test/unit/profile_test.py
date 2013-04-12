@@ -1,5 +1,5 @@
 import unittest
-from app.model import UnisonProfile
+from rainmaker_app.app.model import UnisonProfile
 
 class TestProfile(unittest.TestCase):
 

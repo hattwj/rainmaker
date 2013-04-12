@@ -1,18 +1,42 @@
-base:
+##
+# parser args for manipulating profiles
+profile_title: &profile_title 
+    - 'title'
+    -   
+        help: 'Title of profile'
+        action: 'store'
+        nargs: '?'
+        default: null
+profile_paths: &profile_paths
+    - '-f'
+    - 
+        help: 'Path to profile'
+        action: 'append'
+        metavar: 'path'
+        dest: 'profile_paths'
+profile_n: &profile_n
+    - '-n'
+    -
+        action: 'store'
+        help: 'Profile number'
+##
+# Catch all parser for finding action
+pre:
     args:
         -   
             - 'action'
             -
                 help: 'Action to perform (default="auto")'
-                choices: ['create','delete','list','update','start','stop','status','auto']
-                default: 'auto'
                 nargs: '?'
                 action: 'store'
+##
+# Base options that should always be available
+base:
+    args:
         -
-            - '-h'
+            - '-q'
             - 
-                dest: 'print_help'
-                help: 'Show help and exit'
+                help: 'Suppress all output.'
                 action: 'store_true'
         -
             - '--log'
@@ -21,13 +45,28 @@ base:
                 choices: ['debug','info','warn','error','none']
                 dest: 'log_level'
                 default: 'info'
-            
+auto:
+    args:
+        -   
+            - 'action'
+            -
+                help: 'Action to perform (default="auto")'
+                choices: ['create','delete','list','update','start','stop','status','auto','info']
+                default: 'auto'
+                nargs: '?'
+                action: 'store'
 create:
     questions: 
         unison: ['title','user','local_root','max_backups',
-        'ssh_key_path','port','address','remote_path']
+        'ssh_key_path','port','address','remote_root']
 
     args:
+        -   
+            - 'action'
+            -
+                help: 'Create a profile'
+                metavar: 'create'
+                action: 'store'
         -
             - 'type'
             -
@@ -38,42 +77,73 @@ create:
                 nargs: '?'
 list:
     args:
-        -
-            - '-n'
+        -   
+            - 'action'
             -
+                help: 'List all profiles, or the details of a single profile'
+                metavar: 'list'
                 action: 'store'
-                help: 'Profile number'
+        - *profile_title
+        - *profile_n
+        - *profile_paths
 delete:
     args:
-        - 
-            - 'title'
-            -   
-                help: 'Title of profile to delete'
+        -   
+            - 'action'
+            -
+                help: 'Delete a profile'
+                metavar: 'delete'
                 action: 'store'
+        - *profile_title
+        - *profile_n
+        - *profile_paths
 update:
     args:
-        - 
-            - 'profile'
-            -   
-                help: 'Profile name'
-                action: 'store'
-        - 
-            - 'attrs'
+        -   
+            - 'action'
             -
-                help: 'Profile attributes'
-                nargs: '*'
+                help: 'Update a profile'
+                metavar: 'update'
+                action: 'store'
+        - *profile_title
+        - *profile_n
+        - *profile_paths
 start:
     args:
-        - 
-            - 'profile'
-            -   
-                help: 'Profile name'
+        -   
+            - 'action'
+            -
+                help: 'Start a profile'
+                metavar: 'start'
                 action: 'store'
+        - *profile_title
+        - *profile_n
+        - *profile_paths
 stop:
     args:
-        - 
-            - 'profile'
-            -   
-                help: 'Profile name'
+        -   
+            - 'action'
+            -
+                help: 'Stop a running profile'
+                metavar: 'stop'
                 action: 'store'
+        - *profile_title
+        - *profile_n
+        - *profile_paths
+status:
+    args:
+        -
+            - 'action'
+            -
+                help: 'Status of app'
+                action: 'store'
+                metavar: 'status'
+info:
+    args:
+        -
+            - 'action'
+            -
+                help: 'Info about installation'
+                action: 'store'
+                metavar: 'info'
 

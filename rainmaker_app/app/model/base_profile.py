@@ -1,25 +1,29 @@
 from os import remove
 from string import Template
-from yaml import safe_dump
+from yaml import safe_dump,safe_load
 import re
 
 # will move to handler
 import shlex
 from subprocess import PIPE, Popen
 
-from base_handler import BaseHandler
-from lib import RecordHooks
-from lib import RegexDict
-from conf.model.base_profile import attrs
+from .base_handler import BaseHandler
+from rainmaker_app.lib import RecordHooks
+from rainmaker_app.lib import RegexDict
+from rainmaker_app.conf import load
+
 class BaseProfile(RecordHooks):
 
-    def __init__(self,data=[],path=None):
+    def __init__(self,data={},vals=None,path=None):
         RecordHooks.__init__(self,'profile')
-        self.add_attrs(attrs)
         self.add_attrs(data)
         self.path=path
+        if vals:
+            for k,v in vals.iteritems():
+                setattr(self,k,v)
         self.group_call_template = 'cmd_for_%s_group'
         self.cmd_call_template = 'cmd_for_%s_event'
+        self.callbacks.add('get_events')
         self.callbacks.register('delete',self.on_delete)
         self.callbacks.register('save',self.on_save)
         self.callbacks.register('validate',self.on_validate)
@@ -31,7 +35,7 @@ class BaseProfile(RecordHooks):
         if not self.path:
             return False
         f = open(self.path,'w')
-        safe_dump(self.attrs_dump(), f)
+        safe_dump(self.attrs_dump_key('val'), f)
         f.close()
         self.log.info('Changes saved to: %s ' % self.path)
         return True
@@ -46,27 +50,50 @@ class BaseProfile(RecordHooks):
         # set guid
         if self.guid == None:
             self.guid = _lib.rand_str(10)
-    
+    ##
+    # Schedule handler to run in observer
+    ##
+    def schedule(self,observer):
+        self.handler_init()
+        observer.schedule( self.handler, self.local_root, recursive = self.recursive) 
+        self.observer = observer
+
+    ###
+    # Unschedule event handler
+    ###
+    def unschedule(self):
+        self.observer.unschedule(self.handler)
+
     ###
     # Handle events
     ###
     def handler_init(self):
+        if not self.local_root:
+            raise AttributeError('local_root must be set')
         # create handler
         kwargs = {
-            'ignore_patterns': self.ignore_patterns
+            'ignore_patterns': self.ignore_patterns,
+            'path':self.local_root
             }
         self.handler = BaseHandler(**kwargs)
 
         # create output parser regexes
         self.output_parser = RegexDict( self.output_dict )
+        return self.handler
 
     def process_events(self):
         results = []
-        events = self.handler.get_events(self.local_root)
+        events = self.handler.get_events()
+        self.callbacks.trigger('get_events',events=events)
         cmds = self.build_cmds(events)
         return cmds
 
-    def run_cmd(self,cmd):
+    def run_cmd(self,cmd=None,key=None):
+        cmd = self.subst(self.attr_val(key)) if key and key in self.attrs else cmd
+        if key and key not in self.attrs:
+            raise KeyError('No command: %s' % key)
+        if not cmd:
+            raise AttributeError('Cant run empty command')
         self.log.info('Running cmd: %s' % cmd)
         s_cmd = shlex.split(cmd) 
         p = Popen(s_cmd, shell=False, stderr=PIPE, stdout=PIPE)
@@ -77,6 +104,9 @@ class BaseProfile(RecordHooks):
                     'cmd':cmd
                  }
         self.log.debug('Finished cmd: %s' % cmd)
+        result['output'] = self.process_output(result)
+        self.log.debug(result['output'])
+        
         return result
 
     # analyze output

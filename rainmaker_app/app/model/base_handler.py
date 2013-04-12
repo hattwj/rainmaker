@@ -1,3 +1,7 @@
+# give timestamps to events
+from calendar import timegm
+from time import gmtime
+
 from os import sep
 # Queue imports for different python versions
 try:
@@ -9,34 +13,21 @@ from watchdog.events import PatternMatchingEventHandler
 from watchdog.events import FileSystemMovedEvent
 from watchdog.events import FileSystemEvent
 
-class BaseHandler(PatternMatchingEventHandler):
-    def __init__(self,*args,**kwargs):
-        PatternMatchingEventHandler.__init__(self,*args,**kwargs)
-        self.event_q = Queue()
-    
-    ## handler - universal
-    # belongs to profile
-    # ignore patterns (from profile)
-    # collect event(s)
-    # store until requested
-    
-    ## profile - unique attrs/generic class
-    # pluggable with attrs
-    # take filename and subst for command
-    # run command
-    # process output looking for messages / errors
-    # validations, questions through config
-    # attrs that can call functions or unique classes
+from rainmaker_app.lib import logger, Callbacks
 
-    ## log analyzer - universal with callbacks
-    # log messages/errors
-    # forward information to 
-    # - gui?
-    # - desktop notifications
-    
+class BaseHandler(PatternMatchingEventHandler):
+    def __init__(self,path,ignore_patterns=None):
+        PatternMatchingEventHandler.__init__(self,ignore_patterns=ignore_patterns)
+        self.event_q = Queue()
+        self.log = logger.create(self.__class__.__name__)
+        self.callbacks = Callbacks(self,['get_events'])
+        self.path = path
+
     ## store events in queue
-    def on_any_event(self,event):
-        self.event_q.put( event ) 
+    def on_any_event(self,event_obj):
+        event = self.__event_to_dict__(event_obj,self.path)
+        event['timestamp'] = '%s' % timegm(gmtime())
+        self.event_q.put( event )
     
     ## Add event to queue
     # event = FileSystemEvent('startup',self.profile['local_root'],True)
@@ -48,17 +39,19 @@ class BaseHandler(PatternMatchingEventHandler):
         self.dispatch(event)
     
     ## return array of events
-    def get_events(self,path):
+    def get_events(self):
         events = []
         while True:
             try:
-                event = self.event_to_dict( self.event_q.get_nowait(),path) 
+                event = self.event_q.get_nowait() 
                 events.append(event)
             except Empty:
                 break
+            self.log.info(event)
+        self.callbacks.trigger('get_events',events=events)
         return events 
    
-    def event_to_dict(self,event,path):
+    def __event_to_dict__(self,event,path):
         event_dict = {}
         for k in event.__dict__:
             kk = 'event'+k if k != '_event_type' else 'event_type' 

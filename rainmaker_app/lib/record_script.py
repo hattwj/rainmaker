@@ -1,10 +1,10 @@
 from string import Formatter
 from yaml import safe_load
 from pipes import quote
+from os.path import abspath
 
-from lib.path import which,current_user
-from lib.logger import create
-import lib
+from .path import which,current_user,rain_dir
+from .logger import create
 
 class RecordScript(object):
     
@@ -59,8 +59,9 @@ class RecordScript(object):
 
             # get cmd if exists in this class
             cmd = getattr(self,cmd_key) if hasattr(self,cmd_key) else None
-            # execute command if one is present 
-            if cmd:
+            # execute command if one is present and the command
+            # doesn't have an override
+            if cmd and key not in attrs:
                 self.log.debug("cmd: %s" % cmd_key)
                 data = safe_load( tup[2] ) if tup[2] else None
                 if isinstance(data,dict):
@@ -107,3 +108,9 @@ class RecordScript(object):
 
     def __cmd_current_user__(self,attrs):
         return current_user()
+
+    def __cmd_rain_dir__(self,attrs):
+        return rain_dir
+
+    def __cmd_abs_path__(self,attrs,val):
+        return abspath(self.subst(val,attrs))

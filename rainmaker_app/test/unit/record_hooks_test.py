@@ -1,8 +1,8 @@
 import unittest
 import os
 
-from lib import RecordHooks
-from lib import path
+from rainmaker_app.lib import RecordHooks
+from rainmaker_app.lib import path
 
 class TestRecordHooks(unittest.TestCase):
 

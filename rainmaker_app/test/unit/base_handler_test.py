@@ -1,10 +1,10 @@
 import unittest
 import os
 
-from app.model import BaseHandler
 
-from lib.path import rel
-from lib.tasks import install
+from rainmaker_app.app.model import BaseHandler
+from rainmaker_app.lib.path import rel
+from rainmaker_app.lib.tasks import install
 
 class TestBaseHandler(unittest.TestCase):
 
@@ -16,9 +16,8 @@ class TestBaseHandler(unittest.TestCase):
     def test_ignore_yml(self):
         ignore_handler = BaseHandler(ignore_patterns = ['*.yml']) 
         self.add_events(ignore_handler)
-        events = ignore_handler.get_events()
+        events = ignore_handler.get_events(self.path)
         self.assertEquals(len(events),3)
-
 
     def test_get_events(self):
         src_path=os.path.join(self.path,'test.yml')
