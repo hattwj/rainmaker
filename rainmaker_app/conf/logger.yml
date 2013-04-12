@@ -1,0 +1,15 @@
+#verbosity levels for logger
+verbosity:
+    Rainmaker: 0
+    AppProfiles: 1
+    AppParser: 1
+    BaseProfile: 1
+    BaseHandler: 2
+    RecordScript: 3
+    RecordHooks: 4
+    AttrsBag: 4
+    Callbacks: 3
+    RegexDict: 4
+style: '%(name)-12s %(levelname)-8s %(message)s'
+date_style: '%Y-%m-%d-%H-%M-%S'
+level: 'info'
