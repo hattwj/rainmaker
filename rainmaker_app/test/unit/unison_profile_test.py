@@ -1,7 +1,7 @@
 import unittest
 import os
 
-from rainmaker_app.app.model import BaseProfile
+from rainmaker_app.app.model import Profile
 from rainmaker_app.conf.model.unison_profile import attrs
 from rainmaker_app.lib import path
 from rainmaker_app.lib.tasks import install
@@ -11,7 +11,7 @@ class TestUnisonProfile(unittest.TestCase):
     def setUp(self):
         print 'Setup'
         unittest.TestCase.setUp(self)
-        self.profile = BaseProfile(attrs)
+        self.profile = Profile(attrs)
         self.rain_dir=path.rel('tmp','.rainmaker')
         install(self.rain_dir)
         self.profile.local_root = path.rel('tmp','sync1')

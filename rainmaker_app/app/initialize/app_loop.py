@@ -2,7 +2,7 @@ import os
 from time import sleep
 
 from watchdog.observers import Observer
-
+from yaml import safe_dump
 from rainmaker_app.lib import logger
 
 class AppLoop(object):
@@ -66,9 +66,8 @@ class AppLoop(object):
         handler=kwargs['this']
         events=kwargs['events']
         for event in events:
-            handler.events_log.info('%s %s' % (event['timestamp'],event['event_src_path_rel']) )
-            if 'event_dest_path_rel' in event:
-                handler.events_log.info('%s %s' % (event['timestamp'],event['event_dest_path_rel']) )
+            self.log.info('File %s: %s ' % (event['event_type'],event['event_src_path_rel']))
+            handler.events_log.info(safe_dump(event))
 
     def __shutdown__(self,**kwargs):
         if not self.observer:

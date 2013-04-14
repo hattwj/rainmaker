@@ -39,26 +39,33 @@ class TestTail(unittest.TestCase):
         temp.close()
     
     def test_filter(self):
+        ''' filter lines with val less than 50 '''
         def filter(line):
-            print line
-        
+            n,v = line.split(' ')
+            #print 'gg %s' % line
+            if int(n) < 50:
+                return False
+            return line
         self.tail.filter = filter
-        for line in self.tail.new_lines():
-            pass
+        self.temp.write(self.create_lines(4,60))
+        self.temp.flush()
+        self.expect_lines(self.create_lines(50,60))
 
     def expect_lines(self,lines_str):
         ''' assert expected output from tail '''
+        #print 'expect'
         lines = lines_str.split("\n")
         counter = 0
         for line in self.tail.new_lines():
+            #print line
+            #print lines[counter]
             self.assertEquals(line,lines[counter])
             counter += 1
         self.assertEquals(counter+1,len(lines))
         
-
     def create_lines(self,start,n,suffix='aaa'):
         ''' create new lines helper '''
         result=''
         for i in range(start,n+1):
-            result += "%s %s\n" % (suffix, str(i)*10)
+            result += "%s %s\n" % (str(i), suffix)
         return result

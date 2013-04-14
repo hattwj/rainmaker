@@ -12,7 +12,7 @@ from rainmaker_app.lib import RecordHooks
 from rainmaker_app.lib import RegexDict
 from rainmaker_app.conf import load
 
-class BaseProfile(RecordHooks):
+class Profile(RecordHooks):
 
     def __init__(self,data={},vals=None,path=None):
         RecordHooks.__init__(self,'profile')
@@ -94,8 +94,9 @@ class BaseProfile(RecordHooks):
             raise KeyError('No command: %s' % key)
         if not cmd:
             raise AttributeError('Cant run empty command')
-        self.log.info('Running cmd: %s' % cmd)
+        self.log.debug('Running %s' % cmd)
         s_cmd = shlex.split(cmd) 
+        self.log.info('Running command %s',s_cmd[0])
         p = Popen(s_cmd, shell=False, stderr=PIPE, stdout=PIPE)
         out = p.communicate()
         result = {  'stdout':out[0],
@@ -116,7 +117,7 @@ class BaseProfile(RecordHooks):
         result += self.output_parser.search(output['stdout'])
         if not result:
             result.append('unknown')
-        self.log.debug("cmd_parse: %s" % ' '.join(result))
+        self.log.info("Command parse result: %s" % ' '.join(result))
         return result
 
     def build_cmds(self,events):

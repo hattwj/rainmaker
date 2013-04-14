@@ -4,6 +4,7 @@ import path
 import tasks
 import logger
 
+from .log_monitor import LogMonitor
 from .attrs_bag import AttrsBag
 from .regex_dict import RegexDict
 from .record_script import RecordScript

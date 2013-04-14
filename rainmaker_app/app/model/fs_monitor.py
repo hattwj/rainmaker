@@ -47,7 +47,7 @@ class BaseHandler(PatternMatchingEventHandler):
                 events.append(event)
             except Empty:
                 break
-            self.log.info(event)
+            self.log.debug(event)
         self.callbacks.trigger('get_events',events=events)
         return events 
    

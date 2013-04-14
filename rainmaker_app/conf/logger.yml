@@ -3,7 +3,7 @@ verbosity:
     Rainmaker: 0
     AppProfiles: 1
     AppParser: 1
-    BaseProfile: 1
+    Profile: 1
     BaseHandler: 2
     RecordScript: 3
     RecordHooks: 4

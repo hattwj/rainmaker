@@ -3,7 +3,7 @@ import os
 
 
 from rainmaker_app.conf import load
-from rainmaker_app.app.model import BaseProfile
+from rainmaker_app.app.model import Profile
 from rainmaker_app.lib import logger
 
 class AppProfiles(object):
@@ -17,11 +17,11 @@ class AppProfiles(object):
         if template=='unison':
             attrs = load('model/unison_profile/attrs.yml')
         elif not template or template=='base':
-            attrs = load('model/base_profile/attrs.yml')
+            attrs = load('model/profile/attrs.yml')
         else:
             self.log.error('Unknown profile type: %s' % template)
             raise AttributeError
-        profile = BaseProfile(attrs,vals=vals,path=path)
+        profile = Profile(attrs,vals=vals,path=path)
         profile.callbacks.register('before_save',self.__auto_profile_path__)
         
         return profile

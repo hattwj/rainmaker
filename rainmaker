@@ -33,6 +33,7 @@ def main():
     
     try:
         app.init()
+        app.log.info('Entering app loop')
         while True:
             app.loop.once()
     except KeyboardInterrupt:
