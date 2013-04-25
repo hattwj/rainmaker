@@ -22,7 +22,7 @@ import getpass
 
 root = os.path.abspath(os.path.join(os.path.dirname(__file__),'..') )
 home_dir = os.path.expanduser('~')
-rain_dir = os.path.join(home_dir,'.rainmaker')
+user_dir = os.path.join(home_dir,'.rainmaker')
 key_file = os.path.join(home_dir,'.ssh','authorized_keys')
 
 #

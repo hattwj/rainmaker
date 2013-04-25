@@ -30,15 +30,17 @@ class Tail(object):
                     break
             line = self.filter(line)
             if line:
-                yield line.rstrip("\n")
+                yield line
 
     def filter(self,line):
         "replace this function to provide custom formatting"
         "returning False prevents the line from yielding"
-        return line
+        return line.rstrip('\n')
 
     def reseek(self):
         ''' seek to last position if overwritten'''
+        if not self.where:
+            return
         self.fin.seek(self.where)
 
     def new_lines(self):

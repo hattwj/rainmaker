@@ -5,9 +5,12 @@ output_dict:
         archives_locked: 'Fatal error: Warning: the archives are locked.'
         first_run: 'Warning: No archive files were found for these roots, whose canonical names are:'
         normal: 'Nothing to do'
+        delete: 'Deleting'
         fatal_error: 'Fatal error'
         warning: 'Warning:'
+        update: 'Updating file'
         syntax: 'too many roots'
+        copy: 'Copying'
 ignore_patterns:
     type: array_fnmatch
     default:
@@ -50,12 +53,12 @@ local_root:
     default: /home/${user}/sync
     type: localpath
     desc: 'local root'
-local_tmp_dir: {default: '${rain_dir}/tmp', type: path, desc: path for importing server events}
-local_events_dir: {default: '${rain_dir}/events', type: path, desc: path for local fs events}
+local_tmp_dir: {default: '${user_dir}/tmp', type: path, desc: path for importing server events}
+local_events_dir: {default: '${user_dir}/events', type: path, desc: path for local fs events}
 remote_events_dir: {default: '${abs_path:${remote_root}/../events}', type: path, desc: path to retrieve fs events from server}
 backupdir: {default: '${abs_path:${remote_root}/../backups}', type: path, desc: path to store file versions}
 remote_uri:
-    default: 'ssh://${user}@${address}:${port}'
+    default: 'ssh://${user}@${address}:${port}/'
     type: str
     desc: null
 remote_root:
@@ -86,11 +89,11 @@ cmd_for_created_group:
     default: '${unison_base} ${for_each:[events," -path ${quote:${event_src_path_rel}}"]}'
 cmd_sync_send: 
     type: str
-    default: "${which:unison} ${local_events_dir} ${remote_uri}/${remote_events_dir} ${unison_options} -force ${local_events_dir} -path ${fsmon_log}"
+    default: "${which:unison} ${local_events_dir} ${remote_uri}${remote_events_dir} ${unison_options} -force ${local_events_dir} -path ${fsmon_log}"
     desc: 'server side event sync command - send events'
 cmd_sync_recieve: 
     type: str
-    default: "${which:unison} ${local_tmp_dir} ${remote_uri}/${remote_events_dir} -force ${remote_uri}/${remote_events_dir} ${unison_options} -ignore 'Name ${fsmon_log}'"
+    default: "${which:unison} ${local_tmp_dir} ${remote_uri}${remote_events_dir} -force ${remote_uri}${remote_events_dir} ${unison_options} -ignore 'Name ${fsmon_log}'"
     desc: 'server side event sync command - recieve events'
 startup: 
     type: str
@@ -111,7 +114,7 @@ unison_sync:
 unison_base:
     type: str
     desc: base unison cmd
-    default: "${which:unison} ${local_root} ${remote_uri}/${remote_root} ${unison_options}"
+    default: "${which:unison} ${local_root} ${remote_uri}${remote_root} ${unison_options}"
 unison_options:
     type: str
     desc: standard flags used for all unison sync commands

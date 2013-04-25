@@ -1,9 +1,11 @@
-from string import Formatter
+import random
+
+from string import lowercase, digits,Formatter
 from yaml import safe_load
 from pipes import quote
 from os.path import abspath
 
-from .path import which,current_user,rain_dir
+from .path import which,current_user,user_dir
 from .logger import create
 
 class RecordScript(object):
@@ -12,13 +14,6 @@ class RecordScript(object):
         self.log = create(self.__class__.__name__)
         self.attrs=attrs
         self._formatter = Formatter()
-        self.cmds = {
-            'quote':     {'func':self.__cmd_quote__,'with_attrs':True},
-            'which':        {'func':which},
-            'current_user': {'func':current_user},
-            'for_each':     {'func':self.__cmd_for_each__,'with_attrs':True},
-            'yaml':         {'func':self.__cmd_yaml__}
-        }
     
     # optionally remove flags from val 
     def remove_flags(self,val):
@@ -74,7 +69,7 @@ class RecordScript(object):
                     rep_val = cmd(attrs) 
             elif key in attrs:
                 rep_val = attrs[key]
-            if not rep_val or not rep_key:
+            if rep_val==None or not rep_key:
                 self.log.debug("subst missing val or key:\n\tval=%s\n\tkey=%s" % (rep_val,rep_key))
                 continue
             if isinstance(rep_val,list):
@@ -98,19 +93,32 @@ class RecordScript(object):
         return result
     
     def __cmd_quote__(self,attrs,val):
+        ''' Quote string'''
         return quote(self.subst(val,attrs))
 
     def __cmd_yaml__(self,attrs,val):
+        ''' return yaml object '''
         return safe_load(val)
 
     def __cmd_which__(self,attrs,val):
+        ''' search path for executable '''
         return which(self.subst(val,attrs))
 
     def __cmd_current_user__(self,attrs):
+        ''' return name of current user '''
         return current_user()
 
-    def __cmd_rain_dir__(self,attrs):
-        return rain_dir
+    def __cmd_user_dir__(self,attrs):
+        ''' return application user data dir '''
+        return user_dir
 
     def __cmd_abs_path__(self,attrs,val):
+        ''' return abspath '''
         return abspath(self.subst(val,attrs))
+
+    def __cmd_rand__(self,attrs,val):
+        ''' rand string of length val'''
+        count=int(val)
+        choices=lowercase+digits 
+        return ''.join(random.choice(choices) for x in range(count))
+

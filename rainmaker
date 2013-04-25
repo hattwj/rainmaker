@@ -33,6 +33,8 @@ def main():
     
     try:
         app.init()
+        if len(app.loop.running_profiles) == 0:
+            return
         app.log.info('Entering app loop')
         while True:
             app.loop.once()

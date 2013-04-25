@@ -1,0 +1,11 @@
+address: localhost
+local_root: '${user_dir}/sync1'
+max_backups: '10'
+port: '22'
+remote_root: '${user_dir}/sync2'
+remote_uri: ''
+remote_events_dir: '${user_dir}/events'
+title: unison
+type: unison 
+guid: 'test_profile_n1'
+

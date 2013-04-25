@@ -3,50 +3,61 @@
 
 Rainmaker aims to provide a simple bidirectional file synchronization service by using common programs already installed on most computers. Rainmaker uses the python watchdog library to gain cross platform FSMonitoring capabilities, and utilizes Unison for file transfer. Because of the watchdog library you only need to do a full sync when you start rainmaker. Afterwards the watchdog filesystem monitor will track the changes that occur within your sync directory and only invoke unison to update them when there is a change.
 
-The UI is not yet functional, but feel free to poke around. To start the client you first need to:
+### Features ###
+* Remote file system events
+* No central server required
 
-* Make sure you have unison, an ssh-client, python, python-watchdog, python-yaml installed
-* The python-pip package makes installing yaml and watchdog a breeze
-
-A web based interface is in development, more information coming soon.
+### Known Issues ###
+* GUI is not functional
+* No desktop notifications
 
 ## Getting Started ##
 
 The first thing to do after installing the client is to create a profile. The
 following command will gather the required information to create a profile.
 ~~~
-python ./rainmaker -c
+./rainmaker create
 ~~~
 
 once you have created a profile you can start up rainmaker and begin syncing your files.
 By default profiles are configured to automatically start syncing when you start rainmaker
 ~~~
-python ./rainmaker.py
-~~~
+./rainmaker
+/~~~
 
 ###Client Usage###
 
 Not all features are implemented
 
 ~~~
-usage: rainmaker.py [-h] [-v] [-d PROFILE] [--start PROFILE] [--stop PROFILE]
-                    [-t PROFILE] [-a] [-q] [--log {warn,info,debug,False}]
-                    [-c] [-l] [-u [PROFILE]]
+usage: rainmaker [-h] [-v] [-q] [--log {debug,info,warn,error,none}]
+                 [{create,delete,list,update,start,auto,info}]
+
+positional arguments:
+  {create,delete,list,update,start,auto,info}
+                        Action to perform (default="auto")
+                        
+                        auto    -   Start all profiles where 'auto' = True
+                        
+                        create  -   Create a new profile
+                        
+                        delete  -   Delete a profile
+                        
+                        list    -   List all profiles or specific
+                                    information about a single profile
+                        
+                        update  -   Update the contents of a profile
+                        
+                        start   -   Start by running the specified profile
+                        
+                        info    -   Display config information and exit
 
 optional arguments:
   -h, --help            show this help message and exit
   -v, --version         show program's version number and exit
-  -d PROFILE, --delete PROFILE
-  --start PROFILE
-  --stop PROFILE
-  -t PROFILE, --test PROFILE
-  -a, --auto
-  -q, --quiet
-  --log {warn,info,debug,False}
-  -c                    [TYPE] [OPTIONS]
-  -l                    List all profiles or list settings for specicific
-                        profile
-  -u [PROFILE]          [PROFILE] [OPTIONS]
+  -q                    Suppress all output.
+  --log {debug,info,warn,error,none}
+                        Set log level
 ~~~
 
 
@@ -80,8 +91,7 @@ Coming Soon
 
 ## Server Install: ##
 
-There isnt really anything to install on the server as far as rainmaker is concerned, but you do need to have unison and an openssh-server setup and ready to go.
-Server side changes will be supported soon.
+There isn't really anything to install on the server as far as rainmaker is concerned, but you do need to have unison and an openssh-server setup and ready to go.
 
 ### Ubuntu ###
 Tested on 12.04 Desktop
@@ -107,7 +117,6 @@ Coming Soon
 Coming Soon
 
 
-
 ## Development Notes: ##
 * Unison allows multiple path statements in the command line!
     * This is important because it will allow us to update multiple files per connection
@@ -116,4 +125,3 @@ Coming Soon
 * [Unison] (http://www.cis.upenn.edu/~bcpierce/unison/)
 * [OpenSSH] (http://www.openssh.org/)
 * [Watchdog] (http://packages.python.org/watchdog/)
-* [Paramiko] (http://www.lag.net/paramiko/)

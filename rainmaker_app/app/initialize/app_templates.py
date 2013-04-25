@@ -8,6 +8,6 @@ class AppTemplates(object):
         self.path = self.app.templates_path
         self.templates = self.app.config['templates']
     def find(self,template_type):
-        return app.model.Profile(self.app,data=self.templates[template_type])
+        return app.profile.Profile(self.app,data=self.templates[template_type])
         
 

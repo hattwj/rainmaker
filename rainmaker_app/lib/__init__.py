@@ -1,10 +1,12 @@
 #import _conf
 
+# modules
 import path
 import tasks
 import logger
 
-from .log_monitor import LogMonitor
+#classes
+from .tail import Tail
 from .attrs_bag import AttrsBag
 from .regex_dict import RegexDict
 from .record_script import RecordScript

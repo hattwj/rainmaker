@@ -1,6 +1,6 @@
 import os
 import yaml
-import model
+import profile
 
 root = os.path.abspath(os.path.join(os.path.dirname(__file__)) )
 

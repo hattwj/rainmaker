@@ -1,3 +1,0 @@
-{address: localhost, local_root: /home/ubuntu/rainmaker/rainmaker_app/tmp/sync1, max_backups: '10', port: '22',
-  remote_root: /home/ubuntu/rainmaker/rainmaker_app/tmp/sync2, ssh_key_path: /home/ubuntu/.ssh/rain, title: unison,
-  type: unison, user: ubuntu, guid: 'sfghjggjjfssj'}

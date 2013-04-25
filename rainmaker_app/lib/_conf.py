@@ -227,22 +227,22 @@ class RainmakerConfig(dict):
     def __init__(self):        
         self.log = logging.getLogger('config')
         self.home = os.path.expanduser('~')
-        self.rain_dir = os.path.join(self.home,'.rainmaker')
+        self.user_dir = os.path.join(self.home,'.rainmaker')
         self.log_f='rainmaker.log'
-        self.log_path=os.path.join(self.rain_dir,self.log_f)
+        self.log_path=os.path.join(self.user_dir,self.log_f)
         self.unison_dir = os.path.join(self.home,'.unison')
         self.profiles_f = 'profiles.yml'
-        self.profiles_path=os.path.join(self.rain_dir,self.profiles_f)
+        self.profiles_path=os.path.join(self.user_dir,self.profiles_f)
         self.config_f = 'config.yml'
-        self.config_path=os.path.join(self.rain_dir,self.config_f)
+        self.config_path=os.path.join(self.user_dir,self.config_f)
         app_dir = os.path.join(os.path.dirname(__file__),'..')
         
         self.app_dir = os.path.abspath(app_dir)
         self.app_conf_dir=os.path.join(self.app_dir,'conf')
         self.config_path_ro=os.path.join(self.app_dir,'conf',self.config_f)
                
-        if not os.path.isdir(self.rain_dir):
-            os.mkdir(self.rain_dir)
+        if not os.path.isdir(self.user_dir):
+            os.mkdir(self.user_dir)
         if not os.path.isdir(self.unison_dir):
             os.mkdir(self.unison_dir)
 
@@ -308,6 +308,6 @@ class RainmakerConfig(dict):
 
     def find(self,fname):
         paths=[
-            self.rain_dir,
+            self.user_dir,
             self.app_dir
             ]

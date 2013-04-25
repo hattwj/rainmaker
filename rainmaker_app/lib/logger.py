@@ -54,11 +54,13 @@ def create(name='',style=None,level=None):
     return log
 
 # also log output to a file
-def send_log_to_file(fpath, log,level=None, style=None,date_style=None):
+def log_to_file(fpath, name ,level=None, style=None,date_style=None):
     do_init(style,level)
     level = levels[level] if level else levels[config['level']]
     date_style = date_style if date_style else config['date_style']
     style = style or config['style']
+    
+    log = logging.getLogger(name)
 
     # define a Handler
     handler = logging.FileHandler(fpath)
@@ -73,5 +75,5 @@ def send_log_to_file(fpath, log,level=None, style=None,date_style=None):
     # add the handler to the logger
     log.addHandler(handler)
     
-    return True
+    return log
 

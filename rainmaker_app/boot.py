@@ -3,45 +3,41 @@ import yaml
 
 
 from .conf import load
-from .lib import logger, path, cli, tasks, Callbacks
+from .lib import logger, path, cli, tasks, Callbacks, AttrsBag
 from .app import initialize
 
-class Rainmaker(object):
+class Rainmaker(AttrsBag):
     event_handlers = None
     profiles = None
     callbacks = None
 
-    root = os.path.abspath(os.path.join(os.path.dirname(__file__)) )
-    home_dir = os.path.expanduser('~')
-    rain_dir = os.path.join(home_dir,'.rainmaker')
-    log_path = os.path.join(rain_dir,'rainmaker.log') 
-    log_level = 'info'
-    log_style='%(name)-12s %(levelname)-8s %(message)s'
-    
-    conf_dir=os.path.join(root,'conf')
-    events_path = os.path.join(rain_dir,'events.yml')
-    config_path = os.path.join(conf_dir,'config.yml')
-
     def __init__(self):
+        AttrsBag.__init__(self, load('rainmaker.yml') )
         self.callbacks = Callbacks(self,['init','shutdown'])
-        self.log = logger.create(self.__class__.__name__)
-    
+   
+    def set_user_dir(self,path):
+        self.user_dir = os.path.abspath(os.path.expanduser(path))
+        self.profiles_dir = os.path.join(self.user_dir,'profiles')
+        self.tmp_dir = os.path.join(self.user_dir,'tmp')
+        self.log_path = os.path.join(self.user_dir,'rainmaker.log') 
+        
     # called after parser run to complete init sequence
     def init(self):
+        logger.config['level'] = self.log_level
+        self.log = logger.create(self.__class__.__name__)
+        logger.log_to_file(self.log_path,'') 
         self.callbacks.run('before_init')
-        tasks.install(self.rain_dir)
+        tasks.install(self.user_dir)
         self.config = load('rainmaker.yml')
-        self.profiles = initialize.AppProfiles(self)
-        self.loop = initialize.AppLoop(self)
+        self.profiles = initialize.AppProfiles(self.profiles_dir)
+        self.loop = initialize.AppLoop(self.tmp_dir)
         self.callbacks.run('init')
         self.callbacks.run('after_init')
         return True
     
-    # dir of user data folder
-    def profiles_dir(self,arg=None):
-        return os.path.join(self.rain_dir,'profiles',arg)
-
     # the application will now shut down
     # - trigger related shutdown events
     def shutdown(self):
+        if self.loop:
+            self.loop.shutdown()
         self.callbacks.trigger('shutdown')

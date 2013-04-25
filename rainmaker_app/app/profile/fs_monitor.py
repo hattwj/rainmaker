@@ -3,24 +3,30 @@ from calendar import timegm
 from time import gmtime
 
 from os import sep
+
 # Queue imports for different python versions
 try:
     from Queue import Queue, Empty
 except ImportError:
     from queue import Queue, Empty  # python 3.x
 
+from yaml import safe_dump
+
 from watchdog.events import PatternMatchingEventHandler
 from watchdog.events import FileSystemMovedEvent
 from watchdog.events import FileSystemEvent
 
-from rainmaker_app.lib import logger, Callbacks
 
-class BaseHandler(PatternMatchingEventHandler):
-    def __init__(self,path,ignore_patterns=None):
+from rainmaker_app.lib import logger#, Callbacks
+class FsMonitor(PatternMatchingEventHandler):
+    event_log_style= '%(message)s'
+
+    def __init__(self,path,log_path,ignore_patterns=None):
         PatternMatchingEventHandler.__init__(self,ignore_patterns=ignore_patterns)
         self.event_q = Queue()
-        self.log = logger.create(self.__class__.__name__)
-        self.callbacks = Callbacks(self,['get_events'])
+        log_name = self.__class__.__name__
+        self.fs_log = logger.log_to_file(log_path,log_name,style=self.event_log_style,level='debug')
+        #self.callbacks = Callbacks(self,['get_events'])
         self.path = path
 
     ## store events in queue
@@ -45,10 +51,11 @@ class BaseHandler(PatternMatchingEventHandler):
             try:
                 event = self.event_q.get_nowait() 
                 events.append(event)
+                self.fs_log.debug(safe_dump(event).replace("\n",''))
+
             except Empty:
                 break
-            self.log.debug(event)
-        self.callbacks.trigger('get_events',events=events)
+        #self.callbacks.trigger('get_events',events=events)
         return events 
    
     def __event_to_dict__(self,event,path):
@@ -64,4 +71,3 @@ class BaseHandler(PatternMatchingEventHandler):
     # return event file path relative to root
     def rel_path(self,base,path):
         return path.replace(base+sep,'')
-

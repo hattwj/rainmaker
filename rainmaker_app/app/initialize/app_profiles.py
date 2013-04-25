@@ -1,23 +1,22 @@
 import glob
 import os
 
-
 from rainmaker_app.conf import load
-from rainmaker_app.app.model import Profile
+from rainmaker_app.app.profile import Profile
 from rainmaker_app.lib import logger
 
 class AppProfiles(object):
     profiles = {}
 
-    def __init__(self,my_app):
-        self.app=my_app
+    def __init__(self,path):
+        self.profiles_dir = path
         self.log=logger.create(self.__class__.__name__)
 
     def new(self,template=None,vals=None,path=None):
         if template=='unison':
-            attrs = load('model/unison_profile/attrs.yml')
+            attrs = load('profile/unison.yml')
         elif not template or template=='base':
-            attrs = load('model/profile/attrs.yml')
+            attrs = load('profile/base.yml')
         else:
             self.log.error('Unknown profile type: %s' % template)
             raise AttributeError
@@ -26,6 +25,14 @@ class AppProfiles(object):
         
         return profile
 
+    def load_paths(self,paths):
+        result = []
+        for path in paths:
+            p = self.load_path(path)
+            if p:
+                result.append(p)
+        return result
+    
     def load_path(self,path):
         vals = load(path,abspath=True)
         profile = self.new(vals['type'],vals=vals,path=path)
@@ -45,7 +52,7 @@ class AppProfiles(object):
 
     def all(self):
         profiles = []
-        for p in glob.glob(self.app.profiles_dir('*.yml')):
+        for p in glob.glob(os.path.join(self.profiles_dir,'*.yml')):
             profiles.append( self.load_path(p) )
         return profiles
 
@@ -55,8 +62,7 @@ class AppProfiles(object):
         if profile.path != None:
             return
         profile.path=os.path.join(
-            self.app.rain_dir,
-            'profiles',
+            self.profiles_dir,
             "%s.yml" % (profile.title) 
         )
     

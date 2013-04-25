@@ -1,8 +1,8 @@
 import unittest
 import os
 
-from rainmaker_app.app.model import Profile
-from rainmaker_app.conf.model.unison_profile import attrs
+from rainmaker_app.app.profile import Profile
+from rainmaker_app.conf import load
 from rainmaker_app.lib import path
 from rainmaker_app.lib.tasks import install
 
@@ -11,9 +11,9 @@ class TestUnisonProfile(unittest.TestCase):
     def setUp(self):
         print 'Setup'
         unittest.TestCase.setUp(self)
-        self.profile = Profile(attrs)
-        self.rain_dir=path.rel('tmp','.rainmaker')
-        install(self.rain_dir)
+        self.profile = Profile( load('profile/unison.yml') )
+        self.user_dir=path.rel('tmp','.rainmaker')
+        install(self.user_dir)
         self.profile.local_root = path.rel('tmp','sync1')
         self.profile.remote_root = path.rel('tmp','sync2')
         self.profile.backupdir = path.rel('tmp','backups')
@@ -23,7 +23,7 @@ class TestUnisonProfile(unittest.TestCase):
 
     def test_io_funcs(self):
         self.assertFalse( self.profile.delete() )
-        self.profile.path=os.path.join(self.rain_dir,'profiles','test.yml')
+        self.profile.path=os.path.join(self.user_dir,'profiles','test.yml')
         self.assertTrue( self.profile.save() )
         self.assertTrue( os.path.exists( self.profile.path ) )
         self.assertTrue( self.profile.delete() )
@@ -31,7 +31,7 @@ class TestUnisonProfile(unittest.TestCase):
     
     # 
     def test_process_events(self):        
-        self.profile.handler_init()
+        self.profile.fs_monitor_init()
         self.add_events()
         commands = self.profile.process_events()
         self.assertEquals(len(commands),2)
@@ -55,26 +55,26 @@ class TestUnisonProfile(unittest.TestCase):
     # test path validity 
     def test_paths(self):
         print self.profile.backupdir
-        print self.profile.remote_event_dir
+        print self.profile.remote_events_dir
 
     def add_events(self):
-        self.profile.handler.add_event(
+        self.profile.fs_monitor.add_event(
             'created',
             src_path = os.path.join(self.profile.local_root,'test.txg') ,
             is_dir = False
         )
-        self.profile.handler.add_event(
+        self.profile.fs_monitor.add_event(
             'created',
             src_path = os.path.join(self.profile.local_root,'test3.txt') ,
             is_dir = False
         )
-        self.profile.handler.add_event(
+        self.profile.fs_monitor.add_event(
             'moved',
             src_path = os.path.join(self.profile.local_root,'test.yml') ,
             dest_path = os.path.join(self.profile.local_root,'test2.yml') ,
             is_dir = False
         )
-        self.profile.handler.add_event(
+        self.profile.fs_monitor.add_event(
             'moved',
             src_path = os.path.join(self.profile.local_root,'test2.yml') ,
             dest_path = os.path.join(self.profile.local_root,'test3.yml') ,

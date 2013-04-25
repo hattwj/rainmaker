@@ -48,7 +48,11 @@ class AppParser(object):
 
     # 
     def __create_with__(self,key,add_help=False):
-        self.parser = argparse.ArgumentParser(version='0.0.2',add_help=add_help)
+        self.parser = argparse.ArgumentParser(
+            version='0.0.2',
+            add_help=add_help,
+            formatter_class=argparse.RawTextHelpFormatter
+        )
         self.__add__(key)
         self.__add__('base')
     
@@ -75,17 +79,13 @@ class AppParser(object):
         # reparse opts
         self.opts = self.parser.parse_args(self.args)
         
+        self.app.set_user_dir(self.opts.user_dir)
+
         # carry out response to action after init is complete
         self.func=getattr(self,"__%s__" % self.action)
         self.app.callbacks.register('after_init',self.__after_app_init__)
     
     def __after_app_init__(self):
-        print '''
-Rainmaker info:
-\tuser_dir=%r
-\taction=%r
-\tlog=%r
-        ''' % (self.app.rain_dir,self.action,self.app.log_level)
         self.func()
 
     def __add__(self,key):
@@ -148,30 +148,34 @@ Rainmaker info:
             self.parser.add_argument('--%s'%attr,help=profile.attr_desc(attr))
         self.profile = profile
     
-    def __find_profile__(self):
-        profile = None
+    def __find_profiles__(self):
+        profiles = []
         if hasattr(self.opts,'n') and self.opts.n:
-            profiles = self.app.profiles.all()
+            all_profiles = self.app.profiles.all()
             n = int(self.opts.n)-1
             if len(profiles) <= n or n < 0:
                 print "Profile number %s doesn't exist" % str(n+1)
             else:
-                profile = profiles[n]
+                profiles.append( all_profiles[n] )
         elif hasattr(self.opts,'title') and self.opts.title:
             profile = self.app.profiles.find_by('title',self.opts.title)
             if not profile:
                 print "Profile titled  %s doesn't exist" % str(self.opts.title)
+            else:
+                profiles.append(profile)
         elif hasattr(self.opts,'profile_paths') and self.opts.profile_paths:
-            pass             
-        return profile
+            profiles += self.app.profiles.load_paths(self.opts.profile_paths)       
+        return profiles
 
     def __list__(self):
-        print self.opts
-        profile = self.__find_profile__()
-        
-        if profile:
-            for k,v in profile.attrs_dump_key('val').iteritems():
-                print '#%s\n%s=%s\n' % (profile.attr_desc(k),k,v)
+        profiles = self.__find_profiles__()
+         
+        if profiles:
+            for p in profiles:
+                attrs = self.opts.attrs if self.opts.attrs else p.attrs_dump_key('val').keys()
+
+                for k in attrs:
+                    print '#%s\n%s=%s\n' % (p.attr_desc(k),k,p.subst(getattr(p,k)))
             return
 
         profiles = self.app.profiles.all()
@@ -184,19 +188,30 @@ Rainmaker info:
             print "%s\t%s\t%s\t%s" % (i+1, p.title, p.type,basename(str(p.path)))
             i+=1
     def __start__(self):
-        if not self.opts.title:
-            print 'Profile title required...'
-            self.__list__()
-            return
+        profiles = self.__find_profiles__()
+        if not profiles:
+            print 'Profile required'
+            exit(2)
+        print 'Starting rainmaker' 
+        print "Found\t %s profile(s)" % len(profiles)
+        self.app.loop.start(profiles)
     
-    def __stop__(self):
-        if not self.opts.title:
-            print 'Profile title required...'
-            self.__list__()
-            return
-
     def __info__(self):
-        pass
-    
+        print '''
+Rainmaker:
+  Version:
+  Release Date:
+
+  Path Info:
+    user_dir=%r
+    log=%r
+
+  Profiles:
+        ''' % (
+    self.app.user_dir,
+    self.app.log_level
+    )
+        self.__list__()
+            
     def __status__(self):
         pass

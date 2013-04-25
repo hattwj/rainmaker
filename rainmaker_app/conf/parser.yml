@@ -39,6 +39,12 @@ base:
                 help: 'Suppress all output.'
                 action: 'store_true'
         -
+            - '--user-dir'
+            - 
+                help: 'Location of program data. Default is ~/.rainmaker'
+                dest: 'user_dir'
+                default: '~/.rainmaker'
+        -
             - '--log'
             - 
                 help: 'Set log level'
@@ -50,8 +56,25 @@ auto:
         -   
             - 'action'
             -
-                help: 'Action to perform (default="auto")'
-                choices: ['create','delete','list','update','start','stop','status','auto','info']
+                help: |
+                    Action to perform (default="auto")
+
+                    auto    -   Start all profiles where 'auto' = True
+
+                    create  -   Create a new profile
+
+                    delete  -   Delete a profile
+
+                    list    -   List all profiles or specific
+                                information about a single profile
+                    
+                    update  -   Update the contents of a profile
+
+                    start   -   Start by running the specified profile
+
+                    info    -   Display config information and exit
+                    
+                choices: ['create','delete','list','update','start','auto','info']
                 default: 'auto'
                 nargs: '?'
                 action: 'store'
@@ -86,6 +109,12 @@ list:
         - *profile_title
         - *profile_n
         - *profile_paths
+        -
+            - '--attr'
+            -
+                help: 'List value of specified attribute'
+                action: 'append'
+                dest: 'attrs'
 delete:
     args:
         -   

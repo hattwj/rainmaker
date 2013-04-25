@@ -1,32 +1,27 @@
-log_level:
+version:
+    desc: Rainmaker Version
+    val: 0.2.1
     type: str
-    default: 'info'
-    desc: 'log level'
+release_date:
+    desc: Release date
+    val: 2013-04-25
+    type: date
+home_page:
+    desc: Application home page
+    val: 'https://github.com/hattwj/rainmaker'
+    type: uri
 user_dir:
+    desc: User data directory
+    type: path
+    val: '~/.rainmaker'
+log_path:
+    desc: Application log file path
+    val: '${root}'
+    type: path
+log_level:
+    desc: Log level
+    val: 'info'
     type: str
-    default: '~/.rainmaker'
-    desc: 'location of users .rainmaker dir'
-callbacks:
-    type: arr
-    default: 
-        app:
-            - init
-        profile:
-            - save
-            - delete
-            - validate
-            - update
-            - create
-            - init
-        loop:
-            - startup
-            - shutdown
-        file_system:
-            - create
-            - modify
-            - move
-            - delete
-            - command
-        plugin:
-            - load
-            - unload        
+log_style:
+    desc: Application log style
+    val: '%(name)-12s %(levelname)-8s %(message)s'
