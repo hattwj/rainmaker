@@ -4,7 +4,7 @@ import os
 from rainmaker_app.app.profile import Profile
 from rainmaker_app.conf import load
 from rainmaker_app.lib import path
-from rainmaker_app.lib.tasks import install
+from rainmaker_app.tasks import install
 
 class TestUnisonProfile(unittest.TestCase):
 

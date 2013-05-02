@@ -50,3 +50,4 @@ def which(program):
 # get name of current user
 def current_user():
     return getpass.getuser()
+

@@ -1,31 +1,27 @@
 #verbosity levels for logger
 verbosity:
     Rainmaker: 0
+    AppLoop: 0
     AppProfiles: 1
     AppParser: 1
     Profile: 1
+    LogMonitor: 1
+    FsMonitor: 1
+    ProfileManager: 1
     Handler: 2
     RecordScript: 3
+    FsActions: 0
     RecordHooks: 4
     AttrsBag: 4
     Callbacks: 3
     RegexDict: 4
-v_styles:
-    -
-        style: '%(message)s'
-        date_style: '%Y-%m-%d-%H-%M-%S'
-    -
-        style: '%(name)-12s %(message)s'
-        date_style: '%Y-%m-%d-%H-%M-%S'
-    -
-        style: '%(name)-12s %(levelname)-8s %(message)s'
-        date_style: '%Y-%m-%d-%H-%M-%S'
-    -
-        style: '%(name)-12s %(levelname)-8s %(message)s'
-        date_style: '%Y-%m-%d-%H-%M-%S'
-    -
-        style: '%(name)-12s %(levelname)-8s %(message)s'
-        date_style: '%Y-%m-%d-%H-%M-%S'
-style: '%(name)-12s %(levelname)-8s %(message)s'
+styles:
+    - '%(message)s'
+    - '%(name)-12s %(message)s'
+    - '%(name)-12s %(levelname)-8s %(message)s'
+    - '%(name)-12s %(levelname)-8s %(message)s'
+    - '%(name)-12s %(levelname)-8s %(message)s'
 date_style: '%Y-%m-%d-%H-%M-%S'
 level: 'info'
+log_file_style: '%(message)s'
+

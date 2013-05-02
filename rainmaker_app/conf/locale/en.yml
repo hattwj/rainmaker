@@ -1,0 +1,28 @@
+en:
+    profile:
+        unison:
+            created: |
+                
+                # Your profile has been created! Only a few more steps to go.
+                    
+                    # 0. Create your ssh key
+                         ssh-keygen -t rsa -f ${basename:${ssh_key_path}} -C "rainmaker-${title}-${guid}" 
+
+                    # 1. Add your ssh pub key to the server
+                
+                    #   - Using ssh-copy-id: (recommended method)
+                          ssh-copy-id -i ${ssh_key_path} -p ${port} ${user}@${address} 
+                
+                    #   - Or using scp: (OSX)
+                          scp -p ${port} ${ssh_key_path}.pub ${user}@${address}/home/${user}/.ssh/${basename:${ssh_key_path}}.pub          
+                          ssh -p ${port} ${user}@${address} "cat /home/${user}/.ssh/${basename:${ssh_key_path}}.pub >> /home/${user}/.ssh/authorized_keys"
+                
+
+                    # 2. Create the appropriate directories on the remote machine.
+                         ssh -p ${port} -i ${ssh_key_path} ${user}@${address} "mkdir -p ${remote_root}/.rain && mkdir -p ${backupdir}"
+
+                    # 3. Start rainmaker (all profiles)
+                         rainmaker
+                    
+                    #   - Or start just this profile
+                          rainmaker start ${title}

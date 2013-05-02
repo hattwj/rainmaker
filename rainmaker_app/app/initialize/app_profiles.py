@@ -9,7 +9,8 @@ class AppProfiles(object):
     profiles = {}
 
     def __init__(self,path):
-        self.profiles_dir = path
+        self.user_dir = path
+        self.profiles_dir = os.path.join(path,'profiles')
         self.log=logger.create(self.__class__.__name__)
 
     def new(self,template=None,vals=None,path=None):
@@ -21,6 +22,7 @@ class AppProfiles(object):
             self.log.error('Unknown profile type: %s' % template)
             raise AttributeError
         profile = Profile(attrs,vals=vals,path=path)
+        profile.user_dir = self.user_dir
         profile.callbacks.register('before_save',self.__auto_profile_path__)
         
         return profile

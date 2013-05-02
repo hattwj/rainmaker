@@ -19,7 +19,8 @@ from os.path import basename
 from sys import argv, exit
 import argparse
 
-from rainmaker_app.conf import load
+from rainmaker_app.conf import load, t
+from rainmaker_app.lib import logger
 from time import sleep
 
 # prompt user for valid input
@@ -49,7 +50,6 @@ class AppParser(object):
     # 
     def __create_with__(self,key,add_help=False):
         self.parser = argparse.ArgumentParser(
-            version='0.0.2',
             add_help=add_help,
             formatter_class=argparse.RawTextHelpFormatter
         )
@@ -73,7 +73,8 @@ class AppParser(object):
         
         # look for action, set app settings
         self.opts,rem_args=self.parser.parse_known_args(self.args)
-        self.app.log_level = self.opts.log_level
+        logger.log_level = self.opts.log_level
+        logger.set_verbosity( self.opts.verbosity )
         self.__detect_action__()
         
         # reparse opts
@@ -86,6 +87,7 @@ class AppParser(object):
         self.app.callbacks.register('after_init',self.__after_app_init__)
     
     def __after_app_init__(self):
+        ''' Run action '''
         self.func()
 
     def __add__(self,key):
@@ -111,20 +113,23 @@ class AppParser(object):
             return
 
         self.app.loop.start(p_auto)
+    
+    def __daemon__(self):
+        pass
 
     # create a new profile
     def __create__(self):
         profile = self.app.profiles.new(self.opts.type)
-        if self.opts.type in self.data[self.action]['questions']:
-            qs=self.data[self.action]['questions'][self.opts.type]
-        else:
-            qs = profile.attrs.keys()
+        
+        # load a list of questions to ask 
+        qs = profile.required_fields
         
         print 'Creating %s profile\n' % profile.type
         # ask questions
         for v in qs:
             ask(profile,v)         
         profile.save()
+        print profile.subst(t('profile.unison.created'))
 
     def __delete__(self):
         if not self.opts.title:

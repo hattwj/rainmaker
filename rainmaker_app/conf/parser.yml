@@ -39,6 +39,13 @@ base:
                 help: 'Suppress all output.'
                 action: 'store_true'
         -
+            - '-v'
+            - 
+                help: 'Increase verbosity level (4 is max)'
+                default: 0
+                action: 'count'
+                dest: 'verbosity'
+        -
             - '--user-dir'
             - 
                 help: 'Location of program data. Default is ~/.rainmaker'
@@ -60,6 +67,9 @@ auto:
                     Action to perform (default="auto")
 
                     auto    -   Start all profiles where 'auto' = True
+                    
+                    daemon  -   Start all daemon profiles where 'auto' = daemon,
+                                Only log file system events.
 
                     create  -   Create a new profile
 
@@ -70,18 +80,15 @@ auto:
                     
                     update  -   Update the contents of a profile
 
-                    start   -   Start by running the specified profile
+                    start   -   Only run the specified profile(s)
 
                     info    -   Display config information and exit
                     
-                choices: ['create','delete','list','update','start','auto','info']
+                choices: ['create','delete','daemon','list','update','start','auto','info']
                 default: 'auto'
                 nargs: '?'
                 action: 'store'
 create:
-    questions: 
-        unison: ['title','user','local_root','max_backups',
-        'ssh_key_path','port','address','remote_root']
 
     args:
         -   
@@ -175,4 +182,14 @@ info:
                 help: 'Info about installation'
                 action: 'store'
                 metavar: 'info'
-
+daemon:
+    args:
+        -   
+            - 'action'
+            -
+                help: 'Daemon mode, monitor file system for activity'
+                metavar: 'daemon'
+                action: 'store'
+        - *profile_title
+        - *profile_n
+        - *profile_paths

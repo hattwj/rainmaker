@@ -3,9 +3,8 @@ import logging
 from rainmaker_app.conf import load
 config=load('logger.yml')
 
-init_done = False
-base_style = '%(name)-12s %(levelname)-8s %(message)s' 
-base_level = logging.INFO
+init_done = False 
+log_level=config['level']
 levels = {
     'debug':logging.DEBUG,
     'info':logging.INFO,
@@ -14,51 +13,55 @@ levels = {
     'none':logging.NOTSET
     }
 
-# log to console
-def do_init(style=None,level=None):
-    global init_done
-    level = levels[level] if level else levels[config['level']]
-    style = style or config['style']
+verbosity=0
 
-    if init_done == True:
-        return
+def set_verbosity(val):
+    ''' Set logging verbosity '''
+    global verbosity
+    global config
 
-    init_done = True
-    # set up logging to console
-    logging.basicConfig(
-        level=level,
-        format=style
-    )
-
+    if val <=0:
+        val = 0
+    elif val >= len(config['styles']):
+        val = len(config['styles'])-1
+    verbosity = val
 
 def create(name='',style=None,level=None):
-    do_init(level=level,style=style)
-    level = levels[level] if level else levels[config['level']]
-    style = style or config['style']
+    global log_level
+    global config
+    global verbosity
+    cur_v = config['verbosity'][name]
+    if verbosity < cur_v:
+        level = 'error'
+    else:
+        level = log_level
+    level = levels[level] if level else levels[log_level]
+    style = style if style else config['styles'][verbosity]
 
     log = logging.getLogger(name)
     
-    if name == '':
-        return log
-    #handler = logging.StreamHandler()
-    #handler.setLevel(level)
+    if log.handlers:
+        handler = log.handlers[0] 
+    else:
+        handler = logging.StreamHandler()
+        log.addHandler(handler)
+
+    handler.setLevel(level)
+    log.setLevel(level)
 
     # set a format which is simpler for f_log use
-    #formatter = logging.Formatter(style)
+    formatter = logging.Formatter(style)
     
     # tell the handler to use this format
-    #handler.setFormatter(formatter) 
-
-    #log.addHandler(handler)
+    handler.setFormatter(formatter) 
 
     return log
 
 # also log output to a file
 def log_to_file(fpath, name ,level=None, style=None,date_style=None):
-    do_init(style,level)
-    level = levels[level] if level else levels[config['level']]
+    level = levels[level] if level else levels[log_level]
     date_style = date_style if date_style else config['date_style']
-    style = style or config['style']
+    style = style if style else config['log_file_style']
     
     log = logging.getLogger(name)
 

@@ -5,7 +5,7 @@ from yaml import safe_dump
 from watchdog.observers import Observer
 
 from rainmaker_app.lib import logger
-from rainmaker_app.app.profile import CmdRunner
+from rainmaker_app.app.profile import ProfileManager
 
 class AppLoop(object):
     observer = None
@@ -36,18 +36,20 @@ class AppLoop(object):
             self.observer = Observer()
             self.observer.start()
                 
-        cmd_runner = CmdRunner(profile,self.events_dir)
+        profile_manager = ProfileManager(profile,self.events_dir)
 
-        self.running_profiles[profile.guid] = cmd_runner
-        self.observer.schedule(cmd_runner.fs_monitor, profile.local_root,recursive=profile.recursive)
+        self.running_profiles[profile.guid] = profile_manager
+        self.observer.schedule(profile_manager.fs_monitor, profile.local_root,recursive=profile.recursive)
         self.log.info('Started profile: %s' % profile.title)
-        
+        return profile_manager
+
     def once(self):
         ''' Process events once '''
-        for guid,p in self.running_profiles.iteritems():
-            cmds= p.process_events()
+        for guid,profile_manager in self.running_profiles.iteritems():
+            events= profile_manager.get_events()
+            cmds = profile_manager.events_to_cmds(events)
             for cmd in cmds:
-                out=p.__run_cmd__(cmd)
+                output=profile_manager.run_cmd(cmd)
        
     def shutdown(self,**kwargs):
         if not self.observer:

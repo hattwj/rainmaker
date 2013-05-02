@@ -1,4 +1,5 @@
 from copy import deepcopy
+from .record_script import RecordScript
 
 class AttrsBag(object):
     
@@ -6,16 +7,25 @@ class AttrsBag(object):
         # prevent accidental byref 
         attrs = deepcopy(attrs)
         object.__setattr__(self,'attrs', attrs )
+        object.__setattr__(self,'script', RecordScript())
     
     def add_attrs(self,a_dict):
         # prevent accidental byref
         a_dict=deepcopy(a_dict)
         attrs = object.__getattribute__(self,'attrs') 
         object.__setattr__(self,'attrs', dict(attrs.items()+a_dict.items()) )
-    
+     
+    def new_attr(self,name,default,type,desc):
+        ''' return attr prototype'''
+        attr = {name:{'default':default,'desc':desc,'type':type}}
+        self.add_attrs(attr)
+
     def __getattribute__(self,name):
-        attrs = object.__getattribute__(self,'attrs')
-        if name in attrs:
+        try:
+            attrs = object.__getattribute__(self,'attrs')
+        except AttributeError:
+            attrs = None
+        if attrs and name in attrs:
             return attrs[name]['val'] if 'val' in attrs[name] else attrs[name]['default']
         else:
             return object.__getattribute__(self,name)
@@ -59,3 +69,13 @@ class AttrsBag(object):
             return True
         return False
     
+    def attr_subst(self,name,val=None):
+        val = getattr(self,name) if not val else val 
+        return setattr(self,name,self.subst(val))
+
+    # substitute val template with attrs dict
+    def subst(self, val, attrs={}):
+        self.script.attrs_update( self.attrs_dump() )
+        return self.script.subst(val,attrs)
+
+

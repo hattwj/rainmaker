@@ -1,9 +1,9 @@
 import os
 import yaml
 
-
+import tasks
 from .conf import load
-from .lib import logger, path, cli, tasks, Callbacks, AttrsBag
+from .lib import logger, path, cli, Callbacks, AttrsBag
 from .app import initialize
 
 class Rainmaker(AttrsBag):
@@ -23,13 +23,12 @@ class Rainmaker(AttrsBag):
         
     # called after parser run to complete init sequence
     def init(self):
-        logger.config['level'] = self.log_level
         self.log = logger.create(self.__class__.__name__)
         logger.log_to_file(self.log_path,'') 
         self.callbacks.run('before_init')
         tasks.install(self.user_dir)
         self.config = load('rainmaker.yml')
-        self.profiles = initialize.AppProfiles(self.profiles_dir)
+        self.profiles = initialize.AppProfiles(self.user_dir)
         self.loop = initialize.AppLoop(self.tmp_dir)
         self.callbacks.run('init')
         self.callbacks.run('after_init')

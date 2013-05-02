@@ -24,15 +24,16 @@ class FsMonitor(PatternMatchingEventHandler):
     def __init__(self,path,log_path,ignore_patterns=None):
         PatternMatchingEventHandler.__init__(self,ignore_patterns=ignore_patterns)
         self.event_q = Queue()
-        log_name = self.__class__.__name__
-        self.fs_log = logger.log_to_file(log_path,log_name,style=self.event_log_style,level='debug')
-        #self.callbacks = Callbacks(self,['get_events'])
+        log_name = log_path
+        self.fs_log = logger.log_to_file(log_path,log_path,style=self.event_log_style,level='debug')
+        self.log = logger.create(self.__class__.__name__)
         self.path = path
 
     ## store events in queue
     def on_any_event(self,event_obj):
         event = self.__event_to_dict__(event_obj,self.path)
         event['timestamp'] = '%s' % timegm(gmtime())
+        self.log.info('FS Event')
         self.event_q.put( event )
     
     ## Add event to queue

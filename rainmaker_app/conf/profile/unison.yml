@@ -1,10 +1,16 @@
+required_fields:
+    desc: Required fields
+    type: array
+    default: ['title','user','local_root','max_backups',
+        'ssh_key_path','port','address','remote_root']
 output_dict:
     type: regex_dict
     desc: Patterns for Unison stdout and stderr
     default:
         archives_locked: 'Fatal error: Warning: the archives are locked.'
         first_run: 'Warning: No archive files were found for these roots, whose canonical names are:'
-        normal: 'Nothing to do'
+        none: 'Nothing to do'
+        change: 'Reconciling changes'
         delete: 'Deleting'
         fatal_error: 'Fatal error'
         warning: 'Warning:'
@@ -33,6 +39,14 @@ title:
     default: unison
     type: str
     desc: 'profile name'
+local_tmp_dir:
+    default: '${abs_path:${user_dir}/tmp}'
+    type: path
+    desc: 'Local user tmp dir'
+user_dir:
+    default: null
+    type: path
+    desc: 'Local user data dir'
 user:
     default: '${current_user}'
     type: str
@@ -53,10 +67,9 @@ local_root:
     default: /home/${user}/sync
     type: localpath
     desc: 'local root'
-local_tmp_dir: {default: '${user_dir}/tmp', type: path, desc: path for importing server events}
 local_events_dir: {default: '${user_dir}/events', type: path, desc: path for local fs events}
 remote_events_dir: {default: '${abs_path:${remote_root}/../events}', type: path, desc: path to retrieve fs events from server}
-backupdir: {default: '${abs_path:${remote_root}/../backups}', type: path, desc: path to store file versions}
+backupdir: {default: '${abs_path:${remote_root}/../backups}', type: path, desc: Remote path to store file versions}
 remote_uri:
     default: 'ssh://${user}@${address}:${port}/'
     type: str
@@ -98,11 +111,11 @@ cmd_sync_recieve:
 startup: 
     type: str
     default: '${unison_base}'
-    desc: 'startup command'
+    desc: 'startup commands'
 shutdown:
     type: str
     default: null
-    desc: 'shutdown commands'
+    desc: 'shutdown command'
 do_ignores: 
     desc: Add ignore paths
     type: str
@@ -115,7 +128,11 @@ unison_base:
     type: str
     desc: base unison cmd
     default: "${which:unison} ${local_root} ${remote_uri}${remote_root} ${unison_options}"
+do_backups:
+    type: str
+    desc: unison backup opts
+    default: "-backuplocation 'central' -backup 'Name *' -backupprefix 'ver$VERSION-' -backupdir='${backupdir}' -maxbackups=${max_backups}" 
 unison_options:
     type: str
     desc: standard flags used for all unison sync commands
-    default: "-ui text -auto -batch -sshargs '-i ${ssh_key_path}' -backuplocation 'central' -backup 'Name *' -backupprefix '$VERSION.' -backupdir='${backupdir}' -maxbackups=${max_backups} -confirmbigdel=false ${do_ignores}"
+    default: "-ui text -auto -batch -sshargs '-i ${ssh_key_path}' ${do_backups} -confirmbigdel=false ${do_ignores}"

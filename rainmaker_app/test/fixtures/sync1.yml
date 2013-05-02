@@ -1,11 +1,11 @@
 address: localhost
-local_root: '${user_dir}/sync1'
-max_backups: '10'
+local_root: ${abs_path:${user_dir}/../sync1}
 port: '22'
-remote_root: '${user_dir}/sync2'
-remote_uri: ''
-remote_events_dir: '${user_dir}/events'
-title: unison
-type: unison 
-guid: 'test_profile_n1'
-
+remote_root: ${abs_path:${user_dir}/../sync2}
+do_ignores: false
+do_backups: false
+ssh_key_path: /home/ubuntu/.ssh/rain
+title: sync1
+type: unison
+user: ubuntu
+guid: sync1_guid

@@ -3,9 +3,9 @@ import random
 from string import lowercase, digits,Formatter
 from yaml import safe_load
 from pipes import quote
-from os.path import abspath
+from os.path import abspath,basename
 
-from .path import which,current_user,user_dir
+from .path import which,current_user
 from .logger import create
 
 class RecordScript(object):
@@ -13,8 +13,7 @@ class RecordScript(object):
     def __init__(self,attrs={},depth=2):
         self.log = create(self.__class__.__name__)
         self.attrs=attrs
-        self._formatter = Formatter()
-    
+        self._formatter = Formatter() 
     # optionally remove flags from val 
     def remove_flags(self,val):
         for tup in self._formatter.parse(val):
@@ -70,10 +69,12 @@ class RecordScript(object):
             elif key in attrs:
                 rep_val = attrs[key]
             if rep_val==None or not rep_key:
-                self.log.debug("subst missing val or key:\n\tval=%s\n\tkey=%s" % (rep_val,rep_key))
+                self.log.warn("subst missing val or key:\n\tval=%s\n\tkey=%s" % (rep_val,rep_key))
                 continue
             if isinstance(rep_val,list):
                 rep_val = ''.join(rep_val)
+            elif rep_val == False:
+                rep_val = ''
             #print 'times eol: %s' % times
             result = result.replace(rep_key,str(rep_val),1)
         if times >= 1 and has_flags:
@@ -108,13 +109,13 @@ class RecordScript(object):
         ''' return name of current user '''
         return current_user()
 
-    def __cmd_user_dir__(self,attrs):
-        ''' return application user data dir '''
-        return user_dir
-
     def __cmd_abs_path__(self,attrs,val):
         ''' return abspath '''
         return abspath(self.subst(val,attrs))
+    
+    def __cmd_basename__(self,attrs,val):
+        ''' return abspath '''
+        return basename(self.subst(val,attrs))
 
     def __cmd_rand__(self,attrs,val):
         ''' rand string of length val'''

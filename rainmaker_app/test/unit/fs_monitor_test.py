@@ -4,7 +4,7 @@ import os
 
 from rainmaker_app.app.profile import FsMonitor
 from rainmaker_app.lib.path import rel
-from rainmaker_app.lib.tasks import install
+from rainmaker_app.tasks import install
 
 class TestFsMonitor(unittest.TestCase):
 

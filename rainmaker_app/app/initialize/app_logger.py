@@ -24,7 +24,6 @@ class AppLogger(object):
         self.app = my_app
         # set up logging to console
         logger.do_init(level=self.app.log_level,style=self.app.log_style)
-        self.app.log=logger.create()
         
         # setup logging to file
         logger.send_log_to_file(self.app.log_path,self.app.log)
