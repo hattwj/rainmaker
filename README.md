@@ -1,13 +1,16 @@
 #rainmaker #
+
 ## About ##
 
 Rainmaker aims to provide a simple bidirectional file synchronization service by using common programs already installed on most computers. Rainmaker uses the python watchdog library to gain cross platform FSMonitoring capabilities, and utilizes Unison for file transfer. Because of the watchdog library you only need to do a full sync when you start rainmaker. Afterwards the watchdog filesystem monitor will track the changes that occur within your sync directory and only invoke unison to update them when there is a change.
 
 ### Features ###
+
 * Remote file system events
 * No central server required
 
 ### Known Issues ###
+
 * GUI is not functional
 * No desktop notifications
 
@@ -15,17 +18,19 @@ Rainmaker aims to provide a simple bidirectional file synchronization service by
 
 The first thing to do after installing the client is to create a profile. The
 following command will gather the required information to create a profile.
+
 ~~~
 ./rainmaker create
 ~~~
 
-once you have created a profile you can start up rainmaker and begin syncing your files.
+Once you have created a profile you can start up rainmaker and begin syncing your files.
 By default profiles are configured to automatically start syncing when you start rainmaker
+
 ~~~
 ./rainmaker
-/~~~
+~~~
 
-###Client Usage###
+### Client Usage ###
 
 Not all features are implemented
 
@@ -60,14 +65,16 @@ optional arguments:
                         Set log level
 ~~~
 
-
 **Be sure that you install the same version of unison on all clients and the server**
 
 ## Client Install: ##
+
 ### Ubuntu ###
 
 From a terminal run the following commands
+
 ~~~
+
 # Some day we might take care of these steps in an installer
 
 # Install unison and ssh-client
@@ -78,15 +85,18 @@ sudo pip install watchdog
 
 # Create a rainmaker only ssh-key
 ssh-keygen -f rainamker -t rsa -b 2048 -C "SSH Key for rainmaker"
+
 ~~~
 
 Now you should be ready to run rainmaker
 
 
 ###Windows:###
+
 Coming Soon
 
 ###Mac OSx:###
+
 Coming Soon
 
 ## Server Install: ##
@@ -94,12 +104,17 @@ Coming Soon
 There isn't really anything to install on the server as far as rainmaker is concerned, but you do need to have unison and an openssh-server setup and ready to go.
 
 ### Ubuntu ###
+
 Tested on 12.04 Desktop
+
 ~~~
+
 # Install software
+
 sudo apt-get install openssh-client openssh-server unison
 
 # Create rainmaker user to manage all sync connections
+
 sudo adduser rainmaker --disabled-password
 
 # Add keys to rainmaker user authorized keys files
@@ -108,20 +123,27 @@ sudo adduser rainmaker --disabled-password
 # Add SELinux/AppArmor restrictions for unison
 # not yet implemented, needed for untrusted clients
 sudo apt-get install apparmor-utils
+
 ~~~
 
 ###Windows:###
+
 Coming Soon
 
 ###Mac OSx:###
+
 Coming Soon
 
 
 ## Development Notes: ##
-* Unison allows multiple path statements in the command line!
-    * This is important because it will allow us to update multiple files per connection
 
-##References##
+Server side events are now supported!
+
+See TODO.md for other notices
+
+## References ##
+
 * [Unison] (http://www.cis.upenn.edu/~bcpierce/unison/)
 * [OpenSSH] (http://www.openssh.org/)
 * [Watchdog] (http://packages.python.org/watchdog/)
+

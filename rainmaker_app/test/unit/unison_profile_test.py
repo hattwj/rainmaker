@@ -28,30 +28,7 @@ class TestUnisonProfile(unittest.TestCase):
         self.assertTrue( os.path.exists( self.profile.path ) )
         self.assertTrue( self.profile.delete() )
         self.assertFalse( os.path.exists( self.profile.path ) )
-    
-    # 
-    def test_process_events(self):        
-        self.profile.fs_monitor_init()
-        self.add_events()
-        commands = self.profile.process_events()
-        self.assertEquals(len(commands),2)
-        for cmd in commands:
-            cmd_out = self.profile.run_cmd(cmd)
-            out = self.profile.process_output(cmd_out)
-            if 'normal' not in out:
-                print cmd_out
-
-            self.assertIn( 'normal',out)
-            self.assertNotIn( 'fatal_error',out)
-            if 'warning' in out:
-                self.assertIn( 'first_run',out)
-                
-    # test cmd runner
-    def test_cmd(self):
-        a = self.profile.run_cmd('python %s/test/bin/stderr_stdout.py' % path.root)
-        b = self.profile.run_cmd('unison /fraggle /rock -auto -batch')
-        c = self.profile.run_cmd('unison fraggle rock -auto -batch')
-    
+     
     # test path validity 
     def test_paths(self):
         print self.profile.backupdir

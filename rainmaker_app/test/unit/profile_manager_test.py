@@ -1,6 +1,9 @@
 import unittest
 import os
 
+print 'DEBUG'
+import sys
+
 from rainmaker_app.app.initialize import AppLoop
 from rainmaker_app.app.profile import ProfileManager, Profile
 from rainmaker_app.test import test_helper
@@ -38,15 +41,70 @@ class TestProfileManager(unittest.TestCase):
         src_file_rel = 'file.txt'
         rand_file(self.runner.profile,src_file_rel)
 
-        # Look for new events
+        # Find change in 1 local file
         events = self.runner.get_events(all_events=True)
         cmds = self.runner.events_to_cmds(events)
-        print events
         self.assertEquals(len(cmds),1)
         self.assertEquals(events[0]['event_src_path_rel'],src_file_rel)
-       
-        # sync empty dir?
+    
+    def test_server_side_sync(self):
+        self.runner.startup()
+        pm2=self.create_pm('sync2')        
+        pm2.startup()
+        
+        # change remote file
+        rand_file(pm2.profile ,'rand2')
+        
+        # send change to remote events log
+        sync(pm2)
+        
+        # sync with remote logs and
+        # find a change in 1 remote file
+        events = self.runner.get_events(all_events=True)
+        print events
+        sys.exit(1)
 
+    def test_process_events(self):
+        self.runner.startup()
+        rand_file(self.runner.profile,'a')
+        rand_file(self.runner.profile,'b')
+        events = self.runner.get_events()
+        commands = self.runner.events_to_cmds(events)
+        self.assertEquals(len(events),4)
+        self.assertEquals(len(commands),1)
+        for cmd in commands:
+            cmd_out = self.runner.run_cmd(cmd)
+            out = cmd_out['output']
+            if 'change' not in out:
+                print cmd_out
+
+            self.assertIn( 'change',out)
+            self.assertNotIn( 'fatal_error',out)
+            if 'warning' in out:
+                self.assertIn( 'first_run',out)                
+    
+    def test_empty_dirs(self):
+        ''' Test detection of empty dirs '''
+        self.runner.startup()
+
+        path1 = os.path.join(test_helper.temp_dir,'sync1','froms1')
+        epath1 = os.path.join(test_helper.temp_dir,'sync2','froms1')
+        path2 = os.path.join(test_helper.temp_dir,'sync1','froms2')
+        epath2 = os.path.join(test_helper.temp_dir,'sync2','froms2')
+        
+        test_helper.fs.mkdir(path1)
+        test_helper.fs.mkdir(epath2)
+        sync(self.runner)
+
+        self.assertTrue( os.path.exists(epath1) )
+        self.runner.run_cmd(key='startup')
+        self.assertTrue( os.path.exists(path2) )
+
+def sync(runner):
+    events = runner.get_events(all_events=True)
+    cmds = runner.events_to_cmds(events)
+    for cmd in cmds:
+        runner.run_cmd(cmd)
         
 def rand_file(profile,path):
     rand_str = profile.subst('${rand:1000}')  

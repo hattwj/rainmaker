@@ -57,7 +57,7 @@ class TestTail(unittest.TestCase):
         lines = lines_str.split("\n")
         counter = 0
         for line in self.tail.new_lines():
-            #print line
+            line = line.replace('\n','')
             #print lines[counter]
             self.assertEquals(line,lines[counter])
             counter += 1

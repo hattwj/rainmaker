@@ -31,20 +31,26 @@ class ProfileManager(object):
         self.output_parser = RegexDict( self.profile.output_dict )
     
     def startup(self):
+        ''' Start mon, and ignore initial events '''
         self.__sync_events__()
         events = self.log_monitor.get_events()
         self.run_cmd(key='startup')
 
-    def get_events(self,all_events=False):
+    def get_events(self,all_events=False,only_remote=False):
         ''' Process any events that may have occurred '''
         results = []
         now = timegm(gmtime())
+
         # check for remote events
-        if all_events or (self.last_loop + self.sync_interval) - now < 0:
+        if only_remote or all_events or (self.last_loop + self.sync_interval) - now < 0:
             self.last_loop = timegm(gmtime())
             self.__sync_events__()
             events = self.log_monitor.get_events()
-        events += self.fs_monitor.get_events()
+        
+        # check for local fs events
+        if not only_remote:
+            events += self.fs_monitor.get_events()
+        
         return events
 
     def run_cmd(self,cmd=None,key=None):

@@ -14,9 +14,9 @@ user_dir = os.path.join(temp_dir,'.rainmaker')
 events_dir = os.path.join(temp_dir,'events')
 backups_dir = os.path.join(temp_dir,'backups')
 
+fs = FsActions()
 
 def clean(tdirs=[],create=True):
-    fs = FsActions()
     fs.rmdir(user_dir)
     fs.rmdir(events_dir)
     fs.rmdir(backups_dir)

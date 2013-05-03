@@ -1,11 +1,22 @@
+# Desktop notification options:
+- qt embedded within ui
+- command line util
 
-# ProfileManager
-## Remove events with duplicate file names
-## Add timestamp filter on file log
-### Sync log and grab last timestamp
-### Full sync
-### Check log activity
+# readme.md file is corrupt
 
-# Testing
-## Test two profile setup
+# create readme file for RecordScript dsl
 
+# create cmd runner class specializing in path management
+
+# Manage below with new class
+
+# Malicious paths from remote clients?
+
+# How about a move outside of sync directory?
+## alter event type to delete?
+
+# How about move into watch dir?
+## alter event type to create?
+
+# How should we handle a move event where one file should be ignored?
+## creation of unison.tmp files not ignored during mv

@@ -6,10 +6,11 @@ from .callbacks import Callbacks
 from .attrs_bag import AttrsBag
 
 class RecordHooks(AttrsBag):
-    
+    log = None
     def __init__(self,name=None):
-        AttrsBag.__init__(self) 
-        self.log = create(name)
+        AttrsBag.__init__(self)
+        if not self.log:
+            self.log = create(self.__class__.__name__)
         callbacks=[
             'init',
             'validate',
