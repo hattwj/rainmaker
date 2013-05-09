@@ -1,6 +1,6 @@
 import yaml
 
-from rainmaker_app.conf import load
+from rainmaker_app.lib.conf import load
 from rainmaker_app.lib.callbacks import Callbacks
 
 class AppCallbacks(object):

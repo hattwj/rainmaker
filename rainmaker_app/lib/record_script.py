@@ -1,19 +1,20 @@
-import random
+import random                           #cmd
+from string import lowercase, digits,Formatter #cmd rand
+from yaml import safe_load              #parser
+from pipes import quote                 #cmd
+from os.path import abspath,basename    #cmd
 
-from string import lowercase, digits,Formatter
-from yaml import safe_load
-from pipes import quote
-from os.path import abspath,basename
+from .path import which,current_user    #cmd
+from .logger import create              #logging
 
-from .path import which,current_user
-from .logger import create
 
 class RecordScript(object):
-    
+    ''' RecordScipt: The active yaml templating dsl ''' 
     def __init__(self,attrs={},depth=2):
         self.log = create(self.__class__.__name__)
         self.attrs=attrs
         self._formatter = Formatter() 
+    
     # optionally remove flags from val 
     def remove_flags(self,val):
         for tup in self._formatter.parse(val):
@@ -68,6 +69,17 @@ class RecordScript(object):
                     rep_val = cmd(attrs) 
             elif key in attrs:
                 rep_val = attrs[key]
+            elif key and '.' in key:
+                keys = key.split('.')
+                rep_val=attrs
+                for k in keys:
+                    if isinstance(rep_val,list):
+                        k=int(k)
+                    try:
+                        rep_val=rep_val[k]
+                    except KeyError:
+                        raise KeyError('missing "%s" portion of "%s"' % (k,key) )
+                    
             if rep_val==None or not rep_key:
                 self.log.warn("subst missing val or key:\n\tval=%s\n\tkey=%s" % (rep_val,rep_key))
                 continue

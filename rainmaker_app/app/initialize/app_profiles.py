@@ -1,7 +1,7 @@
 import glob
 import os
 
-from rainmaker_app.conf import load
+from rainmaker_app.lib.conf import load
 from rainmaker_app.app.profile import Profile
 from rainmaker_app.lib import logger
 

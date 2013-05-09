@@ -10,6 +10,7 @@ logger.verbosity = 4
 
 root = os.path.abspath(os.path.join(os.path.dirname(__file__),'..') )
 temp_dir = os.path.join(root,'tmp')
+fixtures_dir = os.path.join(root,'test','fixtures')
 user_dir = os.path.join(temp_dir,'.rainmaker')
 events_dir = os.path.join(temp_dir,'events')
 backups_dir = os.path.join(temp_dir,'backups')

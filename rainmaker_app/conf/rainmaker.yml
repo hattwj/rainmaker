@@ -1,27 +1,15 @@
-version:
-    desc: Rainmaker Version
-    val: 0.2.1
-    type: str
-release_date:
-    desc: Release date
-    val: 2013-04-25
-    type: date
-home_page:
-    desc: Application home page
-    val: 'https://github.com/hattwj/rainmaker'
-    type: uri
-user_dir:
-    desc: User data directory
-    type: path
-    val: '~/.rainmaker'
-log_path:
-    desc: Application log file path
-    val: '${root}'
-    type: path
-log_level:
-    desc: Log level
-    val: 'info'
-    type: str
-log_style:
-    desc: Application log style
-    val: '%(name)-12s %(levelname)-8s %(message)s'
+version: 0.2.2
+authors:
+    - 'hattwj@yahoo.com'
+release_date: 2013-05-17
+homepage: 'https://github.com/hattwj/rainmaker'
+user_dir: '${abspath:~/.rainmaker}'
+profiles_dir: '${abspath:${user_dir}/profiles}' 
+tmp_dir: '${abspath:${user_dir}/tmp}' 
+log_path: '${tmp_dir}/rainmaker.log'
+verbosity: 0
+log_level: 'info'
+log_style: '%(name)-12s %(levelname)-8s %(message)s'
+dependencies:
+    - 'watchdog'
+    - 'yaml'

@@ -77,7 +77,7 @@ remote_uri:
 remote_root:
     default: '/home/${user}/sync'
     type: str
-    desc: null
+    desc: Server sync directory 
 recursive: {default: True, desc: recursive sync, type: bool}
 max_threads: {default: 5, desc: max threads, type: int}
 max_backups:
@@ -132,6 +132,10 @@ do_backups:
     type: str
     desc: unison backup opts
     default: "-backuplocation 'central' -backup 'Name *' -backupprefix 'ver$VERSION-' -backupdir='${backupdir}' -maxbackups=${max_backups}" 
+cmd_notify:
+    type: str
+    desc: Commands for desktop notifications
+    default: 'echo ${count} ${type}|wall'
 unison_options:
     type: str
     desc: standard flags used for all unison sync commands

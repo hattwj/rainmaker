@@ -3,22 +3,34 @@ from .record_script import RecordScript
 
 class AttrsBag(object):
     
-    def __init__(self,attrs={}):
-        # prevent accidental byref 
-        attrs = deepcopy(attrs)
-        object.__setattr__(self,'attrs', attrs )
+    def __init__(self,attrs={},dict_to_obj=False):
+        object.__setattr__(self,'attrs', {} )
         object.__setattr__(self,'script', RecordScript())
+        
+        # load and prevent accidental byref 
+        if dict_to_obj:
+             self.dict_to_obj( deepcopy(attrs) )
+        else:
+             self.add_attrs( deepcopy(attrs) )
     
+    def dict_to_obj(self,attrs):
+        ''' Merge with dict to create methods '''
+        new_attrs = {}
+        for k,v in attrs.iteritems():
+            new_attrs = self.new_attr(k,v,k,k,new_attrs)
+        self.add_attrs(new_attrs)
+
     def add_attrs(self,a_dict):
+        ''' merge with dict '''
         # prevent accidental byref
         a_dict=deepcopy(a_dict)
         attrs = object.__getattribute__(self,'attrs') 
         object.__setattr__(self,'attrs', dict(attrs.items()+a_dict.items()) )
      
-    def new_attr(self,name,default,type,desc):
+    def new_attr(self,name,default,type,desc,attrs={}):
         ''' return attr prototype'''
-        attr = {name:{'default':default,'desc':desc,'type':type}}
-        self.add_attrs(attr)
+        attrs[name]={'default':default,'desc':desc,'type':type}
+        return attrs
 
     def __getattribute__(self,name):
         try:

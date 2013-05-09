@@ -49,6 +49,8 @@ class TestProfileManager(unittest.TestCase):
     
     def test_server_side_sync(self):
         self.runner.startup()
+        
+        # create 2nd profile manager
         pm2=self.create_pm('sync2')        
         pm2.startup()
         
@@ -61,8 +63,8 @@ class TestProfileManager(unittest.TestCase):
         # sync with remote logs and
         # find a change in 1 remote file
         events = self.runner.get_events(all_events=True)
-        print events
-        sys.exit(1)
+        cmds = self.runner.events_to_cmds(events)
+        self.assertEquals(len(cmds),1)
 
     def test_process_events(self):
         self.runner.startup()
@@ -70,7 +72,8 @@ class TestProfileManager(unittest.TestCase):
         rand_file(self.runner.profile,'b')
         events = self.runner.get_events()
         commands = self.runner.events_to_cmds(events)
-        self.assertEquals(len(events),4)
+        print events
+        #self.assertEquals(len(events),4)
         self.assertEquals(len(commands),1)
         for cmd in commands:
             cmd_out = self.runner.run_cmd(cmd)
@@ -89,16 +92,40 @@ class TestProfileManager(unittest.TestCase):
 
         path1 = os.path.join(test_helper.temp_dir,'sync1','froms1')
         epath1 = os.path.join(test_helper.temp_dir,'sync2','froms1')
-        path2 = os.path.join(test_helper.temp_dir,'sync1','froms2')
-        epath2 = os.path.join(test_helper.temp_dir,'sync2','froms2')
+        
+        path2 = os.path.join(test_helper.temp_dir,'sync2','froms2')
+        epath2 = os.path.join(test_helper.temp_dir,'sync1','froms2')
         
         test_helper.fs.mkdir(path1)
-        test_helper.fs.mkdir(epath2)
+        test_helper.fs.mkdir(path2)
         sync(self.runner)
 
         self.assertTrue( os.path.exists(epath1) )
         self.runner.run_cmd(key='startup')
-        self.assertTrue( os.path.exists(path2) )
+        self.assertTrue( os.path.exists(epath2) )
+    
+    def test_notifications(self):
+        ''' Test desktop notifications '''
+        self.runner.startup()
+
+        # create 2nd profile manager
+        pm2=self.create_pm('sync2')        
+        pm2.startup()
+        
+        # change remote file
+        rand_file(pm2.profile ,'rand2')
+        
+        # send change to remote events log
+        sync(pm2)
+        
+        # sync with remote logs and
+        # find a change in 1 remote file
+        events = self.runner.get_events(all_events=True)
+        cmds = self.runner.events_to_cmds(events)
+
+        self.runner.notify(events)
+        
+
 
 def sync(runner):
     events = runner.get_events(all_events=True)

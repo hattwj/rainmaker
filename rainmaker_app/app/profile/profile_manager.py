@@ -1,5 +1,7 @@
 import os
 import shlex
+import time
+
 from subprocess import PIPE, Popen
 
 from calendar import timegm
@@ -19,16 +21,21 @@ class ProfileManager(object):
         profile.attr_subst('guid')
         profile.attr_subst('local_root')
         profile.attr_subst('remote_root')
-
+        print profile.local_root
         fslog_path = os.path.join(events_dir,'%s.log' % profile.guid)
+        print fslog_path
         self.fslog_path = fslog_path
         self.fs_monitor = FsMonitor(profile.local_root,fslog_path,profile.ignore_patterns)
-        self.log_monitor = LogMonitor(events_dir,fslog_path)
+        self.log_monitor = LogMonitor(events_dir,'*.log',profile.ignore_patterns)
         
         self.log=logger.create(self.__class__.__name__)
         self.profile = profile
+        self.subst = profile.subst
+        
         # create output parser regexes
-        self.output_parser = RegexDict( self.profile.output_dict )
+        self.output_parser = RegexDict()
+        for k,v in self.profile.output_dict.iteritems():
+            self.output_parser.add_regex(k,v)
     
     def startup(self):
         ''' Start mon, and ignore initial events '''
@@ -38,38 +45,69 @@ class ProfileManager(object):
 
     def get_events(self,all_events=False,only_remote=False):
         ''' Process any events that may have occurred '''
-        results = []
+        events = []
         now = timegm(gmtime())
 
         # check for remote events
         if only_remote or all_events or (self.last_loop + self.sync_interval) - now < 0:
             self.last_loop = timegm(gmtime())
             self.__sync_events__()
-            events = self.log_monitor.get_events()
-        
+            events += self.log_monitor.get_events()
+            self.notify(events)
+
         # check for local fs events
         if not only_remote:
             events += self.fs_monitor.get_events()
         
         return events
+    
+    def notify(self,events):
+        ''' run event notification commands '''
 
-    def run_cmd(self,cmd=None,key=None):
+        if not self.profile.cmd_notify:
+            return False
+        
+        groups = self.__group_events__(events)
+        for k,v in groups.iteritems():
+            cmd = self.subst(self.profile.cmd_notify,{'count': len(v),'type':k})
+            self.run_cmd(cmd,parse=False) 
+
+    def run_cmd(self,cmd=None,key=None,parse=True):
         ''' run command or run contents of key as a command '''
+        #
         cmd = self.profile.subst(self.profile.attr_val(key)) if key and key in self.profile.attrs else cmd
         if key and key not in self.profile.attrs:
             raise KeyError('No command: %s' % key)
+        
+        #
         if not cmd:
             raise AttributeError('Cant run empty command')
         self.profile.log.debug('Running %s' % cmd)
-        s_cmd = shlex.split(cmd) 
+        
+        # split cmd with shell=False is supposed
+        # to be safer with untrusted input
+        # but SLOW
+        #if split_cmd:
+        #    cmd = shlex.split(cmd)
+        
         self.profile.log.info('Running command %s',cmd)
-        p = Popen(s_cmd, shell=False, stderr=PIPE, stdout=PIPE)
+        
+        p = Popen(cmd, shell=True, stderr=PIPE, stdout=PIPE)
+        
+        # maybe callback or threading later? 
+        #while p.poll()==None:
+        #    time.sleep(0.2)
         out = p.communicate()
+
         result = {  'stdout':out[0],
                     'stderr':out[1],
                     'returncode':p.returncode,
                     'cmd':cmd
                  }
+        
+        if not parse:
+            return result
+
         result['output'] = self.__process_output__(result)
         if result['returncode'] > 0:
             self.profile.log.debug(result)

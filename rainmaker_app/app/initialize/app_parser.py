@@ -19,7 +19,7 @@ from os.path import basename
 from sys import argv, exit
 import argparse
 
-from rainmaker_app.conf import load, t
+from rainmaker_app.lib.conf import load, t
 from rainmaker_app.lib import logger
 from time import sleep
 
@@ -29,11 +29,11 @@ def ask(bag,key):
     while valid == False:
         print('')
         if bag.attr_val(key):
-            print 'Default: %s' % bag.subst(str(bag.attr_default(key)))  
-        ans = raw_input( "%s: " % bag.attr_desc(key) ) or bag.attr_default(key)
+            default = bag.subst(str(bag.attr_default(key)))  
+        ans = raw_input( "%s [enter=%s]: " % (bag.attr_desc(key),default) ) or bag.attr_default(key)
         setattr(bag,key,bag.subst(str(ans)))
         valid = bag.attr_validate(key)
-    print 'Using: %s' % bag.attr_val(key)
+    #print 'Using: %s' % bag.attr_val(key)
     return ans
 
 class AppParser(object):
@@ -47,8 +47,8 @@ class AppParser(object):
         self.func=None
         self.app = app
 
-    # 
     def __create_with__(self,key,add_help=False):
+        ''' '''
         self.parser = argparse.ArgumentParser(
             add_help=add_help,
             formatter_class=argparse.RawTextHelpFormatter
@@ -68,6 +68,8 @@ class AppParser(object):
     
     # parse cli args and run action
     def parse_args(self,args=None):
+        ''' '''
+        # create parser
         self.args = args
         self.__create_with__('pre')
         
@@ -94,7 +96,9 @@ class AppParser(object):
         if key not in self.data:
             return
         for arr in self.data[key]['args']:
-            self.parser.add_argument(arr[0],**arr[1])
+            kwargs = arr[1]
+            kwargs['help'] = t('parser.help.%s.%s' % (key,arr[0]))
+            self.parser.add_argument(arr[0],**kwargs)
             
     def __add_action__(self,opts):
         getattr(self,"__%s__" % opts[0].action)(opts[1])
@@ -103,13 +107,12 @@ class AppParser(object):
         p_all = self.app.profiles.all()
         p_auto = self.app.profiles.find_by('auto',True,all=True)
         
-        print 'Starting rainmaker' 
-        print "Found\t %s profiles" % len(p_all)
-        print "\t %s with autostart" % len(p_auto)
+        opts={'count_all':str(len(p_all)),'count_auto':str(len(p_auto))}
+          
+        print t('parser.action.auto',opts)
+
         if len(p_auto) == 0:
-            print '\n'
-            self.parser.print_help()
-            print '\nNothing to do. Please create a profile'
+            print t('parser.notice.nothing_to_do')
             return
 
         self.app.loop.start(p_auto)
@@ -124,30 +127,25 @@ class AppParser(object):
         # load a list of questions to ask 
         qs = profile.required_fields
         
-        print 'Creating %s profile\n' % profile.type
+        print t('parser.action.new',{'profile':profile.attrs_dump()})
         # ask questions
         for v in qs:
             ask(profile,v)         
         profile.save()
-        print profile.subst(t('profile.unison.created'))
+        print profile.subst(t('profile.%s.created' % self.opts.type))
 
     def __delete__(self):
-        if not self.opts.title:
-            print 'Profile title required...'
-            self.__list__()
-            return
-        
-        profile=self.app.profiles.find_by('title',self.opts.title)
-        if not profile:
-            print 'No profile found with title="%s"' % self.opts.title
-            return
-        print 'Deleting: %s' % profile.path
-        profile.delete()
+        profiles = self.__find_profiles__()
+        if not profiles:
+            print t('parser.notice.profile_info_required')
+            exit(2)
+        for p in profiles:
+            profile.delete()
 
     def __update__(self):
         profile = self.app.profiles.find_by('title',self.opts.title)
         if not profile:
-            print 'No profile found with title=%r' % self.opts.title
+            print t('parser.notice.title_not_found',{'title': self.opts.title})
             return
         for attr in profile.attrs_dump().keys():
             self.parser.add_argument('--%s'%attr,help=profile.attr_desc(attr))
@@ -159,13 +157,13 @@ class AppParser(object):
             all_profiles = self.app.profiles.all()
             n = int(self.opts.n)-1
             if len(profiles) <= n or n < 0:
-                print "Profile number %s doesn't exist" % str(n+1)
+                print t('parser.notice.number_not_found',{'number': str(n+1) })
             else:
                 profiles.append( all_profiles[n] )
         elif hasattr(self.opts,'title') and self.opts.title:
             profile = self.app.profiles.find_by('title',self.opts.title)
             if not profile:
-                print "Profile titled  %s doesn't exist" % str(self.opts.title)
+                print t('parser.notice.title_not_found',{'title': self.opts.title})
             else:
                 profiles.append(profile)
         elif hasattr(self.opts,'profile_paths') and self.opts.profile_paths:
@@ -174,16 +172,8 @@ class AppParser(object):
 
     def __list__(self):
         profiles = self.__find_profiles__()
-         
-        if profiles:
-            for p in profiles:
-                attrs = self.opts.attrs if self.opts.attrs else p.attrs_dump_key('val').keys()
-
-                for k in attrs:
-                    print '#%s\n%s=%s\n' % (p.attr_desc(k),k,p.subst(getattr(p,k)))
-            return
-
-        profiles = self.app.profiles.all()
+        if not profiles: 
+            profiles = self.app.profiles.all()
         print 'Found %s profiles' % len(profiles)
         if len(profiles) == 0:
             return
@@ -195,27 +185,15 @@ class AppParser(object):
     def __start__(self):
         profiles = self.__find_profiles__()
         if not profiles:
-            print 'Profile required'
+            print t('parser.notice.profile_info_required')
             exit(2)
-        print 'Starting rainmaker' 
-        print "Found\t %s profile(s)" % len(profiles)
+        print t('parser.action.profile_count',{'count':len(profiles)})
+        for p in profiles:
+            print t('parser.action.start_profile',{'profile':p.attrs_dump() })
         self.app.loop.start(profiles)
     
     def __info__(self):
-        print '''
-Rainmaker:
-  Version:
-  Release Date:
-
-  Path Info:
-    user_dir=%r
-    log=%r
-
-  Profiles:
-        ''' % (
-    self.app.user_dir,
-    self.app.log_level
-    )
+        print t('parser.action.info',{'app':self.app.attrs_dump()})
         self.__list__()
             
     def __status__(self):

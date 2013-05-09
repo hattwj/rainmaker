@@ -1,6 +1,6 @@
 import logging
 
-from rainmaker_app.conf import load
+from rainmaker_app.lib.conf import load
 config=load('logger.yml')
 
 init_done = False 
@@ -39,7 +39,8 @@ def create(name='',style=None,level=None):
     style = style if style else config['styles'][verbosity]
 
     log = logging.getLogger(name)
-    
+    log.v=verbosity
+
     if log.handlers:
         handler = log.handlers[0] 
     else:

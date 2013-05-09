@@ -1,4 +1,3 @@
-import conf
 import app
 import lib
 import tasks

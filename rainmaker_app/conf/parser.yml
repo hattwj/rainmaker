@@ -3,14 +3,12 @@
 profile_title: &profile_title 
     - 'title'
     -   
-        help: 'Title of profile'
         action: 'store'
         nargs: '?'
         default: null
 profile_paths: &profile_paths
     - '-f'
     - 
-        help: 'Path to profile'
         action: 'append'
         metavar: 'path'
         dest: 'profile_paths'
@@ -18,7 +16,6 @@ profile_n: &profile_n
     - '-n'
     -
         action: 'store'
-        help: 'Profile number'
 ##
 # Catch all parser for finding action
 pre:
@@ -26,7 +23,6 @@ pre:
         -   
             - 'action'
             -
-                help: 'Action to perform (default="auto")'
                 nargs: '?'
                 action: 'store'
 ##
@@ -36,25 +32,21 @@ base:
         -
             - '-q'
             - 
-                help: 'Suppress all output.'
                 action: 'store_true'
         -
             - '-v'
             - 
-                help: 'Increase verbosity level (4 is max)'
                 default: 0
                 action: 'count'
                 dest: 'verbosity'
         -
             - '--user-dir'
             - 
-                help: 'Location of program data. Default is ~/.rainmaker'
                 dest: 'user_dir'
                 default: '~/.rainmaker'
         -
             - '--log'
             - 
-                help: 'Set log level'
                 choices: ['debug','info','warn','error','none']
                 dest: 'log_level'
                 default: 'info'
@@ -63,27 +55,6 @@ auto:
         -   
             - 'action'
             -
-                help: |
-                    Action to perform (default="auto")
-
-                    auto    -   Start all profiles where 'auto' = True
-                    
-                    daemon  -   Start all daemon profiles where 'auto' = daemon,
-                                Only log file system events.
-
-                    create  -   Create a new profile
-
-                    delete  -   Delete a profile
-
-                    list    -   List all profiles or specific
-                                information about a single profile
-                    
-                    update  -   Update the contents of a profile
-
-                    start   -   Only run the specified profile(s)
-
-                    info    -   Display config information and exit
-                    
                 choices: ['create','delete','daemon','list','update','start','auto','info']
                 default: 'auto'
                 nargs: '?'
@@ -94,7 +65,6 @@ create:
         -   
             - 'action'
             -
-                help: 'Create a profile'
                 metavar: 'create'
                 action: 'store'
         -
@@ -110,7 +80,6 @@ list:
         -   
             - 'action'
             -
-                help: 'List all profiles, or the details of a single profile'
                 metavar: 'list'
                 action: 'store'
         - *profile_title
@@ -119,7 +88,6 @@ list:
         -
             - '--attr'
             -
-                help: 'List value of specified attribute'
                 action: 'append'
                 dest: 'attrs'
 delete:
@@ -127,7 +95,6 @@ delete:
         -   
             - 'action'
             -
-                help: 'Delete a profile'
                 metavar: 'delete'
                 action: 'store'
         - *profile_title
@@ -138,7 +105,6 @@ update:
         -   
             - 'action'
             -
-                help: 'Update a profile'
                 metavar: 'update'
                 action: 'store'
         - *profile_title
@@ -149,7 +115,6 @@ start:
         -   
             - 'action'
             -
-                help: 'Start a profile'
                 metavar: 'start'
                 action: 'store'
         - *profile_title
@@ -160,7 +125,6 @@ stop:
         -   
             - 'action'
             -
-                help: 'Stop a running profile'
                 metavar: 'stop'
                 action: 'store'
         - *profile_title

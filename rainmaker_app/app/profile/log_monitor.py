@@ -3,21 +3,20 @@ import os
 
 from yaml import safe_load
 
-from rainmaker_app.lib import Tail, logger
+from rainmaker_app.lib import Tail, logger, RegexDict, FsActions
 
 class LogMonitor(object):
-    def __init__(self,log_dir,pattern='*.log'):
+    def __init__(self,log_dir,pattern='*.log',ignore_events=[]):
+        self.ignore_events = ignore_events
         self.log_dir = log_dir
         self.log = logger.create(self.__class__.__name__)
-        try:
-            os.mkdir( log_dir)
-            os.path.isdir( log_dir )
-        except OSError,e:
-            pass            
+        self.fs = FsActions()        
+        self.fs.mkdir(log_dir)
         self.pattern = pattern
         self.tails = {}
     
     def get_events(self):
+        ''' Scan log files for new events '''
         self.scan_files()
         return self.scan_events()
 
@@ -28,7 +27,7 @@ class LogMonitor(object):
                 continue
             f=open(p,'r')
             tail = Tail(f)
-            log_filter=LogFilter(self.log)
+            log_filter=LogFilter(self.log,self.ignore_events)
             tail.filter = log_filter.filter
             self.tails[p]=tail
 
@@ -43,27 +42,50 @@ class LogMonitor(object):
         return events 
 
 class LogFilter(object):
-    def __init__(self,log):
+    ''' Custom Tail filter for recieving fs events '''
+    def __init__(self,log,ignore_events=[]):
         self.log = log
         self.timestamp = 0
+        self.nice_paths = RegexDict()
+        self.nice_paths.add_regex('nice','^[a-zA-Z0-9]+')
+        self.ignores = RegexDict()
+        for v in ignore_events:
+            self.ignores.add_fnmatch(v,v)
 
     def filter(self,line):
         ''' A callback function used for filtering lines from Tail'''
         try:
             event = __line_to_event__(line)
             timestamp = int(event['timestamp'])
+            # we dont need to look for dest path
+            # because it should have been logged
+            # as a seperate event
+            path = event['event_src_path_rel'] 
+            p =  self.ignores.search(path)
+            nice = self.nice_paths.search(path)
+            
+            if p:
+                self.log.info('Ignoring event due to pattern: %s' % p)
+                return False
+
+            # search for and remove malicious paths    
+            if not nice or '..' in path:
+                self.log.warn('Ignoring malicious path: %s' % path)
+                return False
         except:
-            self.log.warn( 'malformed line in fs log' )
+            self.log.warn( 'Malformed line in fs log' )
             self.log.debug(line)
             return False
         
         if timestamp < self.timestamp:
+            self.log.info('Ignoring event due to timestamp: %s' % timestamp)
             return False
         
         self.timestamp = timestamp
         return event
 
 def __line_to_event__(line):
+    ''' only return keys for valid event '''
     result={}
     dat = safe_load(line)
     keys=[
@@ -75,5 +97,3 @@ def __line_to_event__(line):
     for k in keys:
         result[k] = dat[k]
     return result
-
-

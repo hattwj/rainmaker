@@ -11,6 +11,7 @@ class TestRecordScript(unittest.TestCase):
         unittest.TestCase.setUp(self)
         self.rs = RecordScript()
         self.attrs = {
+            'nested_key': [1,2,{'a':'hello world','b':'again ${nested_key.2.a}'}],
             'a': '${b}',
             'b': '${c}',
             'c': '${d}',
@@ -42,3 +43,8 @@ class TestRecordScript(unittest.TestCase):
         print self.rs.subst('${nested}',attrs)
         #self.rs.attrs_subst()
         #print self.rs.attrs
+    
+    def test_nested_key(self):
+        self.rs.attrs_update(self.attrs)
+        print self.rs.subst('${nested_key.2.a}')
+        print self.rs.subst('${nested_key.2.b}')

@@ -4,14 +4,14 @@ from yaml import safe_dump,safe_load
 import re
 
 from rainmaker_app.lib import RecordHooks
-from rainmaker_app.conf import load
+from rainmaker_app.lib.conf import load
 
 class Profile(RecordHooks):
 
     def __init__(self,data={},vals=None,path=None):
         RecordHooks.__init__(self,self.__class__.__name__)
         self.add_attrs(data)
-        self.path=path
+        self.dict_to_obj({'path':path})
         if vals:
             for k,v in vals.iteritems():
                 setattr(self,k,v)
