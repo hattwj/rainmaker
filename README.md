@@ -34,35 +34,33 @@ By default profiles are configured to automatically start syncing when you start
 
 Not all features are implemented
 
-~~~
-usage: rainmaker [-h] [-v] [-q] [--log {debug,info,warn,error,none}]
-                 [{create,delete,list,update,start,auto,info}]
+~~~bash
+usage: rainmaker [-h] [-q] [-v] [--user-dir USER_DIR]
+                 [--log {debug,info,warn,error,none}]
+                 [{create,delete,daemon,list,update,start,auto,info}]
 
 positional arguments:
-  {create,delete,list,update,start,auto,info}
-                        Action to perform (default="auto")
-                        
-                        auto    -   Start all profiles where 'auto' = True
-                        
+  {create,delete,daemon,list,update,start,auto,info}
+                        Action to perform: (default="auto")
+                        auto    -   Start profiles where 'auto' = True
+                        daemon  -   Start all daemon profiles.
+                                    Only log file system events.
                         create  -   Create a new profile
-                        
                         delete  -   Delete a profile
-                        
-                        list    -   List all profiles or specific
+                        list    -   List all profiles, or specific
                                     information about a single profile
-                        
                         update  -   Update the contents of a profile
-                        
-                        start   -   Start by running the specified profile
-                        
-                        info    -   Display config information and exit
+                        start   -   Only run the specified profile(s)
+                        info    -   Display config information
 
 optional arguments:
   -h, --help            show this help message and exit
-  -v, --version         show program's version number and exit
-  -q                    Suppress all output.
+  -q                    Quiet. Suppress output
+  -v                    Verbosity level, -vvvv is max verbosity
+  --user-dir USER_DIR   Location of app data (default="~/.rainmaker")
   --log {debug,info,warn,error,none}
-                        Set log level
+                        Log level
+
 ~~~
 
 **Be sure that you install the same version of unison on all clients and the server**
@@ -73,7 +71,7 @@ optional arguments:
 
 From a terminal run the following commands
 
-~~~
+~~~bash
 
 # Some day we might take care of these steps in an installer
 
@@ -107,7 +105,7 @@ There isn't really anything to install on the server as far as rainmaker is conc
 
 Tested on 12.04 Desktop
 
-~~~
+~~~bash
 
 # Install software
 
@@ -139,7 +137,7 @@ Coming Soon
 
 Server side events are now supported!
 
-See TODO.md for other notices
+See [TODO](TODO.md) for other notices
 
 ## References ##
 
