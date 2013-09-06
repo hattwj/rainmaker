@@ -1,6 +1,11 @@
 import os
 import shutil
 import yaml
+import sys
+
+module_path = os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..') )
+sys.path.append(module_path)
+
 from rainmaker_app.tasks import install
 from rainmaker_app.lib import logger
 from rainmaker_app.lib import FsActions
@@ -9,22 +14,29 @@ logger.config['level']='debug'
 logger.verbosity = 4
 
 root = os.path.abspath(os.path.join(os.path.dirname(__file__),'..') )
-temp_dir = os.path.join(root,'tmp')
-fixtures_dir = os.path.join(root,'test','fixtures')
-user_dir = os.path.join(temp_dir,'.rainmaker')
-events_dir = os.path.join(temp_dir,'events')
-backups_dir = os.path.join(temp_dir,'backups')
+
+temp_dir = os.path.join(root, 'tmp')
+fixtures_dir = os.path.join(root, 'test', 'fixtures')
+user_dir = os.path.join(temp_dir, '.rainmaker')
+events_dir = os.path.join(temp_dir, 'events')
+backups_dir = os.path.join(temp_dir, 'backups')
+data_dir = os.path.join(temp_dir, 'sync1')
+
+db_path = os.path.join(user_dir, 'test.sqlite')
 
 fs = FsActions()
 
-def clean(tdirs=[],create=True):
+def clean_temp_dir(tdirs=[],create=True):
     fs.rmdir(user_dir)
     fs.rmdir(events_dir)
     fs.rmdir(backups_dir)
+    fs.rmdir(data_dir)
     if create:
         install(user_dir)
         fs.mkdir(backups_dir)
         fs.mkdir(events_dir)
+        fs.rmdir(data_dir)
+
     for tdir in tdirs:
         tdir = os.path.join(temp_dir,tdir)
         fs.rmdir(tdir)

@@ -114,7 +114,9 @@ class AppParser(object):
         if len(p_auto) == 0:
             print t('parser.notice.nothing_to_do')
             return
-
+        
+        for p in p_auto:
+            print t('parser.action.start_profile', p.attrs_dump() )
         self.app.loop.start(p_auto)
     
     def __daemon__(self):
@@ -126,13 +128,14 @@ class AppParser(object):
         
         # load a list of questions to ask 
         qs = profile.required_fields
-        
-        print t('parser.action.new',{'profile':profile.attrs_dump()})
+        pattrs = profile.attrs_dump() 
+        print t('parser.action.new',{'profile':pattrs},['profile'])
         # ask questions
         for v in qs:
             ask(profile,v)         
         profile.save()
-        print profile.subst(t('profile.%s.created' % self.opts.type))
+        create_msg = 'parser.action.created.%s' % (self.opts.type)
+        print t(create_msg,{'profile':pattrs},['profile'])
 
     def __delete__(self):
         profiles = self.__find_profiles__()
@@ -182,6 +185,7 @@ class AppParser(object):
         for p in profiles:
             print "%s\t%s\t%s\t%s" % (i+1, p.title, p.type,basename(str(p.path)))
             i+=1
+    
     def __start__(self):
         profiles = self.__find_profiles__()
         if not profiles:
@@ -189,7 +193,7 @@ class AppParser(object):
             exit(2)
         print t('parser.action.profile_count',{'count':len(profiles)})
         for p in profiles:
-            print t('parser.action.start_profile',{'profile':p.attrs_dump() })
+            print t('parser.action.start_profile',{'profile':p.attrs_dump()},['profile'])
         self.app.loop.start(profiles)
     
     def __info__(self):

@@ -7,7 +7,7 @@ import logging
 from rainmaker_app.lib import logger
 logger.base_level = logging.DEBUG
 
-from rainmaker_app.test.unit import *
+from rainmaker_app.test.unit.db import *
 
 unittest.main()
 

@@ -13,13 +13,13 @@ def load(path,abspath=False,from_dir=None):
         data=yaml.safe_load(f.read())
     return data
 
-def t(path,attrs={}):
+def t(path,attrs={},paths=[]):
     ''' run translation '''
     global locale_script
     
     if not locale_script:
         set_locale(locale)
-    return locale_script.subst('${%s}' % path,attrs)
+    return locale_script.subst('${%s}' % path,attrs,search_paths=paths )
 
 def set_locale(val):
     global locale

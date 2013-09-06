@@ -1,19 +1,19 @@
 #verbosity levels for logger
 verbosity:
     Rainmaker: 0
-    AppLoop: 0
+    FsActions: 0
+    AppLoop: 1
     AppProfiles: 1
     AppParser: 1
-    Profile: 1
-    LogMonitor: 1
-    FsMonitor: 1
-    ProfileManager: 1
-    Handler: 2
+    Profile: 2
+    LogMonitor: 2
+    FsMonitor: 2
+    ProfileManager: 2
+    Handler: 3
     RecordScript: 3
-    FsActions: 0
     RecordHooks: 4
     AttrsBag: 4
-    Callbacks: 3
+    Callbacks: 4
     RegexDict: 4
 styles:
     - '%(message)s'

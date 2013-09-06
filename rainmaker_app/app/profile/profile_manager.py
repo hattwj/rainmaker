@@ -21,9 +21,7 @@ class ProfileManager(object):
         profile.attr_subst('guid')
         profile.attr_subst('local_root')
         profile.attr_subst('remote_root')
-        print profile.local_root
         fslog_path = os.path.join(events_dir,'%s.log' % profile.guid)
-        print fslog_path
         self.fslog_path = fslog_path
         self.fs_monitor = FsMonitor(profile.local_root,fslog_path,profile.ignore_patterns)
         self.log_monitor = LogMonitor(events_dir,'*.log',profile.ignore_patterns)
