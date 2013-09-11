@@ -26,6 +26,15 @@ db_path = os.path.join(user_dir, 'test.sqlite')
 
 fs = FsActions()
 
+from random import random
+def write_many(path,count=10):
+    result = []
+    for n in range(0, count):
+        cur_path = os.path.join(path, str(random()) )
+        fs.write(cur_path, str(random()) )
+        result.append(cur_path)
+    return result
+
 def clean_temp_dir(tdirs=[],create=True):
     fs.rmdir(user_dir)
     fs.rmdir(events_dir)
@@ -35,7 +44,7 @@ def clean_temp_dir(tdirs=[],create=True):
         install(user_dir)
         fs.mkdir(backups_dir)
         fs.mkdir(events_dir)
-        fs.rmdir(data_dir)
+        fs.mkdir(data_dir)
 
     for tdir in tdirs:
         tdir = os.path.join(temp_dir,tdir)
