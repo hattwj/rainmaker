@@ -1,7 +1,6 @@
 from rainmaker_app.test.db_helper import *
 from rainmaker_app.test.test_helper import *
 
-
 class DifferenceTest(unittest.TestCase):
     
     @inlineCallbacks
@@ -26,15 +25,11 @@ class DifferenceTest(unittest.TestCase):
         yield self.load_fixture('deleted')
         g = yield Difference.resolve(1, 2)
         self.assertEquals( len(g), 2)
-
         print g
-        #gg = yield MyFile.all()
-        #print gg
 
     @inlineCallbacks
     def load_fixture(self, test_name):
-        data = load('test/fixtures/db/differences.yml')
-        
+        data = load('test/fixtures/unit/db/differences.yml')
         for r in data['my_file'][test_name]:
             yield MyFile(**r).save()
 

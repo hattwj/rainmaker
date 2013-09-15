@@ -6,4 +6,5 @@ from twisted.internet import reactor
 from twistar.registry import Registry
 from twistar.dbconfig.base import InteractionBase
 
-from rainmaker_app.db.config import *
+from rainmaker_app.db.config import initDB, tearDownDB
+from rainmaker_app.db.model import *

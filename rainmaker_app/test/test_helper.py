@@ -3,15 +3,16 @@ import shutil
 import yaml
 import sys
 
-module_path = os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..') )
-sys.path.append(module_path)
+#module_path = os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..') )
+#sys.path.append(module_path)
 
 from rainmaker_app.tasks import install
 from rainmaker_app.lib import logger
 from rainmaker_app.lib import FsActions
 
-logger.config['level']='debug'
-logger.verbosity = 4
+logger.config['level']='warn'
+logger.verbosity = 0
+logger.create('Tests',level='warn')
 
 root = os.path.abspath(os.path.join(os.path.dirname(__file__),'..') )
 
@@ -21,7 +22,6 @@ user_dir = os.path.join(temp_dir, '.rainmaker')
 events_dir = os.path.join(temp_dir, 'events')
 backups_dir = os.path.join(temp_dir, 'backups')
 data_dir = os.path.join(temp_dir, 'sync1')
-
 db_path = os.path.join(user_dir, 'test.sqlite')
 
 fs = FsActions()

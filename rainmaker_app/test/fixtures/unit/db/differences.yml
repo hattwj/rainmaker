@@ -1,7 +1,10 @@
 sync_path:
     always:
-        - {root: '/sync1', id: 1}
-        - {root: '/sync2', id: 2}
+        - {root: '/sync1'}
+        - {root: '/sync2'}
+file_comparison:
+    deleted:
+        - { my_file_id: , }
 my_file:
     # no conflict, neither side has changed
     no_conflict:
@@ -9,8 +12,8 @@ my_file:
         - {fhash: 0, state: 1, path: a, size: 0, inode: 0, is_dir: True, mtime: 5, sync_path_id: 2 } 
     # no conflict, but one side has deleted an empty dir
     deleted:
-        - {fhash: 0, state: 1, path: a, size: 0, inode: 0, is_dir: True, mtime: 5, sync_path_id: 1 } 
-        - {fhash: 0, state: 4, path: a, size: 0, inode: 0, is_dir: True, mtime: 5, sync_path_id: 2 } 
+        - {fhash: 0, state: 1, path: a, is_dir: True, sync_path_id: 1 } 
+        - {fhash: 0, state: 4, path: a, is_dir: True, sync_path_id: 2 } 
     # two differing files
     conflicted_file:
         - {fhash: 33, state: 1, path: a, size: 0, inode: 0, is_dir: False, mtime: 5, sync_path_id: 1 } 

@@ -1,7 +1,9 @@
 #verbosity levels for logger
 verbosity:
     Rainmaker: 0
-    FsActions: 0
+    Tests: 4
+    Database: 1
+    FsActions: 1
     AppLoop: 1
     AppProfiles: 1
     AppParser: 1
@@ -16,10 +18,10 @@ verbosity:
     Callbacks: 4
     RegexDict: 4
 styles:
+    - ''
+    - '%(message)s'
     - '%(message)s'
     - '%(name)-12s %(message)s'
-    - '%(name)-12s %(levelname)-8s %(message)s'
-    - '%(name)-12s %(levelname)-8s %(message)s'
     - '%(name)-12s %(levelname)-8s %(message)s'
 date_style: '%Y-%m-%d-%H-%M-%S'
 level: 'info'
