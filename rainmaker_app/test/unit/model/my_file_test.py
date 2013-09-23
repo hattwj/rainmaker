@@ -13,14 +13,7 @@ class MyFileTest(unittest.TestCase):
     @inlineCallbacks
     def tearDown(self):
         yield tearDownDB()
-
-    @inlineCallbacks
-    def test_classmethod_find_many(self):
-        ''' no difference between sets '''
-        yield self.load_fixture('test_find_many')
-        g = yield MyFile.find_many([1, 2])
-        self.assertEquals( len(g), 2)
-    
+ 
     @inlineCallbacks
     def test_reset(self):
         ''' no difference between sets '''

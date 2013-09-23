@@ -12,47 +12,32 @@ MIGRATIONS = {
     0 : """CREATE TABLE schema_migrations (version TEXT)""",
     1 : """ CREATE TABLE sync_paths (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                root TEXT,
+                root TEXT NOT NULL,
                 guid TEXT,
                 scanned_at INTEGER
             )""",
     2 : """ CREATE TABLE my_files (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                sync_path_id INTEGER,
-                path TEXT, 
+                sync_path_id INTEGER NOT NULL,
+                path TEXT NOT NULL, 
                 fhash TEXT, 
-                size INTEGER, 
+                size INTEGER DEFAULT 0, 
                 inode INTEGER, 
                 state INTEGER, 
                 mtime INTEGER, 
                 ctime INTEGER, 
-                is_dir BOOLEAN,
-                created_at INTEGER,
-                updated_at INTEGER, 
-                scanned_at INTEGER
-            )""",
-    3 : """ CREATE TABLE file_versions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                my_file_id INTEGER,
-                sync_path_id INTEGER,
-                path TEXT, 
-                fhash TEXT, 
-                size INTEGER, 
-                inode INTEGER, 
-                state INTEGER, 
-                mtime INTEGER, 
-                ctime INTEGER, 
-                is_dir BOOLEAN,
+                is_dir BOOLEAN NOT NULL,
+                next_id INTEGER,
                 created_at INTEGER,
                 updated_at INTEGER, 
                 scanned_at INTEGER
             )""",
     4 : """ CREATE TABLE sync_comparisons (
-                file_version_id INTEGER, 
+                my_file_id INTEGER, 
                 sync_path_id INTEGER
             )""",
     5 : """ CREATE VIEW differences AS
-                SELECT DISTINCT m1.id, m1.sync_path_id
+                SELECT DISTINCT m1.id AS my_file_id
                 FROM my_files m1
                 LEFT JOIN my_files m2
                     ON m1.path = m2.path
@@ -61,8 +46,9 @@ MIGRATIONS = {
                     AND m1.is_dir = m2.is_dir
                     AND m1.size = m2.size
                     AND m1.state = m2.state
-                WHERE m2.id IS NULL"""
-               
+                WHERE m2.id IS NULL
+                    AND m1.next_id IS NULL
+                    AND m2.next_id IS NULL""" 
 }
 
 @defer.inlineCallbacks

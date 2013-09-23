@@ -27,10 +27,11 @@ class MyFile(DBObject):
     fhash = None
     my_file_id = None
     is_dir = None
+    size = 0
     id = None
 
     #Column names
-    columns = ['id', 'fhash', 'inode', 'mtime', 'ctime', 'sync_path_id', 'path' ]
+    columns = ['id','size', 'fhash', 'inode', 'mtime', 'ctime', 'sync_path_id', 'path' ]
     fstat_columns = ['inode', 'mtime', 'ctime' ]
     
     #Original values
