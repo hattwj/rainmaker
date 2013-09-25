@@ -1,0 +1,83 @@
+
+setup:
+    sync_path:
+        - {root: '/sync1'}
+        - {root: '/sync2'}
+    
+# no conflict, but one side has deleted an empty dir
+test_deleted_no_conflict:
+    my_file:
+        - {fhash: 0, state: 1, path: a, is_dir: True, sync_path_id: 1 } 
+        - {fhash: 0, state: 4, path: a, is_dir: True, sync_path_id: 2 }
+        - {fhash: 0, state: 1, path: a, is_dir: True, sync_path_id: 2, next_id: 2 }
+        - {fhash: 0, state: 1, path: b, is_dir: True, sync_path_id: 1 } 
+        - {fhash: 0, state: 1, path: b, is_dir: True, sync_path_id: 2 } 
+        - {fhash: 7, state: 1, path: c1, is_dir: False, sync_path_id: 1 } 
+        - {fhash: 7, state: 1, path: c1, is_dir: False, sync_path_id: 2, next_id: 9 } 
+        - {fhash: 8, state: 1, path: c1, is_dir: False, sync_path_id: 2, next_id: 9 } 
+        - {fhash: 8, state: 4, path: c1, is_dir: False, sync_path_id: 2 } 
+    sync_comparison:
+        - { my_file_id: 1, sync_path_id: 2}
+        - { my_file_id: 3, sync_path_id: 1}
+        - { my_file_id: 4, sync_path_id: 1}
+        - { my_file_id: 7, sync_path_id: 1}
+        - { my_file_id: 6, sync_path_id: 2}
+
+# no conflict, but updates on both sides
+test_modified_no_conflict:
+    my_file:
+        - {fhash: 0, state: 1, path: a, is_dir: False, sync_path_id: 1 } 
+        - {fhash: 8, state: 1, path: a, is_dir: False, sync_path_id: 2 }
+        - {fhash: 0, state: 1, path: a, is_dir: False, sync_path_id: 2, next_id: 2 }
+        - {fhash: 7, state: 1, path: c1, is_dir: False, sync_path_id: 1 } 
+        - {fhash: 7, state: 1, path: c1, is_dir: False, sync_path_id: 2, next_id: 7 } 
+        - {fhash: 8, state: 1, path: c1, is_dir: False, sync_path_id: 2, next_id: 7 } 
+        - {fhash: 9, state: 1, path: c1, is_dir: False, sync_path_id: 2 } 
+    sync_comparison:
+        - { my_file_id: 1, sync_path_id: 2}
+        - { my_file_id: 3, sync_path_id: 1}
+        - { my_file_id: 4, sync_path_id: 2}
+        - { my_file_id: 5, sync_path_id: 1}
+        - { my_file_id: 6, sync_path_id: 1}
+# no conflict, but moves on both sides
+test_moved_no_conflict:
+    my_file:
+        - {fhash: 0, state: 1, path: a, is_dir: False, sync_path_id: 1 } 
+        - {fhash: 0, state: 1, path: b, is_dir: False, sync_path_id: 2 }
+        - {fhash: 0, state: 1, path: a, is_dir: False, sync_path_id: 2, next_id: 2 }
+        - {fhash: 7, state: 1, path: c1, is_dir: False, sync_path_id: 1 } 
+        - {fhash: 7, state: 1, path: c1, is_dir: False, sync_path_id: 2, next_id: 7 } 
+        - {fhash: 7, state: 1, path: c1, is_dir: False, sync_path_id: 2, next_id: 7 } 
+        - {fhash: 7, state: 1, path: c2, is_dir: False, sync_path_id: 2 } 
+    sync_comparison:
+        - { my_file_id: 1, sync_path_id: 2}
+        - { my_file_id: 3, sync_path_id: 1}
+        - { my_file_id: 4, sync_path_id: 2}
+        - { my_file_id: 5, sync_path_id: 1}
+        - { my_file_id: 6, sync_path_id: 1}
+# no conflict, but new_files on both sides
+test_new_no_conflict:
+    my_file:
+        - {fhash: 0, state: 1, path: a1, is_dir: False, sync_path_id: 1 } 
+        - {fhash: 1, state: 1, path: b1, is_dir: False, sync_path_id: 1 }
+        - {fhash: 2, state: 1, path: c1, is_dir: False, sync_path_id: 1 }
+        - {fhash: 3, state: 1, path: a2, is_dir: False, sync_path_id: 2 } 
+        - {fhash: 4, state: 1, path: b2, is_dir: False, sync_path_id: 2 } 
+        - {fhash: 5, state: 1, path: c2, is_dir: False, sync_path_id: 2 } 
+# conflict, but simple
+test_simple_conflict:
+    my_file:
+        - {fhash: 0, state: 1, path: a, is_dir: False, sync_path_id: 1 } 
+        - {fhash: 1, state: 1, path: a, is_dir: False, sync_path_id: 2 }
+        - {fhash: 0, state: 1, path: b, is_dir: False, sync_path_id: 1 } 
+        - {fhash: 1, state: 1, path: b, is_dir: False, sync_path_id: 2 }
+# conflict renamed
+test_renamed_conflict:
+    my_file:
+        - {fhash: 0, state: 1, path: d, is_dir: False, sync_path_id: 1 } 
+        - {fhash: 0, state: 1, path: e, is_dir: False, sync_path_id: 2 }
+        - {fhash: 0, state: 1, path: c, is_dir: False, sync_path_id: 1, next_id: 1 }
+        - {fhash: 0, state: 1, path: c, is_dir: False, sync_path_id: 2, next_id: 2 }
+    sync_comparison:
+        - { my_file_id: 4, sync_path_id: 1}
+        - { my_file_id: 3, sync_path_id: 2}

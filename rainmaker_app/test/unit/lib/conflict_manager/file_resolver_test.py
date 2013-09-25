@@ -1,7 +1,7 @@
 from rainmaker_app.test.db_helper import *
 from rainmaker_app.test.test_helper import *
 
-from rainmaker_app.model.file_resolver import FileResolver
+from rainmaker_app.lib.conflict_manager.file_resolver import FileResolver
 
 class FileResolverTest(unittest.TestCase):
     
@@ -10,7 +10,7 @@ class FileResolverTest(unittest.TestCase):
     def setUp(self):
         clean_temp_dir()
         yield initDB(db_path)
-        self.data = load('test/fixtures/unit/model/file_resolver.yml')
+        self.data = load('test/fixtures/unit/lib/conflict_manager/file_resolver.yml')
         yield load_fixture( 'setup', self.data )
         yield load_fixture( self._testMethodName, self.data )
 

@@ -1,5 +1,4 @@
-from . common import *
-from . sync_comparison import SyncComparison
+from rainmaker_app.model.common import *
 
 class FileResolver(object):
     """ resolve differences between multiple files """
@@ -237,6 +236,7 @@ def obj_matches_rules(obj, rules):
     return match
 
 def _full_match_rules( my_file ):
+    """ generate rules for full match of my_file object """
     return [
         [ 'path', '=', my_file.path],
         [ 'sync_path_id', '!=', my_file.sync_path_id],
@@ -247,7 +247,7 @@ def _full_match_rules( my_file ):
     ]
 
 def _conflict_match( m1, m2 ):
-    """ check for conflicts """
+    """ check for conflicts between two my_file objects """
     if _conflict(m1, m2):
         return True
     if m1.path == m2.path:
