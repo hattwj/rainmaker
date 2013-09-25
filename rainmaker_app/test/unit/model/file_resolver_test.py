@@ -19,9 +19,32 @@ class FileResolverTest(unittest.TestCase):
         yield tearDownDB()
 
 # Tests
-
     @inlineCallbacks
     def test_deleted_no_conflict(self):
+        yield self.expect_state(FileResolver.DELETED)
+    
+    @inlineCallbacks
+    def test_modified_no_conflict(self):
+        yield self.expect_state(FileResolver.MODIFIED)
+    
+    @inlineCallbacks
+    def test_moved_no_conflict(self):
+        yield self.expect_state(FileResolver.MOVED)
+    
+    @inlineCallbacks
+    def test_new_no_conflict(self):
+        yield self.expect_state(FileResolver.NEW)
+
+    @inlineCallbacks
+    def test_simple_conflict(self):
+        yield self.expect_state(FileResolver.CONFLICT)
+
+    @inlineCallbacks
+    def test_renamed_conflict(self):
+        yield self.expect_state(FileResolver.CONFLICT)
+
+    @inlineCallbacks
+    def expect_state(self, expected_state):
         my_files = yield Difference.between_sync_paths( 1, 2 )
         # test difference expectation
         #self.assertEquals( len(my_files), 2)
@@ -31,22 +54,7 @@ class FileResolverTest(unittest.TestCase):
             my_file = my_files.pop()
             file_resolver = FileResolver(my_file)
             file_resolver.resolve_against( my_files )
-            #last child was deleted
-            child = file_resolver.last_child
-            self.assertEquals( child.my_file.state, MyFile.DELETED )
-            # has parent/child
-            parent = file_resolver.first_parent
-            
-            print parent
-            
-            #myfd(my_file)
-            details(parent)
-
-            self.assertEquals( parent.child, child )
-            self.assertEquals( child.parent, parent )
-            
-            # no conflicts 
-            self.assertEquals( 0, len(file_resolver.conflict_files) )
+            self.assertEquals( file_resolver.state, expected_state ) 
             # prep for next round
             my_files = file_resolver.unrelated_files
 

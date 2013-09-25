@@ -4,8 +4,16 @@ from . sync_comparison import SyncComparison
 class FileResolver(object):
     """ resolve differences between multiple files """
     
+    #State Constants
+    CONFLICT        = 5
+    DELETED         = 4
+    MODIFIED        = 3
+    MOVED           = 2
+    NO_CHANGE       = 1
+    NEW             = 0
+    
     def __init__(self, my_file=None, *peers):
-        """ assert only one init method used """
+        """ init resolver consisting of at least one file """
         if not peers:
             peers = []
         self._init_properties(my_file)  # Init class properties
@@ -58,6 +66,7 @@ class FileResolver(object):
 
     def _init_properties(self, my_file):
         """ init class variables """
+        self._state = None
         self.my_file = my_file
         self._child = None
         self._last_child = None
@@ -95,7 +104,7 @@ class FileResolver(object):
         if self.my_file.versions:
             rules = _full_match_rules( self.my_file.versions[0] )
             parent_ids = _pattern_index(my_files, rules, version=False)
-        
+
         # look for conflicts with current version
         conflict_ids = [i for i, m in enumerate(my_files) if _conflict_match(m, self.my_file)]
          
@@ -118,8 +127,8 @@ class FileResolver(object):
         self.conflict_files = [my_files[i] for i in conflict_ids]
         
         # check for other matches in parents and children
-        #self._first_parent = self.first_parent
-        #self._last_child = self.last_child
+        self._first_parent = self.first_parent
+        self._last_child = self.last_child
 
     def result(self):
         """ peek at contents of resolve function"""
@@ -137,6 +146,25 @@ class FileResolver(object):
         return self.conflict_files + self.unrelated_files
 
     @property
+    def state(self):
+        """ get final state of all related files """        
+        if not self.peer_files:
+            return None
+        if self.conflict_files:
+            return self.CONFLICT
+        if self.last_child.my_file.state == self.my_file.DELETED:
+            return self.DELETED
+        child = self.last_child
+        while child.parent:
+            if child.parent.my_file.fhash != child.my_file.fhash:
+                return self.MODIFIED
+            if child.parent.my_file.is_dir != child.my_file.is_dir:
+                return self.MOVED
+            if child.parent.my_file.path != child.my_file.path:
+                return self.MOVED
+        return self.NEW         
+
+    @property
     def child(self):
         """ init child or return none """
         if self._child == None and self.child_files:
@@ -151,7 +179,6 @@ class FileResolver(object):
         self.child_files = self._child.peer_files
         self._copy_relative( self._child )
         self._update_parent()
-        
 
     @property
     def parent(self):
@@ -164,6 +191,7 @@ class FileResolver(object):
 
     @parent.setter
     def parent(self, val):
+        """ set parent """
         self._parent = val
         self.parent_files = self._parent.peer_files
         self._copy_relative( self._parent )
@@ -171,7 +199,7 @@ class FileResolver(object):
 
     @property
     def first_parent(self):
-        """ get first child of series """
+        """ get first parent of series """
         if self.parent:
             return self.parent.first_parent
         return self
@@ -184,7 +212,7 @@ class FileResolver(object):
         return self
 
 def pop_multiple(arr, idx, pop=True):
-    """ pop multiple indecies from array """
+    """ pop multiple indices from array """
     result = []
     for i in sorted(idx, reverse=True):
         if pop:
@@ -219,6 +247,18 @@ def _full_match_rules( my_file ):
     ]
 
 def _conflict_match( m1, m2 ):
+    """ check for conflicts """
+    if _conflict(m1, m2):
+        return True
+    if m1.path == m2.path:
+        return False
+    if m1.versions and m2.versions:
+        for m1v in m1.versions:
+            if _pattern_index( m2.versions, _full_match_rules(m1v), False):
+                return True
+    return False
+
+def _conflict(m1, m2):
     """ compare two files to see if they conflict """
     return m2.path == m1.path and (
     m2.fhash != m1.fhash or
