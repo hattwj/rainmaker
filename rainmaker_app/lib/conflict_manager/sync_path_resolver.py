@@ -1,0 +1,3 @@
+class SyncPathResolver(object)
+
+end
