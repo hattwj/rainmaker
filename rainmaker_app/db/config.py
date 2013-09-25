@@ -4,7 +4,7 @@ from twistar.dbobject import DBObject
 from twistar.registry import Registry
 
 from rainmaker_app.lib import logger
-from . model import *
+from . models import *
 
 log = logger.create('Database')
 
