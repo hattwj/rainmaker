@@ -9,6 +9,8 @@ import sys
 from rainmaker_app.tasks import install
 from rainmaker_app.lib import logger
 from rainmaker_app.lib import FsActions
+from . object_mocker import object_mocker
+
 
 logger.config['level']='warn'
 logger.verbosity = 0

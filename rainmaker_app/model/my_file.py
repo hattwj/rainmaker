@@ -1,8 +1,9 @@
 from . common import *
+from . base import Base
 
 from rainmaker_app.lib.lib_hash import md5Checksum as checksum
 
-class MyFile(DBObject):
+class MyFile(Base):
 
     BELONGSTO = ['sync_path']
     HASMANY = ['file_versions']
@@ -37,20 +38,6 @@ class MyFile(DBObject):
     #Original values
     data_was = None
     
-    # Super class
-    @classmethod
-    def find_many(klass, arr, col='id'):
-        where_ids = []
-        where = ''
-        for val in arr:
-            where_ids.append( val )
-            if where == '':
-                where = "%s = ?" % col
-            else:
-                where += ' OR %s = ?' % col
-        where_ids.insert(0, where)
-        return klass.find(where=where_ids)
-
     # Possibly migrate into super_class
     def __init__(self, **kwargs):
         DBObject.__init__(self, **kwargs)

@@ -32,10 +32,10 @@ class Difference(Base):
 
     @classmethod
     @defer.inlineCallbacks
-    def between_sync_paths(klass, *ids):
+    def between_sync_paths(klass, *ids): 
         q = klass.q_difference % { 'ids' : sql_arr(ids) } 
         diffs = yield Registry.DBPOOL.runQuery( q )
-        my_files = yield MyFile.find_many(d[0] for d in diffs)
+        my_files = yield MyFile.find_many([d[0] for d in diffs if d])
         for my_file in my_files:
             my_file.versions = yield versions( my_file.id, ids )
         defer.returnValue( my_files )

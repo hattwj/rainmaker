@@ -9,7 +9,9 @@ class Base(DBObject):
 
     # Super class
     @classmethod
-    def find_many(klass, arr, col='id'):
+    def find_many(klass, arr=None, col='id'):
+        if not arr:
+            return []
         where_ids = []
         where = ''
         for val in arr:

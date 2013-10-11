@@ -1,0 +1,18 @@
+setup:
+    sync_path:
+        - {root: '/sync1'}
+        - {root: '/sync2'}
+# no conflict, neither side has changed
+test_no_difference:
+    my_file:
+        - {fhash: 0, state: 1, path: a, size: 0, is_dir: True, sync_path_id: 1 } 
+        - {fhash: 0, state: 1, path: a, size: 0, is_dir: True, sync_path_id: 2 } 
+# no conflict, but one side has deleted an empty dir
+test_deleted:
+    my_file:
+        - {fhash: 0, state: 1, path: a, is_dir: True, sync_path_id: 1 } 
+        - {fhash: 0, state: 4, path: a, is_dir: True, sync_path_id: 2 }
+    sync_comparison:
+        - { my_file_id: 1, sync_path_id: 2}
+        - { my_file_id: 2, sync_path_id: 1}
+

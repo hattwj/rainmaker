@@ -1,5 +1,0 @@
-test_find_many:
-    my_file:
-        - { path: 'c', sync_path_id: 1}
-        - { path: 'a', sync_path_id: 1}
-        - { path: 'b', sync_path_id: 2}

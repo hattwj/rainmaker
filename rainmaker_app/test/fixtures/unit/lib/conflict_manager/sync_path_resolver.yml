@@ -1,0 +1,27 @@
+setup:
+    sync_path:
+       - {root: a} 
+       - {root: b}
+       - {root: c}
+       - {root: d}
+
+test_process_file_resolver:
+    mock_objects:
+        test_new:
+            !!python/object:__main__.MockFileResolver
+            peer_files:
+                - !!python/object:__main__.MyFile
+                  path: aaa
+
+test_conflicts_resolver:
+    my_file:
+        - {path: aaa, is_dir: false, sync_path_id: 1}
+        - {path: bbb, is_dir: false, sync_path_id: 1}
+        - {path: ccc, is_dir: false, sync_path_id: 2}
+
+test_get_file_from:
+    my_file:
+        - {path: aaa, is_dir: false, sync_path_id: 1}
+        - {path: bbb, is_dir: false, sync_path_id: 2}
+        - {path: dd1, is_dir: false, sync_path_id: 4}
+        - {path: dd2, is_dir: false, sync_path_id: 4}

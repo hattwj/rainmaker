@@ -98,7 +98,7 @@ def initDB(location):
         cp_max=1
     )  # max db thread to 1 for sqlite
 
-    Registry.register( *models )
+    Registry.register( *models_arr )
     g = _check_schema()
     g.addCallback(_migrate)
     return g

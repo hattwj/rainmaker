@@ -1,0 +1,2 @@
+class TransferAgent(object):
+    pass
