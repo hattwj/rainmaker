@@ -1,4 +1,5 @@
 from rainmaker_app.model.common import *
+from rainmaker_app.db.models import Difference
 
 class FileResolver(object):
     """ resolve differences between multiple files """
@@ -10,7 +11,26 @@ class FileResolver(object):
     MOVED           = 2
     NO_CHANGE       = 1
     NEW             = 0
-    
+
+    def __repr__(self):
+        return "<FileResolver state=%s, my_file_id=%s>" % (self.state, self.my_file.id)
+
+    @classmethod
+    @defer.inlineCallbacks
+    def resolve_syncs(klass, sync_paths_arr):
+        """ compare sync paths and find conflicts/updates"""        
+        my_files = yield Difference.between_sync_paths( *sync_paths_arr )
+        resolvers = []
+        while len(my_files) > 0:
+            # resolve differences
+            my_file = my_files.pop()
+            file_resolver = klass( my_file )
+            file_resolver.resolve_against( my_files )
+            resolvers.append( file_resolver )
+            # prep for next round
+            my_files = file_resolver.unrelated_files
+        defer.returnValue( resolvers )
+
     def __init__(self, my_file=None, *peers):
         """ init resolver consisting of at least one file """
         if not peers:
@@ -28,7 +48,7 @@ class FileResolver(object):
             return
         # verify peer files
         rules = _full_match_rules( self.my_file )
-        peer_ids = _pattern_index(peers[1:], rules, version=False)
+        peer_ids = _index_files(peers[1:], rules, version=False)
         assert len(peer_ids) == len(peers) 
 
     @classmethod
@@ -47,7 +67,9 @@ class FileResolver(object):
 
     def _copy_relative(self, relative):
         """ copy attributes of relative when initialized as parent/child """
-        self.related_files = relative.related_files
+        for r in relative.related_files:
+            if r not in self.related_files:
+                self.related_files.append(r) 
         self.conflict_files = relative.conflict_files
         self.unrelated_files = relative.unrelated_files
     
@@ -77,6 +99,7 @@ class FileResolver(object):
         self.parent_files = []
         self.child_files = []
         self.peer_files = []
+        self.sync_paths = []
 
     def resolve_against(self, my_files):
         """ 
@@ -88,47 +111,31 @@ class FileResolver(object):
         if not my_files:
             return
 
-        # get array id of all being compared
-        all_ids = [i for i, obj in enumerate(my_files)]
-
         # look for identical / peer files
         rules = _full_match_rules( self.my_file )
-        peer_ids = _pattern_index(my_files, rules, version=False)
+        self.peer_files += _pop_files(my_files, rules, version=False)
 
         # look to see if we match an old version
-        child_ids = _pattern_index(my_files, rules, version=True)
+        self.child_files += _pop_files(my_files, rules, version=True)
 
         # look for files matching our last version
-        parent_ids = []
         if self.my_file.versions:
             rules = _full_match_rules( self.my_file.versions[0] )
-            parent_ids = _pattern_index(my_files, rules, version=False)
+            self.parent_files += _pop_files(my_files, rules, version=False)
 
         # look for conflicts with current version
         conflict_ids = [i for i, m in enumerate(my_files) if _conflict_match(m, self.my_file)]
-         
-        # remove files matching our last version
-        conflict_ids = list(set(conflict_ids) - set(parent_ids))
-
-        # remove files that we match the last version of
-        conflict_ids = list(set(conflict_ids) - set(child_ids))
+        self.conflict_files = pop_multiple( my_files, conflict_ids)
         
         # get un/related ids
-        related_ids = list(set(conflict_ids + child_ids + parent_ids))
-        unrelated_ids = list(set(all_ids) - set(related_ids))
+        self.related_files = self.peer_files + self.parent_files +\
+            self.child_files + self.conflict_files
+        self.unrelated_files = my_files
 
-        # collect objects
-        self.peer_files += [my_files[i] for i in peer_ids]
-        self.parent_files = [my_files[i] for i in parent_ids]
-        self.child_files = [my_files[i] for i in child_ids]
-        self.related_files = [my_files[i] for i in related_ids] + self.peer_files
-        self.unrelated_files = [my_files[i] for i in unrelated_ids]
-        self.conflict_files = [my_files[i] for i in conflict_ids]
-        
         # check for other matches in parents and children
         self._first_parent = self.first_parent
         self._last_child = self.last_child
-
+        
     def result(self):
         """ peek at contents of resolve function"""
         return {
@@ -254,7 +261,7 @@ def _conflict_match( m1, m2 ):
         return False
     if m1.versions and m2.versions:
         for m1v in m1.versions:
-            if _pattern_index( m2.versions, _full_match_rules(m1v), False):
+            if _index_files( m2.versions, _full_match_rules(m1v), False):
                 return True
     return False
 
@@ -265,16 +272,24 @@ def _conflict(m1, m2):
     m2.state != m1.state or
     m2.size != m1.size or
     m2.is_dir != m1.is_dir )
-    
-def _pattern_index( my_files, rules, version=False ):
+
+def _pop_files(my_files, rules, version):
+    ''' '''
+    match_ids = _index_files(my_files, rules, version)
+    return pop_multiple( my_files, match_ids)
+
+def _index_files( my_files, rules, version=False ):
     """ return index of files matching rule """
     result = []
     for i, my_file in enumerate(my_files):
         match = False
         if version and my_file.versions:
-            match = _pattern_index( my_file.versions, rules, False)
+            match = _index_files( my_file.versions, rules, False)
         elif not version:
             match = obj_matches_rules( my_file, rules)
         if match:
             result.append(i)
     return result
+
+class UnknownStateError(Exception):
+    pass

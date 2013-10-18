@@ -3,7 +3,55 @@ setup:
     sync_path:
         - {root: '/sync1'}
         - {root: '/sync2'}
-    
+        - {root: '/sync3'}
+
+# test ability to find differences between sync paths
+test_resolve_syncs:
+    #expected related file ids and state
+    expected:
+        - [ [1,2], [2],  4]
+        - [ [4,5], [5],  4]
+        - [ [8,9], [8],  2]
+        - [ [11,12],[11], 2]
+        - [ [13,14],[14], 3]
+        - [ [16],[16], 0]
+        - [ [17],[17], 0]
+        - [ [18],[18], 0]
+        - [ [19],[19], 0]
+
+    sync_comparison:
+        - { my_file_id: 1, sync_path_id: 2}
+        - { my_file_id: 3, sync_path_id: 1}
+
+    my_file:
+        # deleted dir  1,2 - 4
+        - {fhash: 0, state: 1, path: a_deleted_dir, is_dir: True, sync_path_id: 1 } 
+        - {fhash: 0, state: 4, path: a_deleted_dir, is_dir: True, sync_path_id: 2 }
+        - {fhash: 0, state: 1, path: a_deleted_dir, is_dir: True, sync_path_id: 2, next_id: 2 }
+        # deleted file 4,5 - 4
+        - {fhash: 0, state: 1, path: a_deleted_file, is_dir: False, sync_path_id: 1 } 
+        - {fhash: 0, state: 4, path: a_deleted_file, is_dir: False, sync_path_id: 2 }
+        - {fhash: 0, state: 1, path: a_deleted_file, is_dir: False, sync_path_id: 2, next_id: 5 }
+        # moved dirs  8,9 - 2
+        - {fhash: 0, state: 1, path: moved_dir_old, is_dir: True, sync_path_id: 1, next_id: 8 } 
+        - {fhash: 0, state: 1, path: moved_dir_new, is_dir: True, sync_path_id: 1 } 
+        - {fhash: 0, state: 1, path: moved_dir_old, is_dir: True, sync_path_id: 2 }        
+        # moved files 11,12 - 2
+        - {fhash: 0, state: 1, path: moved_file_old, is_dir: False, sync_path_id: 1, next_id: 11 } 
+        - {fhash: 0, state: 1, path: moved_file_new, is_dir: False, sync_path_id: 1 } 
+        - {fhash: 0, state: 1, path: moved_file_old, is_dir: False, sync_path_id: 2 }
+        # modified files 13,14 - 3
+        - {fhash: 8, state: 1, path: modified_file, is_dir: False, sync_path_id: 1 } 
+        - {fhash: 9, state: 1, path: modified_file, is_dir: False, sync_path_id: 2 }
+        - {fhash: 8, state: 1, path: modified_file, is_dir: False, sync_path_id: 2, next_id: 14 }
+        # new dirs - 16,17 - 0
+        - {fhash: 0, state: 1, path: b_new_dir, is_dir: True, sync_path_id: 1 } 
+        - {fhash: 0, state: 1, path: c_new_dir, is_dir: True, sync_path_id: 2 } 
+        # new files - 18,19 - 0
+        - {fhash: 0, state: 1, path: b_new_file, is_dir: False, sync_path_id: 1 } 
+        - {fhash: 0, state: 1, path: c_new_file, is_dir: False, sync_path_id: 2 }
+        - {fhash: 0, state: 1, path: c_new_file, is_dir: False, sync_path_id: 3 }
+
 # no conflict, but one side has deleted an empty dir
 test_deleted_no_conflict:
     my_file:

@@ -6,13 +6,7 @@ setup:
        - {root: d}
 
 test_process_file_resolver:
-    mock_objects:
-        test_new:
-            !!python/object:__main__.MockFileResolver
-            peer_files:
-                - !!python/object:__main__.MyFile
-                  path: aaa
-
+    test: a
 test_conflicts_resolver:
     my_file:
         - {path: aaa, is_dir: false, sync_path_id: 1}

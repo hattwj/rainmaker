@@ -17,6 +17,19 @@ class FileResolverTest(unittest.TestCase):
     @inlineCallbacks
     def tearDown(self):
         yield tearDownDB()
+    
+# Tests class methods    
+    @inlineCallbacks
+    def test_resolve_syncs(self):
+        # def resolve_against(self, sync_paths_arr):
+        expected = self.data[ self._testMethodName ]['expected']
+        resolvers = yield FileResolver.resolve_syncs( [1,2] )
+        for s in resolvers:
+            r = s.last_child
+            result = [ sorted([s.id for s in r.related_files]), \
+                sorted([s.id for s in r.peer_files]), r.state ]
+            self.assertEquals( result in expected, True )
+        returnValue(None)
 
 # Tests
     @inlineCallbacks

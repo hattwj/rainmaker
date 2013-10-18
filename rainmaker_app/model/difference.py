@@ -28,7 +28,8 @@ class Difference(Base):
                     AND m2.next_id IS NULL
                     AND m1.next_id IS NULL
                 WHERE m2.id IS NULL
-                    AND m1.next_id IS NULL;"""
+                    AND m1.next_id IS NULL
+                    AND m1.sync_path_id IN %(ids)s;"""
 
     @classmethod
     @defer.inlineCallbacks
