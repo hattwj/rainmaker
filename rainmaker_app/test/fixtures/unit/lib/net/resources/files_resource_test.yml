@@ -1,0 +1,5 @@
+
+test_get:
+    my_file:
+        - {path: fff, sync_path_id: 1, is_dir: False}
+        - {path: ffg, sync_path_id: 1, is_dir: False}

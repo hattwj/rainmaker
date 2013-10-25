@@ -1,3 +1,4 @@
+import json
 from . common import *
 
 class Base(DBObject):
@@ -28,6 +29,12 @@ class Base(DBObject):
         DBObject.__init__(self, **kwargs)
         ''' Save original values '''
         self._do_data_was()
+
+    def to_json(self):
+        result = {}
+        for k in self.columns:
+            result[k] = getattr(self, k)
+        return json.dumps( result )
 
     def _do_data_was(self):
         self.data_was = {}
