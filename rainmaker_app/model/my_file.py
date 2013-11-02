@@ -32,7 +32,8 @@ class MyFile(Base):
     id = None
 
     #Column names
-    columns = ['id','size', 'fhash', 'inode', 'mtime', 'ctime', 'sync_path_id', 'path' ]
+    columns = ['id','size', 'fhash', 'inode', 'mtime', 'ctime', 'sync_path_id', 'path', 'state', 'is_dir', 'next_id' ]
+    safe_columns = ['size', 'fhash', 'inode', 'mtime', 'ctime', 'path', 'state', 'is_dir' ]
     fstat_columns = ['inode', 'mtime', 'ctime' ]
     
     #Original values
@@ -47,8 +48,10 @@ class MyFile(Base):
     def _do_data_was(self):
         self.data_was = {}
         for k in self.columns:
+            if not hasattr(self, k):
+                setattr(self, k, None)
             self.data_was[k] = getattr(self, k)
-
+                    
     # Super class
     def afterInit(self):
         if self.state == self.NEW:
@@ -81,7 +84,7 @@ class MyFile(Base):
         ''' Set created at '''
         self.created_at = int( round( time() * 1000 ) )
  
-    # Super Class
+    @defer.inlineCallbacks 
     def beforeSave(self):
 
         # shouldnt use state for modified?
@@ -90,12 +93,21 @@ class MyFile(Base):
         self.updated_at = int( round( time() * 1000 ) )
         
         # save old version
-        if self.changed():
-            FileVersion(**self.data_was).save()
-
+        if self.data_was['id'] and self.changed() and self.next_id == None:
+            old_file = MyFile(**self.data_was)
+            old_file.next_id = self.id
+            yield old_file.save()
+        
         # change stored values
         self._do_data_was()
         
+    
+    @defer.inlineCallbacks
+    def delete_file(self):
+        self.state = MyFile.DELETED
+        yield self.save()
+        defer.returnValue( 'not implemented')
+
     def is_new(self):
         ''' check if record is new '''
         return self.state == self.NEW
@@ -156,3 +168,24 @@ class MyFile(Base):
             else:
                 self,state = self.ERROR
 
+@defer.inlineCallbacks
+def must_be_unique(my_file):
+    ''' Require that path, sync_path_id, next_id combos are unique '''
+    if my_file.next_id:
+        my_files = yield MyFile.find(where=[
+            'sync_path_id = ? AND path = ? AND next_id = ?',
+            my_file.sync_path_id,
+            my_file.path,
+            my_file.next_id
+        ])
+    else:
+        my_files = yield MyFile.find(where=[
+            'sync_path_id = ? AND path = ? AND next_id IS NULL',
+            my_file.sync_path_id,
+            my_file.path
+        ])
+    if my_files:
+        my_file.errors.add('path','already exists')
+
+MyFile.addValidator(must_be_unique)
+    

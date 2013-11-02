@@ -2,44 +2,109 @@ from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 from twisted.internet import defer
 
-from rainmaker_app.lib.util import Object
+from rainmaker_app.lib.util import ExportArray, Object
 
-class BaseResource(Resource):
-    def getChild(self, name, request):
-        if not hasattr(request,'id'):
-            request.id = name
-        elif '.' in name and not hasattr(request, 'render_to'):
-            request.render_to = name
-        elif not hasattr(request,'sub_action'):
-            request.sub_action = name
-        return self
-    
-    def render_GET(self, request):
-        # Set default responseCode
+def _end( action, request):
+    ''' actions running at end of render '''
+    # finish render
+    request.finish()
+
+def _on_error( err, request):
+    ''' an error occurred during the render '''
+    print err
+    request.setResponseCode(500)
+    request.finish()
+    raise err#Exception('Resource handler error')
+
+def strip_arg_arrays(args):
+    ''' strip arrays out of request.args '''
+    for k, v in args.iteritems():
+        if hasattr(v,'keys'):
+            # test for dicts
+            args[k] = strip_arg_arrays(v) 
+        elif not hasattr(v, 'splitlines'):
+            # not a string (its an array/list)
+            if len(v) == 1:
+                # convert to string
+                args[k] = v[0]
+        
+
+def render_wrapper(func):    
+    ''' render decorator '''
+    def sub_render_wrapper(self, request):
+        ''' nested func to access func parameters'''
+        # set response code
         request.setResponseCode(200)
-        request.vdata = Object() # Data passed to view
+        strip_arg_arrays(request.args)
 
-        # pick action to call
-        if hasattr(request, 'id') and hasattr(self, 'show'):
-            request.action = 'show'
-            d = self.show(request)
-        elif hasattr(self, 'index'):
-            request.action = 'index'
-            d = self.index(request)
-        else:
-            request.setResponseCode(404)
-            return '-Error: 404 unknown'
+        # run resource
+        d = func(self, request) # defer or string
+        if not hasattr(d, 'addCallback'):
+            return d # string
         
         # Finish the request
-        d.addCallback( self._end, request )
-        d.addErrback( self._on_error, request )
+        d.addCallback( _end, request )
+        d.addErrback( _on_error, request )
         return NOT_DONE_YET
-    
-    def _end(self, action, request):
-        # finish render
-        request.finish()
+    return sub_render_wrapper
 
-    def _on_error(self, err, request):
-        print err
+class BaseResource(Resource):
+    cur_cert = None
+    resource_id = None
+    
+    def __init__(self,**kwargs):
+        Resource.__init__(self)
+        self.regxs = {}
+        for k, v in kwargs.iteritems():
+            if k == 'resource_id':
+                self.resource_id = v
+            else:
+                self.putChild(k,v)
+
+    def getChild(self, name, request):
+        #print 'class: %s name: %s' % (self.__class__.__name__, name) 
+        if self.resource_id:
+            request.args[self.resource_id] =  name
+        # use current resource
+        return self
+ 
+    @render_wrapper
+    def render_DELETE(self, request): 
+        if hasattr(self,'delete'):
+            return self.delete(request)
+        
+        request.setResponseCode(404)
+        return 'Error: 404 unknown action DELETE'
+    
+    @render_wrapper
+    def render_PUT(self, request):
+        # pick action to call
+        if hasattr(self, 'update'):
+            return self.update(request)
+        
+        request.setResponseCode(404)
+        return '-Error: 404 unknown action update'
+    
+    @render_wrapper
+    def render_POST(self, request):
+
+        # pick action to call
+        if hasattr(self, 'create'):
+            return self.create(request)
+        
+        request.setResponseCode(404)
+        return '-Error: 404 unknown action create'
+         
+    @render_wrapper 
+    def render_GET(self, request):
+        # pick action to call
+        if self.resource_id in request.args.keys()\
+            and hasattr(self, 'show'):
+            return self.show(request)
+        
+        if hasattr(self, 'index'):
+            return self.index(request)
+        
         request.setResponseCode(500)
-        request.finish()
+        return "%s-Error: 500 unknown" % self.__class__.__name__
+         

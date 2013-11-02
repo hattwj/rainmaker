@@ -19,13 +19,18 @@ class SmartDummyRequest(DummyRequest):
  
  
 class DummySite(server.Site):
+    def put(self, url, args=None, headers=None):
+        return self._request("PUT", url, args, headers)
+    
+    def delete(self, url, args=None, headers=None):
+        return self._request("DELETE", url, args, headers)
+    
     def get(self, url, args=None, headers=None):
         return self._request("GET", url, args, headers)
  
  
     def post(self, url, args=None, headers=None):
         return self._request("POST", url, args, headers)
- 
  
     def _request(self, method, url, args, headers):
         request = SmartDummyRequest(method, url, args, headers)

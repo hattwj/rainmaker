@@ -5,8 +5,24 @@ class Base(DBObject):
     #Column names
     columns = None
 
+    # instantiated by sub class for safe_init
+    safe_columns = None
+
     #Original values
     data_was = None
+
+    @classmethod
+    def safe_init(klass, **kwargs):
+        ''' mass assignment protection '''
+        new_klass = klass()
+        safe_columns = klass.safe_columns
+        if not safe_columns:
+            return new_klass
+        keys = kwargs.keys()
+        for k in safe_columns:
+            if k in keys:
+                setattr(new_klass, k, kwargs[k])
+        return new_klass
 
     # Super class
     @classmethod
@@ -29,12 +45,16 @@ class Base(DBObject):
         DBObject.__init__(self, **kwargs)
         ''' Save original values '''
         self._do_data_was()
-
-    def to_json(self):
+    
+    @property
+    def serialized_data(self):
         result = {}
         for k in self.columns:
             result[k] = getattr(self, k)
-        return json.dumps( result )
+        return result 
+
+    def to_json(self):
+        return json.dumps( self.serialized_data )
 
     def _do_data_was(self):
         self.data_was = {}
