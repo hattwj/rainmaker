@@ -14,7 +14,13 @@ MIGRATIONS = {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 root TEXT NOT NULL,
                 guid TEXT,
-                scanned_at INTEGER
+                scanned_at INTEGER,
+                state_hash TEXT,
+                state_hash_updated_at INTEGER,
+                scanning BOOLEAN,
+                listening BOOLEAN,
+                local BOOLEAN,
+                updating BOOLEAN
             )""",
     2 : """ CREATE TABLE my_files (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -52,7 +58,7 @@ MIGRATIONS = {
 }
 
 @defer.inlineCallbacks
-def _migrate( versions=[] ):
+def _init_migrations( versions=[] ):
     """ 
         Run migrations 
         - except for values in 'versions' array
@@ -88,8 +94,8 @@ def _check_schema():
             versions.append('0') # dont create schema migrations table
 
     defer.returnValue( versions )
-    
-def initDB(location):
+
+def _db_connect(location):
     Registry.DBPOOL = adbapi.ConnectionPool(
         'sqlite3', 
         location, 
@@ -98,9 +104,30 @@ def initDB(location):
         cp_max=1
     )  # max db thread to 1 for sqlite
 
+@defer.inlineCallbacks
+def _init_models(*args):
+    ''' modify each model'''
+    for m in models_arr:
+        yield _model_introspection(m)
+
+@defer.inlineCallbacks
+def _model_introspection(model):
+    ''' create columns varable and init fields '''
+    q = "PRAGMA table_info('%s')" % model.tablename()
+    cols_tup = yield Registry.DBPOOL.runQuery(q)
+    cols = [tup[1] for tup in cols_tup]
+    model.columns = cols
+    for col in cols:
+        if not hasattr(model, col):
+            setattr(model, col, None)
+
+def initDB(location):
+    ''' init db connection and models '''
+    _db_connect(location)
     Registry.register( *models_arr )
     g = _check_schema()
-    g.addCallback(_migrate)
+    g.addCallback(_init_migrations)
+    g.addCallback(_init_models)
     return g
 
 def tearDownDB():

@@ -1,13 +1,18 @@
+import hashlib
 from threading import Lock
 
 from . common import *
+from .base import Base
 from . my_file import MyFile
 
-class SyncPath(DBObject):
+from rainmaker_app.lib.lib_hash import RollingHash
+
+class SyncPath(Base):
     ''' Model status of file system between scans '''
 
     HASMANY = ['my_files']
-
+   
+    scanning        = False
     scanned_at      = 0
     scan_started_at = 0
     
@@ -22,7 +27,46 @@ class SyncPath(DBObject):
     _lock_deleted   = Lock()
     _lock_new       = Lock()
     
+    @defer.inlineCallbacks
+    def is_state_hash_stale(self):
+        ''' check files for change '''
+        my_files = yield MyFile(where=[
+            '''
+            sync_path_id = ? AND 
+            updated_at > ? AND
+            next_id IS NULL AND
+            state != ?
+            ''',
+            self.id,
+            self.state_hash_updated_at,
+            MyFile.DELETED
+        ])
+        if my_files:
+            defer.returnValue( True )
+        defer.returnValue( False )
+
+    @defer.inlineCallbacks
+    def refresh_state_hash(self, incremental = False):
+        bufr = ''
+        
+        if incremental:
+            my_files = yield MyFile.active_files_since(self.id, self.state_hash_updated_at)
+        else:
+            my_files = yield MyFile.active_files(self.id)
+            self.state_hash = None
+
+        f_ubound = len(my_files) - 1
+        for i, f in enumerate(my_files):
+            bufr += '%s-%s-%s-%s' % (f.path, f.state, f.fhash, f.is_dir)
+            if len(bufr) > 4096 or i == f_ubound:
+                h.update(bufr)
+                bufr = ''
+        self.state_hash = str(h.hexdigest())    
+        self.state_hash_updated_at = int( round( time() * 1000 ) ) 
+        defer.returnValue( self.state_hash )
+
     def _reset_counters(self):
+        ''' mutexed counters '''
         self._count_scanned = 0
         self._count_stale = 0
         self._count_new = 0
@@ -60,10 +104,10 @@ class SyncPath(DBObject):
         }
 
     def scan(self):
-
+        ''' '''
         @defer.inlineCallbacks
         def _scan(self, count=0):
-            
+            ''' start scan '''
             path = self.root
 
             self._lock_scanned.acquire()
@@ -84,6 +128,7 @@ class SyncPath(DBObject):
             defer.returnValue(self)
         
         def _scan_done(self):
+            ''' callback for when callback complete '''
             self.scanned_at = self.scan_started_at
             result = self._scan_stats()
             self._lock_scanned.release()
@@ -113,8 +158,8 @@ class SyncPath(DBObject):
             # race condition between os.walk and scan?
             self._inc_deleted()
         else:
-            print 'Debug in scanner'
-            print my_file
+            msg = 'Scanned File: %s has unknown state' % my_file.path
+            raise ScannerError(msg)
         yield my_file.save()
 
     @defer.inlineCallbacks
@@ -132,6 +177,9 @@ class SyncPath(DBObject):
                 f.save()
                 self._inc_deleted()
             else:
-                print 'Debug me'
+                print 'A file that we thought was deleted still exists'
         defer.returnValue(self)
 
+class ScannerError(Exception):
+    ''' Error while scanning files '''
+    pass

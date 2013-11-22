@@ -18,6 +18,21 @@ class FilesResourceTest(unittest.TestCase):
         self.web = DummySite( routes.resources() )
 
     @inlineCallbacks
+    def test_delete(self):
+        ''' delete a file record from db'''
+        # assert record exists
+        my_file = yield MyFile.find(where=['sync_path_id = ? AND path = ?','1', 'g01'], limit = 1) 
+        self.assertNotEqual(my_file, None)
+        # delete record
+        response = yield self.web.delete("syncs/g/files/g01" )
+        my_file = yield MyFile.find(where=['sync_path_id = ? AND path = ?','1', 'g01'], limit = 1) 
+        self.assertEquals( my_file , None ) 
+        self.assertEquals( 204, response.responseCode) 
+        # test that repeated delete returns 404 
+        response = yield self.web.delete("syncs/g/files/g01" )
+        self.assertEquals( 404, response.responseCode) 
+         
+    @inlineCallbacks
     def test_create(self):
         # create a file
         args = {'file':{'path':'new', 'is_dir': 0}}
@@ -35,10 +50,12 @@ class FilesResourceTest(unittest.TestCase):
         args = {'file':{'path':'new', 'is_dir': 0}}
         response = yield self.web.put("syncs/g/files/g01", args )
         my_file = yield MyFile.find(where=['sync_path_id = ? AND path = ?','1', 'new'], limit = 1) 
-        print my_file
-        print response.value()
         self.assertEquals( my_file.to_json(), response.value() ) 
+        self.assertEquals( my_file.id, 1 )
+        my_file = yield MyFile.find(where=['sync_path_id = ? AND path = ?','1', 'g01'], limit = 1) 
+        self.assertEquals( my_file.id, 2 )
         self.assertEquals( 200, response.responseCode) 
+        my_files = yield MyFile.all() 
         
     @inlineCallbacks
     def test_index(self):

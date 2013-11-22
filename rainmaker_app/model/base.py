@@ -15,14 +15,17 @@ class Base(DBObject):
     def safe_init(klass, **kwargs):
         ''' mass assignment protection '''
         new_klass = klass()
-        safe_columns = klass.safe_columns
-        if not safe_columns:
-            return new_klass
-        keys = kwargs.keys()
-        for k in safe_columns:
-            if k in keys:
-                setattr(new_klass, k, kwargs[k])
+        new_klass.safe_update( kwargs )
         return new_klass
+
+    
+    def safe_update(self, opts):
+        if not self.safe_columns:
+            raise NoSafeColsError
+        keys = opts.keys()
+        for k in self.safe_columns:
+            if k in keys:
+                setattr(self, k, opts[k])
 
     # Super class
     @classmethod
@@ -55,7 +58,7 @@ class Base(DBObject):
 
     def to_json(self):
         return json.dumps( self.serialized_data )
-
+   
     def _do_data_was(self):
         self.data_was = {}
         for k in self.columns:
@@ -71,3 +74,6 @@ class Base(DBObject):
                 return True
         return False
 
+class NoSafeColsError(Exception):
+    ''' no safe cols defined for class'''
+    pass

@@ -11,6 +11,7 @@ def _end( action, request):
 
 def _on_error( err, request):
     ''' an error occurred during the render '''
+    # TODO: errors should be logged
     print err
     request.setResponseCode(500)
     request.finish()
@@ -27,7 +28,6 @@ def strip_arg_arrays(args):
             if len(v) == 1:
                 # convert to string
                 args[k] = v[0]
-        
 
 def render_wrapper(func):    
     ''' render decorator '''

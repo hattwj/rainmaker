@@ -12,7 +12,6 @@ class FilesResource(BaseResource):
         sync_path = yield SyncPath.find( where = ['guid = ?', 
                 request.args['sync_path_guid']
             ], limit = 1)
-        print request.args
         # Automatically version files?
         # Allow bulk update instead
         # Both. This function should allow appending
@@ -61,11 +60,11 @@ class FilesResource(BaseResource):
             request.args['sync_path_guid']], limit = 1)
         my_file = yield MyFile.find(where=[
             'sync_path_id = ? AND path = ?', 
-            sync_path.id, request.args['path'] ])
+            sync_path.id, request.args['path'] ], limit = 1)
         
         if my_file:
-            result = yield my_file.delete()
-            request.write( result )
+            yield my_file.delete()
+            request.setResponseCode(204)
         else:
             request.setResponseCode(404)
             request.write('Not Found')
@@ -97,12 +96,6 @@ class FilesResource(BaseResource):
             request.setResponseCode(404)
             request.write('sync path not Found')
             return
-        my_files = yield sync_path.my_files.get(where=['next_id IS NULL'])
-        
-        if my_files:
-            my_files = ExportArray( my_files )
-            request.write( my_files.to_json() )
-        else:
-            request.setResponseCode(404)
-            request.write('Not Found')
-  
+        my_files = yield sync_path.my_files.get(where=['next_id IS NULL']) 
+        my_files = ExportArray( my_files )
+        request.write( my_files.to_json() ) 

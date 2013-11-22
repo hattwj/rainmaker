@@ -5,6 +5,9 @@ setup:
 test_update:
     my_file:
         - {path: g01, sync_path_id: 1, is_dir: False}
+test_delete:
+    my_file:
+        - {path: g01, sync_path_id: 1, is_dir: False}
 test_show:
     my_file:
         - {path: g01, sync_path_id: 1, is_dir: False}

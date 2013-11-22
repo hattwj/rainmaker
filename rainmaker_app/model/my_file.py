@@ -32,7 +32,6 @@ class MyFile(Base):
     id = None
 
     #Column names
-    columns = ['id','size', 'fhash', 'inode', 'mtime', 'ctime', 'sync_path_id', 'path', 'state', 'is_dir', 'next_id' ]
     safe_columns = ['size', 'fhash', 'inode', 'mtime', 'ctime', 'path', 'state', 'is_dir' ]
     fstat_columns = ['inode', 'mtime', 'ctime' ]
     
@@ -45,6 +44,27 @@ class MyFile(Base):
         ''' Save original values '''
         self._do_data_was()
 
+    @classmethod
+    @defer.inlineCallbacks
+    def active_files(klass, sync_path_id): 
+        my_files = yield klass.find(where=[
+            'next_id IS NULL AND state != ? AND sync_path_id = ?',
+            klass.DELETED,
+            sync_path_id
+        ], orderby='path,state,fhash,is_dir')
+        defer.returnValue( my_files )
+    
+    @classmethod
+    @defer.inlineCallbacks
+    def active_files_since(klass, sync_path_id, int_date ): 
+        my_files = yield klass.find(where=[
+            'next_id IS NULL AND state != ? AND sync_path_id = ? AND updated_at > ?',
+            klass.DELETED,
+            sync_path_id,
+            int_date
+        ], orderby='path,state,fhash,is_dir')
+        defer.returnValue( my_files )
+
     def _do_data_was(self):
         self.data_was = {}
         for k in self.columns:
@@ -54,6 +74,7 @@ class MyFile(Base):
                     
     # Super class
     def afterInit(self):
+        ''' only runs on new records '''
         if self.state == self.NEW:
             if self.fhash != None or self.is_dir == True:
                 self.state = self.NO_CHANGE
@@ -95,15 +116,15 @@ class MyFile(Base):
         # save old version
         if self.data_was['id'] and self.changed() and self.next_id == None:
             old_file = MyFile(**self.data_was)
+            old_file.id = None
             old_file.next_id = self.id
-            yield old_file.save()
-        
+            gg = yield old_file.save()
         # change stored values
         self._do_data_was()
-        
-    
+         
     @defer.inlineCallbacks
     def delete_file(self):
+        ''' delete file '''
         self.state = MyFile.DELETED
         yield self.save()
         defer.returnValue( 'not implemented')
