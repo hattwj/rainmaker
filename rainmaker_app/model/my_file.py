@@ -1,12 +1,14 @@
 from . common import *
-from . base import Base
-
 from rainmaker_app.lib.lib_hash import md5Checksum as checksum
 
 class MyFile(Base):
 
     BELONGSTO = ['sync_path']
     HASMANY = ['file_versions']
+    
+    BEFORE_CREATE = ['set_created_at','set_updated_at']
+    BEFORE_SAVE = ['set_updated_at','create_new_version']
+    FIRST_INIT = ['init_state']
 
     #State Constants
     ERROR      = 999
@@ -27,23 +29,15 @@ class MyFile(Base):
     inode = None
     fhash = None
     my_file_id = None
-    is_dir = None
+    is_dir = False
     size = 0
     id = None
 
     #Column names
-    safe_columns = ['size', 'fhash', 'inode', 'mtime', 'ctime', 'path', 'state', 'is_dir' ]
+    ATTR_ACCESSIBLE = ['size', 'fhash', 'inode', 'mtime', 'ctime', 'path', 'state', 'is_dir' ]
     fstat_columns = ['inode', 'mtime', 'ctime' ]
     
-    #Original values
-    data_was = None
     
-    # Possibly migrate into super_class
-    def __init__(self, **kwargs):
-        DBObject.__init__(self, **kwargs)
-        ''' Save original values '''
-        self._do_data_was()
-
     @classmethod
     @defer.inlineCallbacks
     def active_files(klass, sync_path_id): 
@@ -64,16 +58,8 @@ class MyFile(Base):
             int_date
         ], orderby='path,state,fhash,is_dir')
         defer.returnValue( my_files )
-
-    def _do_data_was(self):
-        self.data_was = {}
-        for k in self.columns:
-            if not hasattr(self, k):
-                setattr(self, k, None)
-            self.data_was[k] = getattr(self, k)
                     
-    # Super class
-    def afterInit(self):
+    def init_state(self):
         ''' only runs on new records '''
         if self.state == self.NEW:
             if self.fhash != None or self.is_dir == True:
@@ -100,18 +86,12 @@ class MyFile(Base):
                 return True
         return False
 
-    # Super Class
-    def beforeCreate(self):
-        ''' Set created at '''
-        self.created_at = int( round( time() * 1000 ) )
- 
     @defer.inlineCallbacks 
-    def beforeSave(self):
+    def create_new_version(self):
 
-        # shouldnt use state for modified?
+        # shouldn't use state for modified?
         if self.state == self.MODIFIED:
             self.state = self.NO_CHANGE
-        self.updated_at = int( round( time() * 1000 ) )
         
         # save old version
         if self.data_was['id'] and self.changed() and self.next_id == None:

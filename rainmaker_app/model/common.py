@@ -6,3 +6,4 @@ from twistar.dbobject import DBObject
 from twistar.registry import Registry
 from twistar.utils import transaction
 
+from . base import Base

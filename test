@@ -7,7 +7,12 @@ import logging
 from rainmaker_app.lib import logger
 logger.base_level = logging.DEBUG
 
-from rainmaker_app.test.unit.db import *
+#from rainmaker_app.test.unit.db import *
 
-unittest.main()
+import sys
+import importlib
+if sys.argv:
+    print sys.argv
+    __import__( sys.argv[1] )
 
+#unittest.main()

@@ -4,5 +4,11 @@ from rainmaker_app.model.my_file import MyFile
 from rainmaker_app.model.difference import Difference
 from rainmaker_app.model.file_version import FileVersion
 from rainmaker_app.model.sync_comparison import SyncComparison
+from rainmaker_app.model.authorization import Authorization
+from rainmaker_app.model.message import Message
+from rainmaker_app.model.pubkey import Pubkey
 
-models_arr = [ SchemaMigration, MyFile, SyncPath, Difference, FileVersion, SyncComparison]
+models_arr = [ 
+    SchemaMigration, MyFile, SyncPath, Difference,
+    FileVersion, SyncComparison, Authorization, Message, Pubkey
+]

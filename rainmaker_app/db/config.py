@@ -4,7 +4,7 @@ from twistar.dbobject import DBObject
 from twistar.registry import Registry
 
 from rainmaker_app.lib import logger
-from . models import *
+from rainmaker_app.db.models import *
 
 log = logger.create('Database')
 
@@ -54,7 +54,27 @@ MIGRATIONS = {
                     AND m1.state = m2.state
                 WHERE m2.id IS NULL
                     AND m1.next_id IS NULL
-                    AND m2.next_id IS NULL""" 
+                    AND m2.next_id IS NULL""",
+    6 : """ CREATE TABLE authorizations(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                cert_str TEXT NOT NULL,
+                pk_str TEXT NOT NULL,
+                sync_path_id INTEGER NOT NULL,
+                offset_path TEXT DEFAULT NULL,
+                read_only BOOLEAN DEFAULT FALSE,
+                guid TEXT NOT NULL
+            )""",
+    7 : """ CREATE TABLE messages(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                pubkey_id INTEGER NOT NULL,
+                data TEXT NOT NULL,
+                signature TEXT NOT NULL,
+                created_at INTEGER
+            )""",
+    8 : """ CREATE TABLE pubkeys(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                pubkey_str TEXT NOT NULL
+            )"""
 }
 
 @defer.inlineCallbacks

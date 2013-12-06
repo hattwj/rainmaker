@@ -5,7 +5,17 @@ import tasks
 from .lib.conf import load
 from .lib import logger, path, Callbacks, AttrsBag
 from .app import initialize
+import rainmaker_app
 
+def pre_init(module):
+    # set root app directory
+    module.root = path.root
+    
+    # set base attributes
+    app_attrs = load('rainmaker_app.yml')
+    for k, v in app_attrs.iteritems():
+        setattr(module, k, v)
+    
 class Rainmaker(AttrsBag):
     event_handlers = None
     profiles = None
@@ -15,7 +25,7 @@ class Rainmaker(AttrsBag):
         AttrsBag.__init__(self, load('rainmaker.yml'),dict_to_obj=True )
         self.callbacks = Callbacks(self,['init','shutdown'])
    
-    def set_user_dir(self,path):
+    def set_user_dir(self, path):
         self.user_dir = os.path.abspath(os.path.expanduser(path))
         self.profiles_dir = os.path.join(self.user_dir,'profiles')
         self.tmp_dir = os.path.join(self.user_dir,'tmp')

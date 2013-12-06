@@ -1,6 +1,8 @@
 import os
 import yaml
 
+import rainmaker_app
+
 def load(path,abspath=False,from_dir=None):
     ''' load yml file from conf directory '''
     global root
@@ -33,7 +35,6 @@ def set_locale(val):
     from .record_script import RecordScript
     locale_script = RecordScript(locale_dict)
  
-
 root = os.path.abspath(
     os.path.join(
         os.path.dirname(

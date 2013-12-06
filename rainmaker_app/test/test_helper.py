@@ -3,14 +3,14 @@ import shutil
 import yaml
 import sys
 
-#module_path = os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..') )
-#sys.path.append(module_path)
-
 from rainmaker_app.tasks import install
 from rainmaker_app.lib import logger
 from rainmaker_app.lib import FsActions
-#from . object_mocker import object_mocker
 
+import rainmaker_app as app
+from rainmaker_app import boot
+
+boot.pre_init(app)
 
 logger.config['level']='warn'
 logger.verbosity = 0

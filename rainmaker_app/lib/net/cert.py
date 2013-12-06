@@ -1,11 +1,5 @@
-
 from OpenSSL import crypto, SSL
-from socket import gethostname
-from pprint import pprint
 from time import gmtime, mktime
-from os.path import exists, join
-
-trusted = []
 
 def verifyCallback(connection, x509, errnum, errdepth, ok):
     ''' validate certificate '''
@@ -16,13 +10,14 @@ def verifyCallback(connection, x509, errnum, errdepth, ok):
         print "Server: Client certs are fine"
     return True
 
-def create_self_signed_cert(size=2048):
+def create_cert(size=2048, as_objects=False):
     """
+        Create a certificate and a private/public key pair
     """
             
     # create a key pair
-    k = crypto.PKey()
-    k.generate_key(crypto.TYPE_RSA, size)
+    pkey = crypto.PKey()
+    pkey.generate_key(crypto.TYPE_RSA, size)
 
     # create a self-signed cert
     cert = crypto.X509()
@@ -36,14 +31,93 @@ def create_self_signed_cert(size=2048):
     cert.gmtime_adj_notBefore(0)
     cert.gmtime_adj_notAfter(10*365*24*60*60)
     cert.set_issuer(cert.get_subject())
-    cert.set_pubkey(k)
-    cert.sign(k, 'sha256')
+    cert.set_pubkey(pkey)
+    cert.sign(pkey, 'sha256')
+   
+    # Convert the objects to PEM encoded strings
+    if not as_objects:
+        # Return the cert and pkey as PEM encoded strings
+        cert = crypto.dump_certificate(crypto.FILETYPE_PEM, cert)
+        pkey = crypto.dump_privatekey(crypto.FILETYPE_PEM, pkey)
+    return [cert, pkey]
 
-    #open(join(cert_dir, CERT_FILE), "wt").write(
-    #    crypto.dump_certificate(crypto.FILETYPE_PEM, cert))
-    #open(join(cert_dir, KEY_FILE), "wt").write(
-    #    crypto.dump_privatekey(crypto.FILETYPE_PEM, k))
-    f_cert = crypto.dump_certificate(crypto.FILETYPE_PEM, cert)
-    f_key = crypto.dump_privatekey(crypto.FILETYPE_PEM, k)
+def pkey_str_to_pubkey_str(pkey_str):
+    from Crypto.PublicKey import RSA
+    pkey = RSA.importKey(pkey_str) 
+    pubkey = pkey.publickey()
     
-    return [f_key, f_cert]
+    # We have created the pubkey
+    return pubkey.exportKey()       
+
+#https://launchkey.com/docs/api/encryption
+def encrypt_RSA(pubkey_str, message):
+    '''
+    param: public_key_loc Path to public key
+    param: message String to be encrypted
+    return base64 encoded encrypted string
+    '''
+    from Crypto.PublicKey import RSA
+    from Crypto.Cipher import PKCS1_OAEP
+    #key = open(public_key_loc, "r").read()
+    pubkey = RSA.importKey(pubkey_str)
+    rsakey = PKCS1_OAEP.new(pubkey)
+    encrypted = rsakey.encrypt(message)
+    return encrypted.encode('base64')
+
+def decrypt_RSA(pkey_str, package):
+    '''
+    param: public_key_loc Path to your private key
+    param: package String to be decrypted
+    return decrypted string
+    '''
+    from Crypto.PublicKey import RSA 
+    from Crypto.Cipher import PKCS1_OAEP 
+    from base64 import b64decode 
+    #key = open(private_key_loc, "r").read() 
+    pkey = RSA.importKey(pkey_str) 
+    rsakey = PKCS1_OAEP.new(pkey) 
+    decrypted = rsakey.decrypt(b64decode(package)) 
+    return decrypted
+
+def sign_data(pkey_str, data):
+    '''
+    param: private_key_loc Path to your private key
+    param: package Data to be signed
+    return: base64 encoded signature
+    '''
+    from Crypto.PublicKey import RSA 
+    from Crypto.Signature import PKCS1_v1_5 
+    from Crypto.Hash import SHA256 
+    from base64 import b64encode, b64decode 
+    #key = open(private_key_loc, "r").read() 
+    rsakey = RSA.importKey(pkey_str) 
+    signer = PKCS1_v1_5.new(rsakey) 
+    digest = SHA256.new() 
+    # It's being assumed the data is base64 encoded, so it's decoded before updating the digest 
+    #digest.update(b64decode(data)) 
+    digest.update(data) 
+    sign = signer.sign(digest) 
+    return b64encode(sign)
+
+def verify_sign(pubkey_str, signature, data):
+    '''
+    Verifies with a public key from whom the data came that it was indeed 
+    signed by their private key
+    param: public_key_loc Path to public key
+    param: signature String signature to be verified
+    return: Boolean. True if the signature is valid; False otherwise. 
+    '''
+    from Crypto.PublicKey import RSA 
+    from Crypto.Signature import PKCS1_v1_5 
+    from Crypto.Hash import SHA256 
+    from base64 import b64decode 
+    #pub_key = open(public_key_loc, "r").read() 
+    rsakey = RSA.importKey(pubkey_str) 
+    signer = PKCS1_v1_5.new(rsakey) 
+    digest = SHA256.new() 
+    # Assumes the data is base64 encoded to begin with
+    #digest.update(b64decode(data)) 
+    digest.update(data) 
+    if signer.verify(digest, b64decode(signature)):
+        return True
+    return False
