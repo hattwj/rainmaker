@@ -1,0 +1,15 @@
+version: 0.0.2
+authors:
+    - 'hattwj@yahoo.com'
+release_date: 2013-05-17
+homepage: 'https://github.com/hattwj/rainmaker'
+user_dir: '${abspath:~/.rainmaker}'
+profiles_dir: '${abspath:${user_dir}/profiles}' 
+tmp_dir: '${abspath:${user_dir}/tmp}' 
+log_path: '${tmp_dir}/rainmaker.log'
+verbosity: 0
+log_level: 'info'
+log_style: '%(name)-12s %(levelname)-8s %(message)s'
+dependencies:
+    - 'watchdog'
+    - 'yaml'

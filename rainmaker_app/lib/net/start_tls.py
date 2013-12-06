@@ -1,0 +1,164 @@
+from twisted.internet import protocol, reactor, ssl, defer
+from twisted.protocols import amp
+from twisted.python import log
+
+import rainmaker_app
+from rainmaker_app.lib.net.commands import *
+from rainmaker_app.lib.net.resources import files_resource 
+from rainmaker_app.db.models import Authorization, MyFile
+
+
+class AuthRequired(Exception):
+    pass
+
+def require_secure(func):    
+    ''' render decorator '''
+    def sub_require_secure(self, *args, **kwargs):
+        ''' nested func to access func parameters'''
+        t = self.transport
+        if hasattr(t,'getPeerCertificate') and t.getPeerCertificate():
+            # run
+            d = func(self, *args, **kwargs)
+            return d # string
+        else:
+            raise AuthRequiredError()
+        
+    return sub_require_secure
+
+class ServerProtocol(amp.AMP):
+    
+    sync_path = None # Set after authentication
+
+    def __init__(self, **kwargs):
+        self.authorization = None
+
+    @VersionCheckCommand.responder
+    def version_check(self, version):
+        log.msg('client version: %s' % version)
+        return {
+            'response_code':200,
+            'version': rainmaker_app.version
+        }
+
+    def connectionLost(self, reason):
+        log.msg(reason)
+
+    @SetPubkeyCommand.responder
+    def set_pubkey(self, guid):
+        log.msg(guid)    # log request
+        self.authorization = None # clear params
+        self.sync_path = None 
+        @defer.inlineCallbacks
+        def sub_set_pubkey(self, guid):
+            auth = yield Authorization.find(where=['guid = ?',guid],limit=1)
+            if auth:
+                self.authorization = auth
+                defer.returnValue( {'response_code':200,'message':'Found pubkey'} )
+            else:
+                defer.returnValue( {'response_code':404,'message':'Unknown pubkey'} )
+        return sub_set_pubkey(self, guid)
+
+    @amp.StartTLS.responder
+    def startTLS(self):
+        log.msg( "server: We started TLS" )
+        return self.authorization.certParams()
+
+    @require_secure
+    @FilesResource.responder
+    def files_resource(self, **kwargs):
+        @defer.inlineCallbacks
+        def sub_files_resource(self, **kwargs):
+            sync_path = yield self.authorization.sync_path.get()
+            result = yield simple_router(files_resource, sync_path, **kwargs)
+            defer.returnValue(result)
+        return sub_files_resource(self, **kwargs)
+    
+    @MessagesResource.responder
+    def messages_resource(self, **kwargs):
+        return simple_router( messages_resource, **kwargs) 
+
+class ServerFactory(protocol.ServerFactory):
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+
+    def buildProtocol(self, addr):
+        return ServerProtocol(**self.kwargs)
+
+class ClientProtocol(amp.AMP):
+    server_version = None
+    authorization = None
+    certParams = None
+    after_auth = None
+
+    def __init__(self, **kwargs):
+        for k, v in kwargs.iteritems():
+            setattr(self, k, v)
+    
+    def connectionMade(self):
+        ''' '''
+        d = self.version_check()
+        d.addCallback(self.set_pubkey)
+        d.addCallback(self.start_tls)
+        d.addErrback(self.startup_failed)
+
+        if self.after_auth:
+            d.addCallback( self.after_auth, self)
+
+    @defer.inlineCallbacks
+    def version_check(self):
+        result = yield self.callRemote( VersionCheckCommand, version = rainmaker_app.version)
+        if not is_compatible(result['version']):
+            raise StartTLSFailed('Incompatible Version: %s' % result['version'])
+        log.msg(result)
+
+    @defer.inlineCallbacks
+    def set_pubkey(self, *chain):
+        ''' set_pubkey on server '''
+        result = yield self.callRemote( SetPubkeyCommand, guid=self.authorization.guid)
+        if result['response_code'] != 200:
+            log.msg(result)
+            raise StartTLSFailed('Unknown Certificate')
+
+    @defer.inlineCallbacks
+    def start_tls(self, *chain):
+        result = yield self.callRemote( amp.StartTLS, **self.authorization.certParams() )
+        log.msg(result)
+
+    def startup_failed(self, reason):
+        log.msg('client: start_tls_failed')
+        log.msg(reason.getTraceback())
+        reason.trap(StartTLSFailed)
+        reason.trap(AuthRequired)
+        self.transport.loseConnection()
+
+def is_compatible(ver):
+    ''' Is the current version of the application compatible with `ver`'''
+    try:
+        if rainmaker_app.version.split('.')[0:1] == ver.split('.')[0:1]:
+            return True
+    except:
+        pass
+    return False
+
+class ClientFactory(protocol.ClientFactory):
+    
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+
+    def buildProtocol(self, addr):
+        return ClientProtocol( **self.kwargs)
+
+    def clientConnectionFailed(self, connector, reason):
+        print "connection failed: ", reason.getErrorMessage()
+
+    def clientConnectionLost(self, connector, reason):
+        print "connection lost: ", reason.getErrorMessage()
+
+class StartTLSFailed(Exception):
+    pass
+
+def simple_router(resource, sync_path, **kwargs):
+    for k in kwargs.keys():
+        if kwargs[k] != None:
+            return getattr(resource, k)(sync_path, kwargs[k]) 
+
