@@ -4,15 +4,17 @@ from twisted.python import log
 
 import rainmaker_app
 from rainmaker_app.lib.net.commands import *
-from rainmaker_app.lib.net.resources import files_resource 
-from rainmaker_app.db.models import Authorization, MyFile
-
+from rainmaker_app.lib.net.resources import files_resource, messages_resource 
+from rainmaker_app.db.models import Authorization, MyFile, Broadcast
 
 class AuthRequired(Exception):
     pass
 
+class StartTLSFailed(Exception):
+    pass
+
 def require_secure(func):    
-    ''' render decorator '''
+    ''' decorator '''
     def sub_require_secure(self, *args, **kwargs):
         ''' nested func to access func parameters'''
         t = self.transport
@@ -21,12 +23,11 @@ def require_secure(func):
             d = func(self, *args, **kwargs)
             return d # string
         else:
-            raise AuthRequiredError()
-        
+            raise AuthRequiredError() 
     return sub_require_secure
 
 class ServerProtocol(amp.AMP):
-    
+    authorization = None     
     sync_path = None # Set after authentication
 
     def __init__(self, **kwargs):
@@ -40,8 +41,13 @@ class ServerProtocol(amp.AMP):
             'version': rainmaker_app.version
         }
 
+    def connectionMade(self):
+        pass
+        #Broadcast.add_listener( self )
+
     def connectionLost(self, reason):
         log.msg(reason)
+        #Broadcast.remove_listener( self )
 
     @SetPubkeyCommand.responder
     def set_pubkey(self, guid):
@@ -57,26 +63,35 @@ class ServerProtocol(amp.AMP):
             else:
                 defer.returnValue( {'response_code':404,'message':'Unknown pubkey'} )
         return sub_set_pubkey(self, guid)
+    
+    @PostMessageCommand.responder
+    def post_message_command(self, **kwargs):
+        return messages_resource.post( self, **kwargs) 
+    
+    @GetMessagesCommand.responder
+    def get_messages_command(self, **kwargs):
+        return messages_resource.get( self, **kwargs) 
 
     @amp.StartTLS.responder
     def startTLS(self):
         log.msg( "server: We started TLS" )
-        return self.authorization.certParams()
 
+        return self.authorization.certParams()
+ 
+    @require_secure
+    def connection_secure(self):
+        print 'The connection is now secure' 
+        
     @require_secure
     @FilesResource.responder
     def files_resource(self, **kwargs):
         @defer.inlineCallbacks
         def sub_files_resource(self, **kwargs):
-            sync_path = yield self.authorization.sync_path.get()
-            result = yield simple_router(files_resource, sync_path, **kwargs)
+            self.sync_path = yield self.authorization.sync_path.get()
+            result = yield simple_router(files_resource, self, **kwargs)
             defer.returnValue(result)
         return sub_files_resource(self, **kwargs)
     
-    @MessagesResource.responder
-    def messages_resource(self, **kwargs):
-        return simple_router( messages_resource, **kwargs) 
-
 class ServerFactory(protocol.ServerFactory):
     def __init__(self, **kwargs):
         self.kwargs = kwargs
@@ -154,11 +169,9 @@ class ClientFactory(protocol.ClientFactory):
     def clientConnectionLost(self, connector, reason):
         print "connection lost: ", reason.getErrorMessage()
 
-class StartTLSFailed(Exception):
-    pass
 
-def simple_router(resource, sync_path, **kwargs):
+def simple_router(resource, server, **kwargs):
     for k in kwargs.keys():
         if kwargs[k] != None:
-            return getattr(resource, k)(sync_path, kwargs[k]) 
+            return getattr(resource, k)(server, kwargs[k]) 
 

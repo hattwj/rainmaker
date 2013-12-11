@@ -1,15 +1,30 @@
+# About
 version: 0.0.2
 authors:
     - 'hattwj@yahoo.com'
-release_date: 2013-05-17
+release_date: 2013-12-11
 homepage: 'https://github.com/hattwj/rainmaker'
+
+# paths
 user_dir: '${abspath:~/.rainmaker}'
 profiles_dir: '${abspath:${user_dir}/profiles}' 
 tmp_dir: '${abspath:${user_dir}/tmp}' 
-log_path: '${tmp_dir}/rainmaker.log'
-verbosity: 0
+
+# server / client settings
+tcp_port: 8000  # file transfers
+udp_port: 9500  # peer discovery
+multicast_group: '224.0.0.1'
+
+# logging
 log_level: 'info'
 log_style: '%(name)-12s %(levelname)-8s %(message)s'
+log_path:  '${tmp_dir}/rainmaker.log'
+verbosity: 0
+
+# requires
 dependencies:
     - 'watchdog'
     - 'yaml'
+    - 'twisted'
+    - 'twistar'
+    - 'sqlite3'

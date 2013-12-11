@@ -59,12 +59,15 @@ class Base(DBObject):
 
     def set_updated_at(self):
         ''' Set updated at '''
-        self.updated_at = int( round( time() * 1000 ) )
+        self.updated_at = self.time_now()
     
     def set_created_at(self):
         ''' Set created at '''
-        self.created_at = int( round( time() * 1000 ) )
-        self.updated_at = int( round( time() * 1000 ) )
+        self.created_at = self.time_now() 
+        self.updated_at = self.time_now()
+    
+    def time_now(self):
+        return int( round( time() * 1000 ) )  
 
     @classmethod
     def safe_init(klass, **kwargs):

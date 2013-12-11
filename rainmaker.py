@@ -15,32 +15,18 @@ This file is part of Rainmaker.
     You should have received a copy of the GNU General Public License
     along with Rainmaker.  If not, see <http://www.gnu.org/licenses/>.
 """
-from rainmaker_app.app.initialize import AppParser
+from twisted.internet import reactor
 from rainmaker_app import boot
 
 
 def main():
     ''' Run the application '''
     
-    #########
-    # start logging to STDOUT
-    app = boot.Rainmaker()
-     
-    #################
-    # process command line arguments
-    parser = AppParser(app)
-    parser.parse_args()
+    boot.pre_init()
+
+    boot.start_network()
     
-    try:
-        app.init()
-        if len(app.loop.running_profiles) == 0:
-            return
-        app.log.info('Entering app loop')
-        while True:
-            app.loop.once()
-    except KeyboardInterrupt:
-        pass
-    app.shutdown()
+    reactor.run()
 
 if __name__ == "__main__":
     main()

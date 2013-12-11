@@ -1,5 +1,5 @@
 import random                           #cmd
-from string import lowercase, digits,Formatter #cmd rand
+from string import lowercase, digits, Formatter #cmd rand
 from yaml import safe_load              #parser
 from pipes import quote                 #cmd
 from os.path import abspath,basename    #cmd

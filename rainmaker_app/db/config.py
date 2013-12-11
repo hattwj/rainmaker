@@ -69,12 +69,28 @@ MIGRATIONS = {
                 pubkey_id INTEGER NOT NULL,
                 data TEXT NOT NULL,
                 signature TEXT NOT NULL,
+                signed_at INTEGER NOT NULL,
+                route TEXT,
                 created_at INTEGER
             )""",
     8 : """ CREATE TABLE pubkeys(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 pubkey_str TEXT NOT NULL
-            )"""
+            )""",
+    9 : """ CREATE TABLE hosts(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                uri TEXT,
+                created_at INTEGER,
+                updated_at INTEGER,
+                last_seen_at INTEGER
+            )""",
+    10 : """ CREATE TABLE broadcasts(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                host_id INTEGER NOT NULL,
+                message_id INTEGER NOT NULL
+            )""",
+    11 : """CREATE INDEX broadcasts_index ON broadcasts(host_id, message_id);"""
+            
 }
 
 @defer.inlineCallbacks

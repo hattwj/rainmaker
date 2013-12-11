@@ -3,6 +3,7 @@ from twisted.python import log
 from twisted.protocols import amp
 from twisted.internet import reactor, defer, ssl
 from rainmaker_app.lib.net.start_tls import ClientFactory, ServerFactory, FilesResource
+from rainmaker_app.lib.net.commands import *
 from rainmaker_app.test.test_helper import *
 from rainmaker_app.test.db_helper import *
 
@@ -45,9 +46,35 @@ server_certs = {
     }
 }
 
+
 @defer.inlineCallbacks
 def after_auth(success, client):
 
+    yield test_messages_resource(client)
+    yield test_files_resource(client)
+
+@defer.inlineCallbacks
+def test_messages_resource(client):
+    from rainmaker_app.lib.net import cert
+    cert_str, pkey_str = cert.create_cert(512)
+    pubkey_str = cert.pkey_str_to_pubkey_str(pkey_str)
+    print "Length of pubkey_str: "
+    print len(pubkey_str)  
+    
+    message = Message(data='Hello World', pubkey_str=pubkey_str)
+    message.sign_with(pkey_str)
+    print message.to_dict()
+    d = yield client.callRemote(PostMessageCommand, **message.to_dict() )
+    print 'Server response to message creation'
+    print d
+    
+    message.signed_at = 33
+    d = yield client.callRemote(PostMessageCommand, **message.to_dict() )
+    print 'Server response to message creation'
+    print d
+
+@defer.inlineCallbacks
+def test_files_resource(client):
     d = yield client.callRemote(FilesResource, index = True)
     print d
 
@@ -80,6 +107,7 @@ def main():
     print 'start_client'
     cf = ClientFactory( authorization=auth, after_auth=after_auth)
     gg = reactor.connectTCP('localhost', 9991, cf)
+
 
 main()
 reactor.run()

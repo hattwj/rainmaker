@@ -1,52 +1,45 @@
 import os
 import yaml
+import random
+import base64
 
-import tasks
+from twisted.internet import reactor
+
 from .lib.conf import load
-from .lib import logger, path, Callbacks, AttrsBag
+from .lib import logger, path, AttrsBag
 from .app import initialize
-import rainmaker_app
 
-def pre_init(module):
+import rainmaker_app
+from rainmaker_app import app
+
+def pre_init():
+    
+    app.guid = base64.b64encode( str(random.getrandbits(64)) ) 
+    print app.guid
+    app.running = True 
+    app.reactor = reactor
+
     # set root app directory
-    module.root = path.root
+    app.root = path.root
     
     # set base attributes
     app_attrs = load('rainmaker_app.yml')
     for k, v in app_attrs.iteritems():
-        setattr(module, k, v)
-    
-class Rainmaker(AttrsBag):
-    event_handlers = None
-    profiles = None
-    callbacks = None
+        setattr(app, k, v)
 
-    def __init__(self):
-        AttrsBag.__init__(self, load('rainmaker.yml'),dict_to_obj=True )
-        self.callbacks = Callbacks(self,['init','shutdown'])
-   
-    def set_user_dir(self, path):
-        self.user_dir = os.path.abspath(os.path.expanduser(path))
-        self.profiles_dir = os.path.join(self.user_dir,'profiles')
-        self.tmp_dir = os.path.join(self.user_dir,'tmp')
-        self.log_path = os.path.join(self.tmp_dir,'rainmaker.log') 
-        
-    # called after parser run to complete init sequence
-    def init(self):
-        tasks.install(self.user_dir)
-        self.log = logger.create(self.__class__.__name__)
-        logger.log_to_file(self.log_path,'') 
-        self.callbacks.run('before_init')
-        self.config = load('rainmaker.yml')
-        self.profiles = initialize.AppProfiles(self.user_dir)
-        self.loop = initialize.AppLoop(self.tmp_dir)
-        self.callbacks.run('init')
-        self.callbacks.run('after_init')
-        return True
-    
-    # the application will now shut down
-    # - trigger related shutdown events
-    def shutdown(self):
-        if self.loop:
-            self.loop.shutdown()
-        self.callbacks.trigger('shutdown')
+###############################################
+def start_network():
+    from rainmaker_app.lib.net.udp_multicast import MulticastServerUDP, broadcast_loop, MulticastClientUDP 
+    print 'Starting UDP server'
+    app.udp_server = app.reactor.listenMulticast(app.udp_port, MulticastServerUDP())        
+    app.udp_broadcast = app.reactor.listenUDP(0, MulticastClientUDP())
+    #.write(request, (app.multicast_group, app.udp_port)) 
+
+    from rainmaker_app.lib.net import start_tls
+    print 'Starting TCP Server'
+    app.reactor.listenTCP(app.tcp_port, start_tls.ServerFactory())
+
+    print 'Starting UDP broadcast loop'
+    broadcast_loop()
+
+    print 'net done. Waiting...'

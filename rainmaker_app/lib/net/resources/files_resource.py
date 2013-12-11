@@ -2,8 +2,8 @@ from twisted.internet import defer
 from rainmaker_app.db.models import MyFile
 
 @defer.inlineCallbacks
-def delete(sync_path, paths):
-    my_files = yield MyFile.find_many(paths, col='path', where=['sync_path_id = ?', sync_path.id])
+def delete(server, paths):
+    my_files = yield MyFile.find_many(paths, col='path', where=['sync_path_id = ?', server.sync_path.id])
     result = []
     for f in my_files:
         g = yield f.delete()
@@ -11,16 +11,16 @@ def delete(sync_path, paths):
     defer.returnValue({'delete':result})
 
 @defer.inlineCallbacks
-def show(sync_path, paths):
-    my_files = yield MyFile.find_many(paths, col='path', where=['sync_path_id = ?', sync_path.id])
+def show(server, paths):
+    my_files = yield MyFile.find_many(paths, col='path', where=['sync_path_id = ?', server.sync_path.id])
     result = []
     for f in my_files:
         result.append( f.to_dict() )
     defer.returnValue({'show' : result})
 
 @defer.inlineCallbacks
-def index(sync_path, paths):
-    my_files = yield MyFile.find(where=['sync_path_id = ?', sync_path.id])
+def index(server, paths):
+    my_files = yield MyFile.find(where=['sync_path_id = ?', server.sync_path.id])
     result = []
     for f in my_files:
         result.append( f.to_dict() )

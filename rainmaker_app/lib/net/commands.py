@@ -2,11 +2,18 @@ from twisted.protocols import amp
 
 def resource_response():
     return {
-        'response' : {
-            'code' : 200,
-            'errors' : []
-        }
+        'code' : 200,
+        'errors' : []
     }
+
+def dump_resource_errors(resource):
+    result = []
+    for k, reasons in resource.errors.iteritems():
+        for reason in reasons:
+            result.append(
+                "%s:%s:%s" % (k, reason, resource.to_json())
+            )
+    return result
 
 class VersionCheckCommand(amp.Command):
     commandName = 'version_check'
@@ -44,7 +51,6 @@ def my_file_params(optional, optional_columns=None):
         ('is_dir', amp.Boolean() )
     ], optional = optional)
 
-
 class FilesResource(amp.Command):
 
     commandName = 'files_resource'
@@ -74,24 +80,38 @@ class FilesResource(amp.Command):
     ]
 
 
-def message_params(optional):
-    return amp.AmpList([
-        ('message': amp.String() ),
-        ('signature': amp.String() ),
-        ('pubkey_str': amp.String())
-    ], optional = optional)
+def message_params():
+    return (
+        ('data', amp.String() ),
+        ('signature', amp.String() ),
+        ('signed_at', amp.Integer() ),
+        ('pubkey_str', amp.String() ),
+        ('route', amp.ListOf( amp.String(), optional=True ) ),
+        ('reply', amp.Boolean(optional=True) )
+    )
 
-
-class MessageResource(amp.Command):
-    commandName = 'public_host_resource'
+class PostMessageCommand(amp.Command):
+    commandName = 'post_message'
     arguments = [
-        ('post', message_params(optional=True) ),
-        ('index', amp.AmpList([
-            ('pubkey_str': amp.String() )
-        ], optional=True) )
+        ('data', amp.String() ),
+        ('signature', amp.String() ),
+        ('signed_at', amp.Integer() ),
+        ('pubkey_str', amp.String() ),
+        ('route', amp.ListOf( amp.String(), optional=True ) ),
+        ('reply', amp.Boolean(optional=True) )
+    ]
+    response = [
+        ('code', amp.Integer() ),
+        ('errors', amp.ListOf( amp.String(optional=True) ) )
+    ]
+
+class GetMessagesCommand(amp.Command):
+    commandName = 'get_messages'
+    arguments = [
+        ('pubkey_str', amp.String() )
     ]
 
     response = [
-        ('post', message_params(optional=True)),
-        ('index', message_params(optional=True))
+        ('code', amp.Integer() ),
+        ('post', amp.ListOf( message_params(), optional=True ) )
     ]
