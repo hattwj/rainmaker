@@ -2,21 +2,30 @@
 version: 0.0.2
 authors:
     - 'hattwj@yahoo.com'
-release_date: 2013-12-11
+release_date: '2013-12-11'
 homepage: 'https://github.com/hattwj/rainmaker'
 
 # paths
 user_dir: '${abspath:~/.rainmaker}'
-profiles_dir: '${abspath:${user_dir}/profiles}' 
-tmp_dir: '${abspath:${user_dir}/tmp}' 
+tmp_dir: '${abspath:${user_dir}/tmp}'
+config_path: '${user_dir}/config.yml'
+database_path: '${user_dir}/rainmaker.sqlite'
 
 # server / client settings
-tcp_port: 8000  # file transfers
-udp_port: 9500  # peer discovery
-multicast_group: '224.0.0.1'
+tcp_port: 8000  # file transfer
+udp_server_options:
+    listen_port: 9500  # peer discovery
+    multicast_group: '224.0.0.1'
+    broadcast: True
+    broadcast_port: 9500 
 
 # logging
 log_level: 'info'
+log_levels:
+    - info
+    - debug
+    - warn
+    - error
 log_style: '%(name)-12s %(levelname)-8s %(message)s'
 log_path:  '${tmp_dir}/rainmaker.log'
 verbosity: 0

@@ -24,6 +24,8 @@ def main():
     
     boot.pre_init()
 
+    boot.init()
+
     boot.start_network()
     
     reactor.run()

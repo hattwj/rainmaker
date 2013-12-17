@@ -11,8 +11,7 @@ k_path = os.path.join(base_path, 'key')
 c_path = os.path.join(base_path, 'cert')
 
 if not (os.path.exists(c_path) and os.path.exists(k_path)):
-    key, crt = cert.create_self_signed_cert()
-    
+    key, crt = cert.create_self_signed_cert() 
     f = open(c_path,'wt')
     f.write(crt)
     f.close()

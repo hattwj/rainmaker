@@ -1,5 +1,6 @@
 import os
 from rainmaker_app.lib import path, FsActions
+from rainmaker_app import app
 
 fs = FsActions()
 
@@ -11,7 +12,7 @@ def install(path):
         fs.mkdir(path)
     
     # create sub dirs too
-    for p in ['tmp','plugins','log','profiles','events']:
+    for p in ['tmp','plugins','log']:
         ipath = os.path.join(path,p)
         if not os.path.isdir( ipath ):
             fs.mkdir(ipath)

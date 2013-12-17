@@ -12,11 +12,9 @@ class SmartDummyRequest(DummyRequest):
         args = args or {}
         for k, v in args.items():
             self.addArg(k, v)
- 
- 
+  
     def value(self):
         return "".join(self.written)
- 
  
 class DummySite(server.Site):
     def put(self, url, args=None, headers=None):
@@ -28,7 +26,6 @@ class DummySite(server.Site):
     def get(self, url, args=None, headers=None):
         return self._request("GET", url, args, headers)
  
- 
     def post(self, url, args=None, headers=None):
         return self._request("POST", url, args, headers)
  
@@ -37,8 +34,7 @@ class DummySite(server.Site):
         resource = self.getResourceFor(request)
         result = resource.render(request)
         return self._resolveResult(request, result)
- 
- 
+  
     def _resolveResult(self, request, result):
         if isinstance(result, str):
             request.write(result)

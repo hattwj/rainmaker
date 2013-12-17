@@ -1,4 +1,5 @@
 #verbosity levels for logger
+
 verbosity:
     Rainmaker: 0
     Tests: 4
@@ -26,4 +27,3 @@ styles:
 date_style: '%Y-%m-%d-%H-%M-%S'
 level: 'info'
 log_file_style: '%(message)s'
-

@@ -7,6 +7,8 @@ from rainmaker_app.lib.net.commands import *
 from rainmaker_app.lib.net.resources import files_resource, messages_resource 
 from rainmaker_app.db.models import Authorization, MyFile, Broadcast
 
+from .net_utils import is_compatible
+
 class AuthRequired(Exception):
     pass
 
@@ -145,15 +147,6 @@ class ClientProtocol(amp.AMP):
         reason.trap(StartTLSFailed)
         reason.trap(AuthRequired)
         self.transport.loseConnection()
-
-def is_compatible(ver):
-    ''' Is the current version of the application compatible with `ver`'''
-    try:
-        if rainmaker_app.version.split('.')[0:1] == ver.split('.')[0:1]:
-            return True
-    except:
-        pass
-    return False
 
 class ClientFactory(protocol.ClientFactory):
     

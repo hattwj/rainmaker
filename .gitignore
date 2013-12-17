@@ -1,4 +1,5 @@
 *.pyc
 *.sw*
 _trial_temp
+build/
 tmp/

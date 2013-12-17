@@ -2,11 +2,12 @@ import random                           #cmd
 from string import lowercase, digits, Formatter #cmd rand
 from yaml import safe_load              #parser
 from pipes import quote                 #cmd
-from os.path import abspath,basename    #cmd
+from os.path import abspath,basename,expanduser  #cmd
 
 from .path import which,current_user    #cmd
 from .logger import create              #logging
 
+from IPython.core.debugger import Tracer
 
 class RecordScript(object):
     ''' RecordScipt: The active yaml templating dsl ''' 
@@ -30,20 +31,24 @@ class RecordScript(object):
         self.attrs = dict( self.attrs.items()+attrs.items() )
      
     # substitute val template with attrs dict
-    def subst(self, val, attrs={},times=7,search_paths=[]):
+    def subst(self, val, attrs=None,times=7,search_paths=[]):
         ''' parse string '''
+        if val == None or isinstance(val, int) or isinstance(val, bool):
+            return val
         result = val
         has_flags = False
-        #print "input: %s" % val
-        #print "times: %s" % times
-        attrs = dict( self.attrs.items() + attrs.items() )
+        if attrs:
+            attrs = dict( self.attrs.items() + attrs.items() )
+        else:
+            attrs = self.attrs
+        #print attrs
+        
         # get tuple of values for every key in string        
         for tup in self._formatter.parse(val):
             # next if no flags
             if tup[1] == None:
                 continue
             
-            #self.log.debug("flag tuple:")
             #print tup
             
             # process tuple of flags - immutable array -
@@ -52,7 +57,9 @@ class RecordScript(object):
             cmd_key = "__cmd_%s__" % key
             rep_key = "${%s}" % ':'.join([key,tup[2]]) if tup[2] else "${%s}" % key
             
+            # Check to see if the string references another key in the attrs
             match,rep_val = self.search(key,attrs,search_paths)
+
             # get cmd if exists in this class
             cmd = getattr(self,cmd_key) if hasattr(self,cmd_key) else None
             # execute command if one is present and the command
@@ -71,7 +78,7 @@ class RecordScript(object):
             elif match:
                 pass
             else:
-                raise KeyError( [key,search_paths,attrs.keys()] )    
+                raise KeyError( [key,search_paths,attrs] )    
             if rep_val==None or not rep_key:
                 self.log.warn("subst missing val or key:\n\tval=%s\n\tkey=%s" % (rep_val,rep_key))
                 continue
@@ -145,9 +152,9 @@ class RecordScript(object):
         ''' return name of current user '''
         return current_user()
 
-    def __cmd_abs_path__(self,attrs,search_paths,val):
+    def __cmd_abspath__(self,attrs,search_paths,val):
         ''' return abspath '''
-        return abspath(self.subst(val,attrs,search_paths=search_paths))
+        return abspath(expanduser(self.subst(val,attrs,search_paths=search_paths)))
     
     def __cmd_basename__(self,attrs,search_paths,val):
         ''' return abspath '''

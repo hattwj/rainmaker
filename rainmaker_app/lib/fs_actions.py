@@ -35,9 +35,13 @@ class FsActions(object):
             self.log.info('[replaced] %s'% path)
         f = open( path, 'wb' )
         f.write( content )
-        f.close()
+        f.close()    
 
-    
+    def touch(self, path):
+        if not os.path.exists(path):
+            f = open( path, 'wb' )
+            f.close()
+            self.log.info('[created] %s' % path)
 
     def copy(self,p1,path):
         if not os.path.exists(path):
