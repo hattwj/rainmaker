@@ -15,19 +15,17 @@ This file is part of Rainmaker.
     You should have received a copy of the GNU General Public License
     along with Rainmaker.  If not, see <http://www.gnu.org/licenses/>.
 """
-from twisted.internet import reactor
-from rainmaker_app import boot
 
+import sys
+from twisted.internet import reactor
+from rainmaker_app import boot, lib
 
 def main():
-    ''' Run the application '''
-    
+    ''' Run the application ''' 
+    # rainmaker_app must be in py_path
+    sys.path.insert(1, lib.path.root)
     boot.pre_init()
-
     boot.init()
-
-    boot.start_network()
-    
     reactor.run()
 
 if __name__ == "__main__":

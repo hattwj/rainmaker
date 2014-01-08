@@ -13,24 +13,30 @@ class Base(DBObject):
 
     # instantiated by sub class for safe_init
     ATTR_ACCESSIBLE = None
+    ATTR_DEFAULTS = None
 
     #Original values
     data_was = None
    
+    def __init__(self, **kwargs):
+        # Create attr_accessible attributes first
+        # or init will wipe them
+        self._do_attr_accessible(kwargs)
+        DBObject.__init__(self, **kwargs)
+        # Save original values
+        self._do_data_was()
+        self.__run_hooks__(self.AFTER_INIT)
+        if self.new_record:
+            self.afterInit()
+
     @property 
     def new_record(self):
         ''' is this a new record? '''
         return self.id == None
 
-    def __init__(self, **kwargs):
-        DBObject.__init__(self, **kwargs)
-        # Save original values
-        self._do_data_was()
-        # Create attr_accessible attributes
-        self._do_attr_accessible()
-        self.__run_hooks__(self.AFTER_INIT)
-
-    def afterInit(self): #Only for new records
+    def afterInit(self): 
+        ''' Only for new records '''
+        print 'RUNNING FIRST INIT'
         return self.__run_hooks__(self.FIRST_INIT)
 
     def beforeCreate(self):
@@ -111,12 +117,13 @@ class Base(DBObject):
     def to_dict(self):
         return self.serialized_data
 
-    def _do_attr_accessible(self):
+    def _do_attr_accessible(self, kwargs):
         """ Create all attr accessible attributes """
         if self.ATTR_ACCESSIBLE:
-            for v in self.ATTR_ACCESSIBLE:
-                if not hasattr(self, v):
-                    setattr(self,v,None)
+            for k in self.ATTR_ACCESSIBLE:
+                if k in kwargs.keys():
+                    v = kwargs.pop(k)
+                    setattr(self, k, v)
 
     def _do_data_was(self):
         ''' record the old value of the data so we can see if anything changes '''

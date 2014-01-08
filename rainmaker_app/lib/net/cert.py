@@ -1,15 +1,6 @@
 from OpenSSL import crypto, SSL
 from time import gmtime, mktime
 
-def verifyCallback(connection, x509, errnum, errdepth, ok):
-    ''' validate certificate '''
-    if not ok:
-        print 'invalid cert from subject:', x509.get_subject()
-        return False
-    else:
-        print "Server: Client certs are fine"
-    return True
-
 def create_cert(size=2048, as_objects=False):
     """
         Create a certificate and a private/public key pair
@@ -42,10 +33,10 @@ def create_cert(size=2048, as_objects=False):
     return [cert, pkey]
 
 def pkey_str_to_pubkey_str(pkey_str):
-    from Crypto.PublicKey import RSA
-    pkey = RSA.importKey(pkey_str) 
+    ''' Generate a pubkey from the pkey'''
+    from Crypto.PublicKey import RSA 
+    pkey = RSA.importKey(pkey_str)
     pubkey = pkey.publickey()
-    
     # We have created the pubkey
     return pubkey.exportKey()       
 
@@ -89,7 +80,7 @@ def sign_data(pkey_str, data):
     from Crypto.Signature import PKCS1_v1_5 
     from Crypto.Hash import SHA256 
     from base64 import b64encode, b64decode 
-    #key = open(private_key_loc, "r").read() 
+    #key = open(private_key_loc, "r").read()
     rsakey = RSA.importKey(pkey_str) 
     signer = PKCS1_v1_5.new(rsakey) 
     digest = SHA256.new() 

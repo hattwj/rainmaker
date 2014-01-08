@@ -59,10 +59,8 @@ MIGRATIONS = {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 cert_str TEXT NOT NULL,
                 pk_str TEXT NOT NULL,
-                sync_path_id INTEGER NOT NULL,
-                offset_path TEXT DEFAULT NULL,
-                read_only BOOLEAN DEFAULT FALSE,
-                guid TEXT NOT NULL
+                pubkey_str TEXT,
+                pubkey_id INTEGER
             )""",
     7 : """ CREATE TABLE messages(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -79,10 +77,14 @@ MIGRATIONS = {
             )""",
     9 : """ CREATE TABLE hosts(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                uri TEXT,
+                address TEXT,
+                udp_port INTEGER,
+                tcp_port INTEGER,
+                pubkey_id TEXT,
+                nonce INTEGER,
+                last_seen_at INTEGER,
                 created_at INTEGER,
-                updated_at INTEGER,
-                last_seen_at INTEGER
+                updated_at INTEGER
             )""",
     10 : """ CREATE TABLE broadcasts(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

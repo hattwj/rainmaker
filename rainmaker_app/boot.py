@@ -3,7 +3,7 @@ import yaml
 import random
 import base64
 
-from twisted.internet import reactor
+from twisted.internet import reactor, defer
 
 from .lib.conf import load
 from .lib import logger, path, AttrsBag
@@ -31,8 +31,9 @@ def pre_init():
     # logging/monitor fs events
     app.fs = lib.FsActions()
 
+@defer.inlineCallbacks
 def init():
-    ''' '''
+    ''' parse command line and load config'''
     global app
     # process cli
     args = cli_parse(app)
@@ -51,7 +52,8 @@ def init():
     #logger.log_to_file( app.log_path, 'root' )
 
     # create/init db run migrations 
-    initDB(app.database_path)
+    yield initDB(app.database_path)
+    start_network()
 
 ###############################################
 def start_network():

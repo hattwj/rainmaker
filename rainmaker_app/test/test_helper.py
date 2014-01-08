@@ -7,10 +7,10 @@ from rainmaker_app.tasks import install
 from rainmaker_app.lib import logger
 from rainmaker_app.lib import FsActions
 
-import rainmaker_app as app
-from rainmaker_app import boot
+import rainmaker_app
+from rainmaker_app import boot, app
 
-boot.pre_init(app)
+boot.pre_init()
 
 logger.config['level']='warn'
 logger.verbosity = 0
