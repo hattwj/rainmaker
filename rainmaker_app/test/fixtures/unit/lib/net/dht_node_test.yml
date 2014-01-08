@@ -1,0 +1,5 @@
+test_host_count:
+    auth:
+        - {key_size: 512, create_pubkey: true}
+    host:
+        - {address: '127.0.0.1', udp_port: 3000, tcp_port: 4000, pubkey_id: 1}
