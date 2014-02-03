@@ -24,13 +24,7 @@ class DatagramParserTest(unittest.TestCase):
         yield initDB(db_path)
 
     def test_commands(self):
-        request = DatagramParser(local, 'rain:%s,store_host:{"pubkey":"bar","address":"127.0.0.1","port":12345,"signature":"abcdefg"}' % app.version)
-        self.assertEquals(None, request.error)
-
-        request = DatagramParser(['127.0.0.1',4000],'rain:%s,store:{"key":"12345678","val":"Somevalhere"}' % app.version) 
-        self.assertEquals(None, request.error)
-
-        request = DatagramParser(['127.0.0.1',4000],'rain:%s,find:{"key":"12345678"}' % app.version) 
+        request = DatagramParser(local, 'rain:%s,announce:{"tcp_port":12345}' % app.version)
         self.assertEquals(None, request.error)
 
     def test_filters(self):
@@ -40,12 +34,15 @@ class DatagramParserTest(unittest.TestCase):
         # Filter on bad client id
         request = DatagramParser(['127.0.0.1', 4000],'snow:%s,find:{"key":"12345678"}' % app.version)
         self.assertEquals(request.error, request.ERR_PROTOCOL)
-        # Filter on malformed parameter data
-        request = DatagramParser(['127.0.0.1', 4000],'rain:%s,find:"key"' % app.version)
-        self.assertEquals(request.error, request.ERR_MALFORMED)
+        # Filter on unknown action
+        request = DatagramParser(['127.0.0.1', 4000],'rain:%s,unknown_action:{"key":44}' % app.version)
+        self.assertEquals(request.error, request.ERR_ACTION)
+        # Filter on malformed action parameters
+        request = DatagramParser(['127.0.0.1', 4000],'rain:%s,announce:{"key":44}' % app.version)
+        self.assertEquals(request.error, request.ERR_ARGS)
 
     def test_encoder(self):
-        msg = DatagramParser.encode('find',key='aaa')
+        msg = DatagramParser.encode('announce',tcp_port='1234')
         request = DatagramParser(['127.0.0.1', 4000], msg)
         self.assertEquals(request.error, request.ERR_NONE)
         
@@ -59,7 +56,7 @@ class MulticastServerUDPTest(unittest.TestCase):
         self.data = load('test/fixtures/unit/lib/net/udp_multicast_test.yml')
         yield load_fixture( 'setup', self.data )
         yield load_fixture( self._testMethodName, self.data )
-        self.protocol = MulticastServerUDP(listen_port=port, node={'key_size':512})
+        self.protocol = MulticastServerUDP(8000, listen_port=port)
         self.transport = FakeTransport()
         self.protocol.transport = self.transport
         self.protocol.startProtocol()
@@ -67,30 +64,31 @@ class MulticastServerUDPTest(unittest.TestCase):
     @inlineCallbacks
     def tearDown(self):
         yield tearDownDB()
-        self.protocol.shutdown()
     
-    # Tests 
-    def test_store_host_command(self):
+    # Tests
+    def test_announce_command(self):
+        ''' test ability to receive and process announce command '''
         # aliases
         p = self.protocol
         t = self.transport 
-        # add hosts
-        msgs = []
-        for i in range(0,10):
-            msg = 'rain:%s:set_host:guid%s:%s:%s' % \
-                (app.version,i, remote[0], remote[1])
-            err = p.datagramReceived(msg, remote)
-            self.assertEquals(err, p.ERR_NONE)
-            # buffer will send to remote2
-            msgs.append([msg,remote2])
-        # request hosts
-        msg = 'rain:%s:get_hosts' % (app.version)
+        
+        p.client_factory = FakeClientFactory()
+
+        # announce host
+        msg = DatagramParser.encode('announce', tcp_port=8000)
         err = p.datagramReceived(msg, remote2)
         self.assertEquals(err, p.ERR_NONE)
-        # check buffer
-        self.assertEqual(len(t.msgs), 10)
-        for m in t.msgs:
-            self.assertEqual( m in msgs, True) 
+        
+        # check for response
+        host = p.client_factory._host
+        self.assertEquals(host==None, False)
+        self.assertEquals(host.tcp_port, 8000)
+        self.assertEquals(host.address, remote2[0])
+    #TODO: Add tests
+
+##############################
+# Fake objects for testing
+##############################
 
 class FakeTransport(object):
     def __init__(self):
@@ -115,27 +113,8 @@ class FakeHostInfo(object):
     host = local
     port = port
 
-class DHTNodeTest(unittest.TestCase):
-    
-    # Test Preparation
-    @inlineCallbacks
-    def setUp(self):
-        clean_temp_dir()
-        yield initDB(db_path)
-        self.data = load('test/fixtures/unit/lib/net/dht_node_test.yml')
-        yield load_fixture( 'setup', self.data )
-        yield load_fixture( self._testMethodName, self.data )
-        self.protocol = FakeProtocol()
-        self.node = DHTNode(self.protocol, key_size=512)
+class FakeClientFactory(object):
+    _host = None
 
-    @inlineCallbacks
-    def tearDown(self):
-        yield tearDownDB()
-        self.node.shutdown()
-
-    def test_host_count(self):
-        node = self.node
-        self.assertEquals(0, node.host_count())
-
-class FakeProtocol(object):
-    pass
+    def dht_client(self, host):
+        self._host = host

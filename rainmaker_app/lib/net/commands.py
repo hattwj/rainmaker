@@ -115,3 +115,37 @@ class GetMessagesCommand(amp.Command):
         ('code', amp.Integer() ),
         ('post', amp.ListOf( message_params(), optional=True ) )
     ]
+
+##########################################################
+# DHT Node Commands
+##########################################################
+class PingHostCommand(amp.Command):
+    ''' ask server to send their info '''
+    commandName = 'ping_host'
+
+class StoreHostCommand(amp.Command):
+    commandName = 'store_host'
+    arguments = [
+        ('address', amp.String()),
+        ('tcp_port', amp.Integer()),
+        ('udp_port', amp.Integer()),
+        ('pubkey_str', amp.String()),
+        ('signature', amp.String()),
+        ('nonce', amp.Integer())
+    ]
+
+    response = [
+        ('code', amp.Integer()),
+        ('errors', amp.ListOf( amp.String(), optional=True ) )
+    ]
+
+class FindHostCommand(amp.Command):
+    commandName = 'find_host'
+    arguments = [
+        ('node_id', amp.String())
+    ]
+    response = [
+        ('code', amp.Integer()),
+        ('errors', amp.ListOf( amp.String() )),
+        ('hosts', amp.ListOf(StoreHostCommand.arguments, optional=True))
+    ]

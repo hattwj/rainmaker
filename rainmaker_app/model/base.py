@@ -1,6 +1,6 @@
 import json
 from . common import *
-from rainmaker_app.lib.util import ExportArray
+from rainmaker_app.lib.util import ExportArray, time_now
 
 class Base(DBObject):
     #Column names
@@ -36,8 +36,10 @@ class Base(DBObject):
 
     def afterInit(self): 
         ''' Only for new records '''
-        print 'RUNNING FIRST INIT'
-        return self.__run_hooks__(self.FIRST_INIT)
+        if not self.new_record:
+            return
+        self.__run_hooks__(self.FIRST_INIT)
+        self.FIRST_INIT = None
 
     def beforeCreate(self):
         return self.__run_hooks__(self.BEFORE_CREATE)
@@ -73,7 +75,7 @@ class Base(DBObject):
         self.updated_at = self.time_now()
     
     def time_now(self):
-        return int( round( time() * 1000 ) )  
+        return time_now()  
 
     @classmethod
     def safe_init(klass, **kwargs):

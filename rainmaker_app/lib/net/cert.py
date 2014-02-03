@@ -112,3 +112,40 @@ def verify_sign(pubkey_str, signature, data):
     if signer.verify(digest, b64decode(signature)):
         return True
     return False
+
+from base64 import b64decode, b64encode 
+from hashlib import sha256
+
+from Crypto import PublicKey
+from Crypto.Hash import SHA256
+from Crypto.Signature import PKCS1_v1_5 
+
+class Pubkey(object):
+
+    __guid__ = None 
+    
+    def __init__(self, pubkey_str):
+        self.pubkey_str = pubkey_str 
+        self.pubkey = PublicKey.RSA.importKey(self.pubkey_str)
+        self.signer = PKCS1_v1_5.new(self.pubkey) 
+
+    @property
+    def guid(self):
+        if self.__guid__: return self.__guid__
+        # 32 byte binary/str digest of pubkey
+        self.__guid__ = b64encode(sha256(self.pubkey_str).digest())
+        return self.__guid__
+
+    def verify(self, signature, data):
+        '''
+        Verifies with a public key from whom the data came that it was indeed 
+        signed by their private key
+        param: signature String signature to be verified
+        param: data String signature to be verified against
+        return: Boolean. True if the signature is valid; False otherwise. 
+        '''
+        digest = SHA256.new() 
+        digest.update(data)
+        if self.signer.verify(digest, b64decode(signature)):
+            return True
+        return False

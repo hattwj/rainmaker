@@ -19,12 +19,20 @@ def load_fixture(test_name, data):
     if test_name not in data.keys():
         return
 
-    for table, rows in data[test_name].iteritems():
-        for r in rows:
-            if 'my_file' == table:
-                yield MyFile(**r).save()
-            elif 'sync_path' == table:
-                yield SyncPath(**r).save()
-            elif 'sync_comparison' == table:
-                yield SyncComparison(**r).save()
-
+    for model_name, records in data[test_name].iteritems():
+        if 'my_file' == model_name:
+            model = MyFile
+        elif 'sync_path' == model_name:
+            model = SyncPath
+        elif 'sync_comparison' == model_name:
+            model = SyncComparison
+        elif 'host' == model_name:
+            model = Host
+        elif 'authorization' == model_name:
+            model = Authorization
+        else:
+            raise ValueError('unknown model: %s' % model)
+        for r in records:
+            record = yield model(**r).save()
+            if record.errors:
+                raise RuntimeError("bad %s fixture: \n%s" % (model_name, repr(record.errors)) )

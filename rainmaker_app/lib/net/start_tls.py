@@ -3,53 +3,40 @@ from twisted.protocols import amp
 from twisted.python import log
 
 import rainmaker_app
-from rainmaker_app.lib.net.commands import *
+from rainmaker_app import app
+from rainmaker_app.lib.util import assign_attrs
 from rainmaker_app.lib.net.resources import files_resource, messages_resource 
-from rainmaker_app.db.models import Authorization, MyFile, Broadcast
+from rainmaker_app.db.models import *
 
-from .net_utils import is_compatible
-
-class AuthRequired(Exception):
-    pass
-
-class StartTLSFailed(Exception):
-    pass
-
-def require_secure(func):    
-    ''' decorator '''
-    def sub_require_secure(self, *args, **kwargs):
-        ''' nested func to access func parameters'''
-        t = self.transport
-        if hasattr(t,'getPeerCertificate') and t.getPeerCertificate():
-            # run
-            d = func(self, *args, **kwargs)
-            return d # string
-        else:
-            raise AuthRequiredError() 
-    return sub_require_secure
+from .net_utils import is_compatible, require_secure, get_address
+from .exceptions import *
+from .commands import *
 
 class ServerProtocol(amp.AMP):
     authorization = None     
     sync_path = None # Set after authentication
 
-    def __init__(self, **kwargs):
-        self.authorization = None
+    def __init__(self):
+        pass
+
+    def connectionMade(self):
+        log.msg('Connection Made')
+
+    def connectionLost(self, reason):
+        log.msg(reason)
+
+    @StoreHostCommand.responder
+    def store_host_command(self, **kwargs):
+        host = Host(**kwargs)
+        self.node.store_host( host )
 
     @VersionCheckCommand.responder
     def version_check(self, version):
         log.msg('client version: %s' % version)
         return {
             'response_code':200,
-            'version': rainmaker_app.version
+            'version': app.version
         }
-
-    def connectionMade(self):
-        pass
-        #Broadcast.add_listener( self )
-
-    def connectionLost(self, reason):
-        log.msg(reason)
-        #Broadcast.remove_listener( self )
 
     @SetPubkeyCommand.responder
     def set_pubkey(self, guid):
@@ -77,13 +64,12 @@ class ServerProtocol(amp.AMP):
     @amp.StartTLS.responder
     def startTLS(self):
         log.msg( "server: We started TLS" )
-
         return self.authorization.certParams()
  
     @require_secure
     def connection_secure(self):
-        print 'The connection is now secure' 
-        
+        log.msg('The connection is now secure') 
+    
     @require_secure
     @FilesResource.responder
     def files_resource(self, **kwargs):
@@ -93,78 +79,46 @@ class ServerProtocol(amp.AMP):
             result = yield simple_router(files_resource, self, **kwargs)
             defer.returnValue(result)
         return sub_files_resource(self, **kwargs)
-    
+     
+    @PingHostCommand.responder
+    def ping_host_command(self):
+       self.sendCommand(StoreHostCommand, app.server.host_args())   
+
 class ServerFactory(protocol.ServerFactory):
+    listen_port = 8500
+    __host__ = None
+
     def __init__(self, **kwargs):
         self.kwargs = kwargs
-
-    def buildProtocol(self, addr):
-        return ServerProtocol(**self.kwargs)
-
-class ClientProtocol(amp.AMP):
-    server_version = None
-    authorization = None
-    certParams = None
-    after_auth = None
-
-    def __init__(self, **kwargs):
-        for k, v in kwargs.iteritems():
-            setattr(self, k, v)
+        assign_attrs(self, **kwargs)
+        self.__host__ = Host()
     
-    def connectionMade(self):
-        ''' '''
-        d = self.version_check()
-        d.addCallback(self.set_pubkey)
-        d.addCallback(self.start_tls)
-        d.addErrback(self.startup_failed)
-
-        if self.after_auth:
-            d.addCallback( self.after_auth, self)
-
-    @defer.inlineCallbacks
-    def version_check(self):
-        result = yield self.callRemote( VersionCheckCommand, version = rainmaker_app.version)
-        if not is_compatible(result['version']):
-            raise StartTLSFailed('Incompatible Version: %s' % result['version'])
-        log.msg(result)
-
-    @defer.inlineCallbacks
-    def set_pubkey(self, *chain):
-        ''' set_pubkey on server '''
-        result = yield self.callRemote( SetPubkeyCommand, guid=self.authorization.guid)
-        if result['response_code'] != 200:
-            log.msg(result)
-            raise StartTLSFailed('Unknown Certificate')
-
-    @defer.inlineCallbacks
-    def start_tls(self, *chain):
-        result = yield self.callRemote( amp.StartTLS, **self.authorization.certParams() )
-        log.msg(result)
-
-    def startup_failed(self, reason):
-        log.msg('client: start_tls_failed')
-        log.msg(reason.getTraceback())
-        reason.trap(StartTLSFailed)
-        reason.trap(AuthRequired)
-        self.transport.loseConnection()
-
-class ClientFactory(protocol.ClientFactory):
-    
-    def __init__(self, **kwargs):
-        self.kwargs = kwargs
-
     def buildProtocol(self, addr):
-        return ClientProtocol( **self.kwargs)
+        return ServerProtocol()
+    
+    def start(self):
+        # start main server
+        self.setup_host()
+        app.reactor.listenTCP(self.listen_port, self)
+        log.msg('TCP Server listening on port %s' % self.listen_port)
 
-    def clientConnectionFailed(self, connector, reason):
-        print "connection failed: ", reason.getErrorMessage()
-
-    def clientConnectionLost(self, connector, reason):
-        print "connection lost: ", reason.getErrorMessage()
-
-
+    def setup_host(self):
+        host = self.__host__
+        address = get_address()
+        if address != host.address or address == None:
+            return
+        host.address = address
+        host.tcp_port = self.listen_port
+        host.udp_port = app.udp_server.listen_port
+        host.nonce = host.time_now()
+        host.signature = app.node.auth.sign(host.signature_data)
+        self.host_args = self.__host__.to_json()
+    
+    @property
+    def address(self):
+        return self.__host__.address
+    
 def simple_router(resource, server, **kwargs):
     for k in kwargs.keys():
         if kwargs[k] != None:
-            return getattr(resource, k)(server, kwargs[k]) 
-
+            return getattr(resource, k)(server, kwargs[k])

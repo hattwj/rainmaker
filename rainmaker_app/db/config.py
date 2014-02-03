@@ -1,5 +1,6 @@
 from twisted.enterprise import adbapi
 from twisted.internet import defer
+from twisted.python import log
 from twistar.dbobject import DBObject
 from twistar.registry import Registry
 
@@ -80,7 +81,7 @@ MIGRATIONS = {
                 address TEXT,
                 udp_port INTEGER,
                 tcp_port INTEGER,
-                pubkey_id TEXT,
+                pubkey_str TEXT,
                 nonce INTEGER,
                 last_seen_at INTEGER,
                 created_at INTEGER,
@@ -150,7 +151,7 @@ def _init_models(*args):
 
 @defer.inlineCallbacks
 def _model_introspection(model):
-    ''' create columns varable and init fields '''
+    ''' create columns variable and init fields '''
     q = "PRAGMA table_info('%s')" % model.tablename()
     cols_tup = yield Registry.DBPOOL.runQuery(q)
     cols = [tup[1] for tup in cols_tup]
@@ -159,6 +160,11 @@ def _model_introspection(model):
         if not hasattr(model, col):
             setattr(model, col, None)
 
+def _init_failed(reason):
+    import sys
+    log.msg(reason.getTraceback())
+    sys.exit
+
 def initDB(location):
     ''' init db connection and models '''
     _db_connect(location)
@@ -166,6 +172,7 @@ def initDB(location):
     g = _check_schema()
     g.addCallback(_init_migrations)
     g.addCallback(_init_models)
+    g.addErrback(_init_failed)
     return g
 
 def tearDownDB():

@@ -1,5 +1,5 @@
 from rainmaker_app.lib.net import cert 
-from rainmaker_app.model.pubkey import *
+from rainmaker_app.model.common import *
 
 class Message(Base):
     pubkey_id = None
