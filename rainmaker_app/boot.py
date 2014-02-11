@@ -20,9 +20,6 @@ def pre_init():
     app_attrs = load('rainmaker_app.yml')
     app.add_attrs( app_attrs )
 
-    # generate app guid    
-    app.guid = base64.b64encode( str(random.getrandbits(64)) )
-    
     # set reactor, mark self as running
     app.running = True 
     app.reactor = reactor
@@ -77,7 +74,7 @@ def start_network():
     from rainmaker_app.lib.net.udp_multicast import MulticastServerUDP  
     
     # init
-    app.node = dht_node.DHTNode(**app.dht_node_options)
+    app.node = dht_node.DHTNode(app.auth)
     app.server = start_tls.ServerFactory(**app.tcp_server_options)
     app.udp_server = MulticastServerUDP(**app.udp_server_options)
     app.client = clients.ClientFactory(**app.tcp_client_options)

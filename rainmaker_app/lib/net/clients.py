@@ -25,7 +25,8 @@ class ClientProtocol(ServerProtocol):
     def connectionMade(self):
         ''' '''
         self.connected = True
-        self.peer_addr_port = self.transport.getPeer()
+        peer = self.transport.getPeer()
+        self.peer_addr_port = (peer.host, peer.port,)
         d = self.version_check()
         d.addErrback(self.startup_failed)
         d.addCallback(self.finish_connecting)
@@ -109,11 +110,16 @@ class ClientFactory(protocol.ClientFactory):
 
     def clientConnectionLost(self, client, reason):
         log.msg("connection lost: %s" % reason.getErrorMessage())
-    
+   
+    def commandFailed(self, *args):
+        log.msg('Command failed')
+        log.msg(args)
+
     def connectionMade(self, client):
         ''' A client made connection '''
         addr_port = client.peer_addr_port
-        log.msg("Connection made: %s" % addr_port)
+        log.msg("Connection made: ")
+        log.msg(addr_port)
         if addr_port in self.clients.keys():
             self.clients[addr_port].transport.loseConnection() 
         self.clients[addr_port] = client
@@ -126,8 +132,11 @@ class ClientFactory(protocol.ClientFactory):
         return self.clients[addr_port]
     
     @defer.inlineCallbacks
-    def ping_host(self, addr_port):
-        client = yield self.get_client(addr_port)
+    def send_ping(self, host):
+        valid = yield host.isValid()
+        if not valid:
+            return
+        client = yield self.get_client(host.addr_port)
         if not client: 
             return
-        client.callRemote(PingHostCommand)
+        client.callRemote(PingHostCommand).addErrback(self.commandFailed)

@@ -82,8 +82,7 @@ MIGRATIONS = {
                 udp_port INTEGER,
                 tcp_port INTEGER,
                 pubkey_str TEXT,
-                nonce INTEGER,
-                last_seen_at INTEGER,
+                signed_at INTEGER,
                 created_at INTEGER,
                 updated_at INTEGER
             )""",

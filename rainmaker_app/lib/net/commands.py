@@ -1,10 +1,10 @@
 from twisted.protocols import amp
 
 def resource_response():
-    return {
-        'code' : 200,
-        'errors' : []
-    }
+    return (
+        ('code', amp.Integer() ),
+        ('errors', amp.ListOf( amp.String(), optional=True) )
+    )
 
 def dump_resource_errors(resource):
     result = []
@@ -122,6 +122,7 @@ class GetMessagesCommand(amp.Command):
 class PingHostCommand(amp.Command):
     ''' ask server to send their info '''
     commandName = 'ping_host'
+    response = resource_response() 
 
 class StoreHostCommand(amp.Command):
     commandName = 'store_host'
@@ -131,21 +132,13 @@ class StoreHostCommand(amp.Command):
         ('udp_port', amp.Integer()),
         ('pubkey_str', amp.String()),
         ('signature', amp.String()),
-        ('nonce', amp.Integer())
+        ('signed_at', amp.Integer())
     ]
-
-    response = [
-        ('code', amp.Integer()),
-        ('errors', amp.ListOf( amp.String(), optional=True ) )
-    ]
+    response = resource_response() 
 
 class FindHostCommand(amp.Command):
     commandName = 'find_host'
     arguments = [
         ('node_id', amp.String())
     ]
-    response = [
-        ('code', amp.Integer()),
-        ('errors', amp.ListOf( amp.String() )),
-        ('hosts', amp.ListOf(StoreHostCommand.arguments, optional=True))
-    ]
+    response = resource_response() 

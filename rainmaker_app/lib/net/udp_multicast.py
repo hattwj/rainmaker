@@ -181,7 +181,7 @@ class MulticastServerUDP(DatagramProtocol):
         host = self.hosts_filter.add( request )
         if not host:
             return
-        app.client.ping_host((host.address, host.tcp_port,))
+        app.client.send_ping(host)
 
     ###########################################
     # Protocol Command Senders

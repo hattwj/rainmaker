@@ -1,0 +1,20 @@
+setup:
+    host:
+        - {address: 127.0.0.1, tcp_port: 55, udp_port: 66, 
+            created_at: 1, last_seen_at: 20, signed_at: 1,
+            node_id: 1}
+        - {address: 127.0.0.2, tcp_port: 55, udp_port: 66, 
+            created_at: 2, last_seen_at: 20, signed_at: 1,
+            node_id: 1}
+        - {address: 127.0.0.3, tcp_port: 55, udp_port: 66, 
+            created_at: 3, last_seen_at: 20, signed_at: 1,
+            node_id: 1}
+        - {address: 117.0.0.1, tcp_port: 55, udp_port: 66, 
+            created_at: 1, last_seen_at: 20, signed_at: 1,
+            node_id: 500000000}
+        - {address: 117.0.0.2, tcp_port: 55, udp_port: 66, 
+            created_at: 2, last_seen_at: 20, signed_at: 1,
+            node_id: 500000000}
+        - {address: 117.0.0.3, tcp_port: 55, udp_port: 66, 
+            created_at: 3, last_seen_at: 20, signed_at: 1,
+            node_id: 500000000}

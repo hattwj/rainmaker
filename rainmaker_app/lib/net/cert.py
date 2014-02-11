@@ -132,8 +132,8 @@ class Pubkey(object):
     @property
     def guid(self):
         if self.__guid__: return self.__guid__
-        # 32 byte binary/str digest of pubkey
-        self.__guid__ = b64encode(sha256(self.pubkey_str).digest())
+        # 32 byte int digest of pubkey
+        self.__guid__ = int(sha256(self.pubkey_str).digest().encode('hex'),16)
         return self.__guid__
 
     def verify(self, signature, data):

@@ -1,6 +1,7 @@
 import errno
 from socket import error as socket_error
 from twisted.python import log
+from twisted.internet import defer
 from rainmaker_app import app
 from .exceptions import AuthRequiredError
 
@@ -19,6 +20,18 @@ def require_secure(func):
         else:
             raise AuthRequiredError() 
     return sub_require_secure
+
+def report_errors(func):    
+    ''' decorator to catch amp command errors  '''
+    def sub_report_errors(self, *args, **kwargs):
+        ''' nested func to access func parameters'''
+        print 'd:'
+        # run
+        d = defer.Deferred()
+        d.addCallback(func, self, *args, **kwargs)
+        print d
+        return d
+    return sub_report_errors
 
 def is_compatible(ver):
     ''' Is the current version of the application compatible with `ver`'''
@@ -44,7 +57,6 @@ class AddressServerUDP(DatagramProtocol):
         #print self.transport.getHost()
         self.transport.connect( self.address, self.listen_port)
         host = self.transport.getHost()
-        self.transport.loseConnection()
         return host.host
 
 def get_address(address=None):
@@ -58,5 +70,7 @@ def get_address(address=None):
             # Not the error we are looking for, re-raise
             raise serr
         log.err('Unable to detect our address')
-        return None
+        address = None
+    # make sure we close connection to prevent memory leak
+    serv.transport.loseConnection()
     return address

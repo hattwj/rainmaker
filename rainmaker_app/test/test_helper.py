@@ -10,7 +10,7 @@ from rainmaker_app.lib import FsActions
 import rainmaker_app
 from rainmaker_app import boot, app
 
-boot.pre_init()
+#boot.pre_init()
 
 logger.config['level']='warn'
 logger.verbosity = 0

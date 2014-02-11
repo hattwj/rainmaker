@@ -5,13 +5,15 @@ from rainmaker_app import app
 
 class Host(Base):
     ATTR_ACCESSIBLE = ['pubkey_str', 'address', 'tcp_port', 
-        'udp_port', 'signature', 'nonce']
+        'udp_port', 'signature', 'signed_at']
     BEFORE_CREATE = ['set_created_at', 'set_updated_at', '__set_last_seen_at__']
     BEFORE_UPDATE = ['set_updated_at', '__set_last_seen_at__']
     TIMEOUT = 15*60*1000    # mark host as stale when updated_at greater than
     last_seen_at = 0
     __pubkey__ = None   # pubkey object
     pubkey_str = None
+    signature  = None
+    __node_id__ = None
 
     @property
     def pubkey(self):
@@ -35,9 +37,9 @@ class Host(Base):
 
     @property
     def signature_data(self):
-        if not self.nonce:
-            self.nonce = self.time_now()
-        return "%s%s%s%s" % (self.address, self.udp_port, self.tcp_port, self.nonce)
+        if not self.signed_at:
+            self.signed_at = self.time_now()
+        return "%s%s%s%s" % (self.address, self.udp_port, self.tcp_port, self.signed_at)
 
     def __set_last_seen_at__(self):
         ''' update last seen at '''
@@ -45,16 +47,27 @@ class Host(Base):
 
     @property
     def node_id(self):
-        ''' b64 encoded 32bit hash of pubkey '''
-        return self.pubkey.guid
+        ''' Int encoded 32bit hash of pubkey '''
+        if self.__node_id__ == None:
+            self.__node_id__ = self.pubkey.guid
+        return self.__node_id__
     
+    @node_id.setter
+    def node_id(self, val):
+        self.__node_id__ = val
+
     @property
     def signature_data(self):
-        return "%s%s%s%s" % (self.address, self.udp_port, self.tcp_port, self.nonce)
+        ''' Return string containing signature data '''
+        return "%s%s%s%s" % (self.address, self.udp_port, self.tcp_port, self.signed_at)
 
     def verify_sig(self):
         ''' verify host data signature '''
         return self.pubkey.verify(self.signature, self.signature_data)
+    
+    @property
+    def addr_port(self):
+        return (self.address, self.tcp_port)
 
 def host_pubkey(self):
     ''' validate pubkey, only if present '''

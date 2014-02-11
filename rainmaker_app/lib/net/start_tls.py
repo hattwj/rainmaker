@@ -8,7 +8,8 @@ from rainmaker_app.lib.util import assign_attrs
 from rainmaker_app.lib.net.resources import files_resource, messages_resource 
 from rainmaker_app.db.models import *
 
-from .net_utils import is_compatible, require_secure, get_address
+from .net_utils import is_compatible, require_secure, get_address, \
+    report_errors
 from .exceptions import *
 from .commands import *
 
@@ -16,19 +17,35 @@ class ServerProtocol(amp.AMP):
     authorization = None     
     sync_path = None # Set after authentication
 
-    def __init__(self):
-        pass
+    def __init__(self, factory):
+        self.factory = factory
 
     def connectionMade(self):
         log.msg('Connection Made')
+        # notify factory
+        self.factory.connectionMade(self)
+        # ask for client information
+        self.callRemote(PingHostCommand)
 
     def connectionLost(self, reason):
+        log.msg('Connection Lost')
         log.msg(reason)
+    
+    @FindHostCommand.responder
+    def find_host_command(self, **kwargs):
+        hosts = app.node.find_nearest_hosts(**kwargs)
+        for host in hosts:
+            self.callRemote(StoreHostCommand, **host.to_dict() )
+        return {'code', 200}
 
     @StoreHostCommand.responder
     def store_host_command(self, **kwargs):
         host = Host(**kwargs)
-        self.node.store_host( host )
+        d = app.node.store_host(host)
+        return {
+            'code': 200,
+            'errors' : []
+        }
 
     @VersionCheckCommand.responder
     def version_check(self, version):
@@ -79,44 +96,65 @@ class ServerProtocol(amp.AMP):
             result = yield simple_router(files_resource, self, **kwargs)
             defer.returnValue(result)
         return sub_files_resource(self, **kwargs)
-     
+
     @PingHostCommand.responder
     def ping_host_command(self):
-       self.sendCommand(StoreHostCommand, app.server.host_args())   
+        log.msg('sending host')
+        kwargs = app.server.host_args
+        print kwargs
+        d = self.callRemote(StoreHostCommand, **kwargs)
+        d.addErrback(self.commandFailed)
+        return {'code':200}
+
+    def commandFailed(self, *args):
+        log.msg('Command failed')
+        log.msg(args)
 
 class ServerFactory(protocol.ServerFactory):
     listen_port = 8500
-    __host__ = None
 
     def __init__(self, **kwargs):
         self.kwargs = kwargs
         assign_attrs(self, **kwargs)
-        self.__host__ = Host()
+        self.host = Host()
     
     def buildProtocol(self, addr):
-        return ServerProtocol()
+        return ServerProtocol(self)
     
     def start(self):
         # start main server
         self.setup_host()
         app.reactor.listenTCP(self.listen_port, self)
         log.msg('TCP Server listening on port %s' % self.listen_port)
+    
+    def connectionMade(self, server):
+        pass
 
     def setup_host(self):
-        host = self.__host__
+        ''' conditionally generate host info '''
+        host = self.host
         address = get_address()
-        if address != host.address or address == None:
+        if address == host.address or address == None:
             return
         host.address = address
         host.tcp_port = self.listen_port
         host.udp_port = app.udp_server.listen_port
-        host.nonce = host.time_now()
+        host.signed_at = host.time_now()
+        host.pubkey_str = app.node.auth.pubkey_str
         host.signature = app.node.auth.sign(host.signature_data)
-        self.host_args = self.__host__.to_json()
     
     @property
     def address(self):
-        return self.__host__.address
+        return self.host.address
+
+    def check_address(self):
+        ''' unconditionally recreate host information '''
+        self.address = None
+        self.setup_host()
+
+    @property
+    def host_args(self):
+        return self.host.to_dict()
     
 def simple_router(resource, server, **kwargs):
     for k in kwargs.keys():

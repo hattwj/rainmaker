@@ -19,7 +19,7 @@ class Authorization(Base):
     def pubkey(self):
         if self.__pubkey__:
             return self.__pubkey__
-        self__pubkey__ = Pubkey(self.pubkey_str)
+        self.__pubkey__ = Pubkey(self.pubkey_str)
         return self.__pubkey__
 
     def private_cert(self):
