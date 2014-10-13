@@ -1,5 +1,12 @@
-test_host_count:
-    authorization:
-        - {key_size: 512}
+setup:
     host:
-        - {address: '127.0.0.1', udp_port: 3000, tcp_port: 4000, pubkey_id: 1}
+        - {address: '127.0.0.2', tcp_port: 40, udp_port: 50}
+
+mock_data:
+    virt_net:
+        "127.0.0.2:40":
+            1:
+                - {address: '127.0.0.3', tcp_port: 40, udp_port: 50}
+        "127.0.0.3:40":
+            1:
+                - {address: '127.0.0.4', tcp_port: 40, udp_port: 50}

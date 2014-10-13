@@ -110,7 +110,7 @@ class DHTNode(object):
         # Don't look for hosts if were above min 
         if self.host_count >= self.MIN_CONNECTIONS:
             app.reactor.callLater(self.L_HOSTS_FIND, self.__hosts_find__)
-            return
+            return False
 
         # bin count depends on number of of known hosts
         bin_count = self.host_count
@@ -135,7 +135,7 @@ class DHTNode(object):
             node_id = self.bucket_to_node_id(idx)
             hosts = self.find_nearest_hosts(node_id)
             for host in hosts:
-                send.client.send_find_host(node_id)
+                self.client.send_find_host(host, node_id)
         self._hosts_lock.release()
         app.reactor.callLater(self.L_HOSTS_FIND, self.__hosts_find__)
 
@@ -236,13 +236,16 @@ class DHTNode(object):
             for h in self.find_nearest_hosts(key):
                 app.client.send_host( host, h )
         self._key_vals_lock.release()
-    
-    def store_host(self, rhost ):
+  
+    @defer.inlineCallbacks
+    def store_host(self, **kwargs ):
         ''' store host if the information is valid  '''
-        if not rhost.verify_sig():
-            log.msg('Refusing to store host with invalid signature')
-            return False
-        return self.__store_host__(rhost)
+        rhost = Host(**kwargs)
+        #add host to db
+        yield rhost.save()
+        if not rhost.errors:
+            self.__store_host__(rhost)
+        defer.returnValue(rhost.errors)
 
     def __store_host__(self, rhost, force=False):
         ''' add/refresh host '''
@@ -345,5 +348,4 @@ class DHTNode(object):
     
     def shutdown(self):
         ''' save hosts and exit '''
-        if self.refresh_loop.running:
-            self.refresh_loop.stop()
+        pass

@@ -25,7 +25,11 @@ class DeferredDict(dict):
 from time import time
 
 def time_now():
-    return int( round( time() * 1000 ) )  
+    '''
+        Return current time stamp in Unix milliseconds
+    '''
+    return int( round( time() * 1000 ) )
+
 
 def assign_attrs(obj, **kwargs):
     ''' Assign Attributes to self '''
@@ -34,7 +38,12 @@ def assign_attrs(obj, **kwargs):
             setattr(obj, k, v)
         else:
             raise AttributeError('Unknown attribute: %s' % k)
-
+import re
+first_cap_re = re.compile('(.)([A-Z][a-z]+)')
+all_cap_re = re.compile('([a-z0-9])([A-Z])')
+def snake_case(name):
+    s1 = first_cap_re.sub(r'\1_\2', name)
+    return all_cap_re.sub(r'\1_\2', s1).lower()
 
 class Object:
     ''' Anonymous Object class'''

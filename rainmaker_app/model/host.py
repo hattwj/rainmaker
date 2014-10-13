@@ -68,8 +68,9 @@ class Host(Base):
     @property
     def addr_port(self):
         return (self.address, self.tcp_port)
-
-def host_pubkey(self):
+##
+# custom validators
+def validate_host_pubkey(self):
     ''' validate pubkey, only if present '''
     if not self.pubkey_str: return True
     if not self.verify_sig():
@@ -95,5 +96,5 @@ Host.validatesPresenceOf(
     'address',
     'udp_port', 
     'tcp_port')
-Host.addValidator(host_pubkey)
+Host.addValidator(validate_host_pubkey)
 Host.addValidator(validate_ports)

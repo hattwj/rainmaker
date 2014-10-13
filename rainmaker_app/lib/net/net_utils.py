@@ -2,7 +2,7 @@ import errno
 from socket import error as socket_error
 from twisted.python import log
 from twisted.internet import defer
-from rainmaker_app import app
+from rainmaker_app import app, version
 from .exceptions import AuthRequiredError
 
 ###################################
@@ -36,7 +36,7 @@ def report_errors(func):
 def is_compatible(ver):
     ''' Is the current version of the application compatible with `ver`'''
     try:
-        if app.version.split('.')[0:2] == ver.split('.')[0:2]:
+        if version.split('.')[0:2] == ver.split('.')[0:2]:
             return True
     except:
         pass

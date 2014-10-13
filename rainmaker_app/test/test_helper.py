@@ -4,7 +4,7 @@ import yaml
 import sys
 
 from rainmaker_app.tasks import install
-from rainmaker_app.lib import logger
+from rainmaker_app.lib import logger, util
 from rainmaker_app.lib import FsActions
 
 import rainmaker_app
@@ -64,3 +64,21 @@ def load(path,abspath=False,from_dir=None):
         data=yaml.safe_load(f.read())
     return data
 
+clock_offset = 0
+def time_elapsed(interval=0,reset=False):
+    global clock_offset
+    if reset:
+        clock_offset = 0
+    else:
+        clock_offset += interval
+
+from time import time
+def time_now():
+    '''
+        Return current time stamp in Unix milliseconds
+    '''
+    #print 'time called with offset'
+    global clock_offset
+    return int( round( time() * 1000 ) ) + clock_offset
+
+util.time_now = time_now

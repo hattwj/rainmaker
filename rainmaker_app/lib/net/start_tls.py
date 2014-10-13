@@ -39,13 +39,15 @@ class ServerProtocol(amp.AMP):
         return {'code', 200}
 
     @StoreHostCommand.responder
+    @defer.inlineCallbacks
     def store_host_command(self, **kwargs):
-        host = Host(**kwargs)
-        d = app.node.store_host(host)
-        return {
+        d = app.node.store_host(**kwargs)
+        d.addErrback( self.command_failed )
+        yield d
+        defer.returnValue( {
             'code': 200,
             'errors' : []
-        }
+        })
 
     @VersionCheckCommand.responder
     def version_check(self, version):
@@ -106,7 +108,7 @@ class ServerProtocol(amp.AMP):
         d.addErrback(self.commandFailed)
         return {'code':200}
 
-    def commandFailed(self, *args):
+    def command_failed(self, *args):
         log.msg('Command failed')
         log.msg(args)
 
