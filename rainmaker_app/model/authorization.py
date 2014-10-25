@@ -45,7 +45,7 @@ class Authorization(Base):
     
     def sign(self, msg):
         if not self.pk_str:
-            raise AttributeError('no pkey')
+            raise AttributeError('no pk_str')
         return sign_data(self.pk_str, msg)
 
     def verify(self, signature, msg):

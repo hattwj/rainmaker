@@ -38,7 +38,7 @@ MIGRATIONS = {
                 created_at INTEGER,
                 updated_at INTEGER, 
                 scanned_at INTEGER
-            )""",
+            )""", # TODO: try: created_at DEFAULT (datetime('now','localtime'))
     4 : """ CREATE TABLE sync_comparisons (
                 my_file_id INTEGER, 
                 sync_path_id INTEGER

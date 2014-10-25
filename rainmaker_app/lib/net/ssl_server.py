@@ -30,7 +30,7 @@ class SSLServer(object):
             cert.verifyCallback
         )
     
-        # Since we have self-signed certs we have to explicitly
+        # Since we/client have self-signed certs we have to explicitly
         # tell the server to trust them.
         self.ctx.load_verify_locations(self.c_path)
         self.port_obj = reactor.listenSSL(self.port, self.site, myContextFactory)
@@ -38,6 +38,3 @@ class SSLServer(object):
     def stop(self):
        self.port_obj.stopListening() 
 
-#if __name__ == '__main__':
-#    run()
-#    reactor.run()

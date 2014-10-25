@@ -76,6 +76,13 @@ def validate_host_pubkey(self):
     if not self.verify_sig():
         self.errors.add('Signature', 'Validation failed')
 
+import socket
+def validate_address(self): 
+    if not socket.inet_aton(self.address):
+        self.errors.add('address', 'invalid')
+        return False
+    return True
+
 def validate_ports(self):
     ''' require valid port range '''
     if not __valid_port__(self.tcp_port):
@@ -96,5 +103,6 @@ Host.validatesPresenceOf(
     'address',
     'udp_port', 
     'tcp_port')
+Host.addValidator(validate_address)
 Host.addValidator(validate_host_pubkey)
 Host.addValidator(validate_ports)

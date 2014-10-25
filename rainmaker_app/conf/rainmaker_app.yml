@@ -41,3 +41,4 @@ dependencies:
     - 'twisted'
     - 'twistar'
     - 'sqlite3'
+    - 'ishell'

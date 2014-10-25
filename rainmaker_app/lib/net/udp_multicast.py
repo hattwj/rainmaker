@@ -25,6 +25,17 @@ from .net_utils import is_compatible, get_address
 from rainmaker_app.db.models import Host
 from rainmaker_app.lib.util import assign_attrs, snake_case, time_now
 from rainmaker_app import app, version
+from rainmaker_app.lib.net import finger_table
+from rainmaker_app.lib.net.clients import ClientFactory
+
+class Param(object):
+    
+    def __init__(self, name, constructor, required):
+        self.name = name
+        self.param_type = param_type
+
+    def construct(self):
+        pass
 
 class BaseResponder(object):
     params = None
@@ -42,15 +53,10 @@ class BaseResponder(object):
 
 class PingResponder(BaseResponder):
     def run(self, request):
-        request.dht.update_host(request.host)
-        request.transport.send('pong')
-
-class PongResponder(BaseResponder):
-    def run(self, request):
-        request.dht.update_host(request.host)
+        print app.auth.to_json()
         
 class StoreValueResponder(BaseResponder):
-    params = ['key','value'] 
+    params = ['key','value']
     def run(self, request):
         request.dht.update_host(request.host)
         request.dht.store(
@@ -58,17 +64,8 @@ class StoreValueResponder(BaseResponder):
             request.params['value']
         )
 class StoreHostResponder(BaseResponder):
-    params = [
-        'address',
-        'udp_port',
-        'tcp_port',
-        'pubkey',
-        'signature',
-        'timestamp'
-    ]
     def run(self, request):
-        request.dht.update_host(request.host)
-        request.dht.store_host()
+        pass
 
 class FindHostResponder(BaseResponder):
     params = ['key']
@@ -88,15 +85,16 @@ class FindHostResponder(BaseResponder):
         
 class FindValueResponder(BaseResponder):
     params = ['key'] 
+    
+    def on_value_found(self, key, value):
+        request.transport.send('store_value', key=key, value=value)
+
     def run(self, request):
         request.dht.update_host(request.host)
-        def on_value_found(self, key, value):
-            request.transport.send('store_value', key=key, value=value)
         request.dht.find_value(request.params['key'], on_value_found)
 
 DEFAULT_ACTIONS = [
     PingResponder(),
-    PongResponder(),
     StoreHostResponder(),
     StoreValueResponder(),
     FindHostResponder(),
@@ -216,6 +214,18 @@ class RequestEncoder(object):
         klass.__buffer_lock.release() 
     
     @classmethod
+    def find(klass, fid):
+        '''
+            Find encoder by fid
+        '''
+        result = None 
+        klass.__buffer_lock.acquire()
+        if fid in klass.__buffer:
+            result = klass.__buffer[fid]
+        klass.__buffer_lock.release()
+        return result
+    
+    @classmethod
     def remove(klass, key):
         '''
             Remove val by key
@@ -239,22 +249,7 @@ class RequestEncoder(object):
         '''
         klass.__buffer_lock.acquire()
         klass.__buffer = {}
-        klass.__buffer_lock.release()
-        
-    @classmethod
-    def find(klass, addr_port, fid, fno):
-        '''
-            return frame by fid, fno if addr_port matches
-        '''
-        result = None
-        addr, port = addr_port
-        klass.__buffer_lock.acquire()
-        if fid in klass.__buffer:
-            msg = klass.__buffers[fid]
-            if msg.address == addr and msg.port == port:
-                result = msg.get_frame(fno)
-        klass.__buffer_lock.release()
-        return result
+        klass.__buffer_lock.release() 
 
     @classmethod
     def get_fid(klass):
@@ -542,9 +537,6 @@ class HostsFilter(object):
         self.__filter__ = []
         self.lock.release()
 
-class FrameBuffer(object):
-    addr_ports = []
-
 class MulticastServerUDP(DatagramProtocol):
     '''
         Lan discovery server            
@@ -560,24 +552,27 @@ class MulticastServerUDP(DatagramProtocol):
     listen_port = 8500    
     broadcast = True
     broadcast_port = 8500
-    min_interval = 0.5
-    max_interval = 5
+    min_interval = 1
+    max_interval = 10
+    pattern = re.compile('^rain:(\d+\.\d+\.\d+):([a-z\.\d]+):([\d\.]+):(\d+):(.*)')
 
     # private variables
     __address__ = None              # set later
     __broadcast_msg__ = None
 
-    def __init__(self):
-        self.hosts_filter = HostsFilter(self)
-
+    def __init__(self, **kwargs):
+        assign_attrs(self, **kwargs)
+        self.hosts_filter = HostsFilter()
+    
     @property
     def addr_port(self):
         return (app.server.address, self.listen_port,)
 
-    def start(self, **kwargs):
+    def start(self):
         ''' start multicast server '''
         # Optionally override attributes
-        assign_attrs(self, **kwargs)
+        RequestParser.transport = self
+        RequestParser.dht = self.dht
         app.reactor.listenMulticast(self.listen_port, self)
         app.udp_server.broadcast_loop()
         log.msg( 'UDP server listening on port %s' % self.listen_port) 
@@ -587,29 +582,50 @@ class MulticastServerUDP(DatagramProtocol):
     # Protocol Parser
     ###############################################
     def datagramReceived(self, datagram, addr_port):
+
         # filter datagrams from self
         if addr_port == self.addr_port:
             return self.ERR_SELF
-
+        
         # process datagram
-        request = RequestParser(self, self.dht, addr_port, datagram)
+        #request = RequestParser.parse(addr_port, datagram)
 
         # run command
-        request.run_responder()
-        
-        return request
+        #request.run_responder()
+        match = self.pattern.match(datagram)
+        if match:
+            ver, addr, tcp_port, udp_port, sig = match.groups()
+            if addr == 'self':
+                addr = addr_port[0]
+            if not is_compatible(ver):
+                return
+            host_params = {
+                'ver': ver,
+                'address': addr,
+                'tcp_port': int(tcp_port),
+                'udp_port': int(udp_port),
+                'signature': sig
+            }
+            host = Host(**host_params)
+            if not finger_table.exists(host):
+                print host
+                print 'host added'
+                finger_table.add(host)
+        return
      
     ###########################################
     # Protocol Command Senders
     ###########################################
-    def send_message(self, addr_port, action, **kwargs):
+    def send_message(self, addr_port, msg):
         '''
             send a message to host
         '''
-        for msg in RequestParser.encode(action, **kwargs):
-            self.send(addr_port, msg)
+        #request = RequestEncoder(addr_port, action, msg)
+        #for msg in request.iter_messages():
+        err = self.__send(addr_port, msg)
+        return err
     
-    def send(self, addr_port, msg):
+    def __send(self, addr_port, msg):
         ''' send a message '''
         try:
             self.transport.write(msg, addr_port)
@@ -625,10 +641,10 @@ class MulticastServerUDP(DatagramProtocol):
 
     def broadcast_loop(self):
         ''' announce presence on lan '''
-        interval = self.min_interva;
+        interval = self.min_interval
         # Send multicast announce message
         addr_port = (self.multicast_group, self.broadcast_port,) 
-        err = self.send_message(addr_port, 'announce', tcp_port=app.server.listen_port)
+        err = self.send_message(addr_port, self.ping_msg())
         if err:
             # wait for loop because of error
             interval = self.max_interval
@@ -638,10 +654,13 @@ class MulticastServerUDP(DatagramProtocol):
     ###########################################
     # Server Utility Functions
     ###########################################
-    @property
-    def addr_port(self):
-        return (self.__address__, self.listen_port,)
  
+    def ping_msg(self):
+        return 'rain:%s:%s:%s:%s:%s' % (version, 'self', app.server.listen_port, self.listen_port, app.server.host.signature )
+
+    def ping(self, addr_port):
+        return self.send_message(addr_port, self.ping_msg())
+
     def startProtocol(self):
         # Join a specific multicast group, which is the IP we will respond to
         self.transport.joinGroup(self.multicast_group)
@@ -653,6 +672,7 @@ class MulticastServerUDP(DatagramProtocol):
         if not self.__address__:
             self.hosts_filter.clear()
             self.__address__ = get_address()
+            log.msg('Our address is: %s' % self.__address__)
     
     @property
     def client_factory(self):

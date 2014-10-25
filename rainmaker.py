@@ -17,16 +17,26 @@ This file is part of Rainmaker.
 """
 
 import sys
-from twisted.internet import reactor
-from rainmaker_app import boot, lib
+from twisted.internet import reactor, threads
+from rainmaker_app import boot, lib, console
 
 def main():
     ''' Run the application ''' 
     # rainmaker_app must be in py_path
     sys.path.insert(1, lib.path.root)
-    boot.pre_init()
-    boot.init()
-    reactor.run()
+    boot.init_pre()
+    boot.init_cli()
+    d = boot.init_app()
+    d.addCallback(start)
+
+def start(pp):
+    boot.init_network()
+    if not boot.app.start_console:
+        boot.start_network()
+    else:
+        threads.deferToThread(console.run)
 
 if __name__ == "__main__":
     main()
+    reactor.run()
+

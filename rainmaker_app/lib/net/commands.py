@@ -119,7 +119,7 @@ class GetMessagesCommand(amp.Command):
 ##########################################################
 # DHT Node Commands
 ##########################################################
-class PingHostCommand(amp.Command):
+class PingCommand(amp.Command):
     ''' ask server to send their info '''
     commandName = 'ping_host'
     response = resource_response() 

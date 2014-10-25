@@ -5,6 +5,7 @@ from twisted.python import log
 import rainmaker_app
 from rainmaker_app import app
 from rainmaker_app.lib.util import assign_attrs
+from rainmaker_app.lib.net import connections
 from rainmaker_app.lib.net.resources import files_resource, messages_resource 
 from rainmaker_app.db.models import *
 
@@ -13,23 +14,32 @@ from .net_utils import is_compatible, require_secure, get_address, \
 from .exceptions import *
 from .commands import *
 
+
 class ServerProtocol(amp.AMP):
+    '''
+        c->s: connect
+        c->s: check version
+        c->s: set_pubkey
+        c->s: startTLS
+        s   : add connection
+        c   : add connection
+    '''
     authorization = None     
     sync_path = None # Set after authentication
 
     def __init__(self, factory):
         self.factory = factory
+        self.peer_auth = None
 
     def connectionMade(self):
         log.msg('Connection Made')
-        # notify factory
-        self.factory.connectionMade(self)
-        # ask for client information
-        self.callRemote(PingHostCommand)
+        self.addr_port = self.transport.getHost()
+
+        connections.add(self)
 
     def connectionLost(self, reason):
         log.msg('Connection Lost')
-        log.msg(reason)
+        connections.remove(self)
     
     @FindHostCommand.responder
     def find_host_command(self, **kwargs):
@@ -41,16 +51,28 @@ class ServerProtocol(amp.AMP):
     @StoreHostCommand.responder
     @defer.inlineCallbacks
     def store_host_command(self, **kwargs):
-        d = app.node.store_host(**kwargs)
+        host = Host(**kwargs)
+        d =  host.isValid()
         d.addErrback( self.command_failed )
-        yield d
+        valid = yield d
+        if valid:
+            finger_table.add(host)
+        code = 200 if valid else 500
         defer.returnValue( {
-            'code': 200,
+            'code': code,
             'errors' : []
         })
+    
+    @PingCommand.responder
+    def ping_command_responder(self):
+        log.msg('received ping')
+        return {
+            'code':200,
+            'errors': []
+        }
 
     @VersionCheckCommand.responder
-    def version_check(self, version):
+    def version_check_command_responder(self, version):
         log.msg('client version: %s' % version)
         return {
             'response_code':200,
@@ -58,55 +80,31 @@ class ServerProtocol(amp.AMP):
         }
 
     @SetPubkeyCommand.responder
-    def set_pubkey(self, guid):
-        log.msg(guid)    # log request
-        self.authorization = None # clear params
-        self.sync_path = None 
-        @defer.inlineCallbacks
-        def sub_set_pubkey(self, guid):
-            auth = yield Authorization.find(where=['guid = ?',guid],limit=1)
-            if auth:
-                self.authorization = auth
-                defer.returnValue( {'response_code':200,'message':'Found pubkey'} )
-            else:
-                defer.returnValue( {'response_code':404,'message':'Unknown pubkey'} )
-        return sub_set_pubkey(self, guid)
-    
-    @PostMessageCommand.responder
-    def post_message_command(self, **kwargs):
-        return messages_resource.post( self, **kwargs) 
-    
-    @GetMessagesCommand.responder
-    def get_messages_command(self, **kwargs):
-        return messages_resource.get( self, **kwargs) 
+    @defer.inlineCallbacks
+    def set_pubkey_command_responder(self, guid):
+        if self.peer_auth:
+            defer.returnValue( {
+                'response_code':400,'message':'pubkey set already'} )
+            return
 
+        auth = yield Authorization.find(where=['guid = ?',guid],limit=1)
+        if auth:
+            self.peer_auth = auth
+            defer.returnValue( {'response_code':200,'message':'Found pubkey'} )
+        else:
+            defer.returnValue( {'response_code':404,'message':'Unknown pubkey'} )
+    
     @amp.StartTLS.responder
     def startTLS(self):
-        log.msg( "server: We started TLS" )
-        return self.authorization.certParams()
+        log.msg( "server/client: We are starting TLS" )
+        return {
+            'tls_localCertificate': self.auth.private_cert(),
+            'tls_verifyAuthorities': [self.peer_auth.certificate()]
+        }
  
     @require_secure
     def connection_secure(self):
-        log.msg('The connection is now secure') 
-    
-    @require_secure
-    @FilesResource.responder
-    def files_resource(self, **kwargs):
-        @defer.inlineCallbacks
-        def sub_files_resource(self, **kwargs):
-            self.sync_path = yield self.authorization.sync_path.get()
-            result = yield simple_router(files_resource, self, **kwargs)
-            defer.returnValue(result)
-        return sub_files_resource(self, **kwargs)
-
-    @PingHostCommand.responder
-    def ping_host_command(self):
-        log.msg('sending host')
-        kwargs = app.server.host_args
-        print kwargs
-        d = self.callRemote(StoreHostCommand, **kwargs)
-        d.addErrback(self.commandFailed)
-        return {'code':200}
+        log.msg('The connection is now secure')  
 
     def command_failed(self, *args):
         log.msg('Command failed')
@@ -156,6 +154,9 @@ class ServerFactory(protocol.ServerFactory):
 
     @property
     def host_args(self):
+        '''
+            dict of host
+        '''
         return self.host.to_dict()
     
 def simple_router(resource, server, **kwargs):

@@ -43,23 +43,28 @@ class FakeClientFactory(object):
     def dht_client(self, host):
         self._host = host
 
+import operator
 class FakeReactor(object):
     def __init__(self):
         self.restart()
-        self.timestamp = time_now()
 
     def restart(self):
         self._deferreds = []
 
     def callLater(self, interval, func, *params):
-        self._deferreds.append([interval, func, params])
+        tstamp = (1000*interval) + time_now()
+        self._deferreds.append([tstamp, func, params])
 
     def run_deferreds(self):
         add_again = []
+        # sort by interval
+        self._deferreds = sorted(self._deferreds, key=operator.itemgetter(0))
+        print self._deferreds
+
         while len(self._deferreds)>0:
             func_info = self._deferreds.pop()
-            interval, func, params = func_info 
-            if time_now() - self.timestamp > interval:
+            tstamp, func, params = func_info
+            if time_now() > tstamp:
                 func(*params)
             else:
                 add_again.append(func_info)
@@ -87,6 +92,7 @@ class RequestEncoderTest(unittest.TestCase):
 
     def setUp(self):
         RequestEncoder.buffer_wipe()
+        time_elapsed(reset=True)
 
     def test_encoder_does_encode_singles(self):
         request = RequestEncoder(local, 'ping')
@@ -102,23 +108,33 @@ class RequestEncoderTest(unittest.TestCase):
         self.assertEquals('store_value' in msgs[0], True)
         
     def test_buffer_does_store_messages(self):
-        self.assertEquals(False, True)
+        data = '0123456789'* 1000
+        request = RequestEncoder(local, 'store_value', data)
+        for msg in request.iter_messages(3, 3):
+            pass
+        new = RequestEncoder.find(request.fid)
+        self.assertEquals(new, request)
 
     def test_buffer_does_expire(self):
-        self.assertEquals(False, True)
+        data = '0123456789'* 1000
+        request = RequestEncoder(local, 'store_value', data)
+        for msg in request.iter_messages(3, 3):
+            pass
+        time_elapsed(request.msg_ttl*1000)
+        run_fake_deferreds()
+        new = RequestEncoder.find(request.fid)
+        self.assertEquals(new, None)
+        
     
     def test_encoder_can_iterate_subset(self):
         data = '0123456789'* 1000
         RequestEncoder.mtu = 101
         request = RequestEncoder(local, 'store_value', data)
         count = 0
-        for msg in request.iter_messages(3, 1):
+        for msg in request.iter_messages(3, 3):
             count += 1
-        self.assertEquals(count == 1, True)
+        self.assertEquals(count == 3, True)
     
-    def test_buffer_does_expire(self):
-        self.assertEquals(False, True)
-
     def test_encoder_limited_by_mtu(self):
         data = '0123456789'* 1000
         RequestEncoder.mtu = 501

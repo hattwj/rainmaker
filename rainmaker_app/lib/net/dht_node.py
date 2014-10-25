@@ -143,6 +143,7 @@ class DHTNode(object):
     def __hosts_load__(self):
         ''' Scan through host table and try to fill out nodes array '''
         hosts = yield Host.all()
+        print 'loading old hosts from database'
         for host in hosts:
             self.store_host(host)
         app.reactor.callLater(self.L_HOSTS_LOAD, self.__hosts_load__)
@@ -237,15 +238,11 @@ class DHTNode(object):
                 app.client.send_host( host, h )
         self._key_vals_lock.release()
   
-    @defer.inlineCallbacks
-    def store_host(self, **kwargs ):
+    #@defer.inlineCallbacks
+    def store_host(self, host ):
         ''' store host if the information is valid  '''
-        rhost = Host(**kwargs)
-        #add host to db
-        yield rhost.save()
-        if not rhost.errors:
-            self.__store_host__(rhost)
-        defer.returnValue(rhost.errors)
+        print 'added host: ' + host.address
+        self.__store_host__(host)
 
     def __store_host__(self, rhost, force=False):
         ''' add/refresh host '''
@@ -297,7 +294,7 @@ class DHTNode(object):
         return removed 
 
     def shutdown_host(self, host, signature, key, signed_at):
-        ''' '''
+        ''' this host is dropping '''
         # Calculate distance and index position
         dist, pos = self.host_info(host)
         rhost = None

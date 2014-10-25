@@ -15,16 +15,18 @@ This file is part of Rainmaker.
     You should have received a copy of the GNU General Public License
     along with Rainmaker.  If not, see <http://www.gnu.org/licenses/>.
 """
-import logging
-from rainmaker_app.lib import logger
 
-class AppLogger(object):
-    def __init__(self,my_app):
-        #  
-        self.app = my_app
-        # set up logging to console
-        logger.do_init(level=self.app.log_level,style=self.app.log_style)
-        
-        # setup logging to file
-        logger.send_log_to_file(self.app.log_path,self.app.log)
-        self.app.log.debug('Starting logger...')
+import sys
+from twisted.internet import reactor
+from rainmaker_app import boot, lib
+
+def main():
+    ''' Run the application ''' 
+    # rainmaker_app must be in py_path
+    sys.path.insert(1, lib.path.root)
+    boot.pre_init()
+    boot.init()
+    reactor.run()
+
+if __name__ == "__main__":
+    main()
