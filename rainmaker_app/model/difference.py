@@ -12,6 +12,7 @@ q_versions = '''
 
 
 class Difference(Base):
+    sticky_table = True # dont allow console db clear
     
     q_difference = """
                 SELECT DISTINCT m1.id AS my_file_id

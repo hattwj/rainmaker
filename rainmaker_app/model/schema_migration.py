@@ -1,4 +1,4 @@
 from . common import *
 
 class SchemaMigration(DBObject):
-    pass
+    sticky_table = True # dont allow console db clear

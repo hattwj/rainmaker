@@ -79,8 +79,7 @@ class MyFile(Base):
     # Super class
     def changed(self, cols=None):
         if cols == None:
-            cols=self.data_was.keys()
-        
+            cols=self.data_was.keys()        
         for k in cols:
             if getattr(self,k) != self.data_was[k]:
                 return True

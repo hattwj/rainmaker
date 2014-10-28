@@ -1,4 +1,4 @@
 from . common import *
 
-class FileVersion(DBObject):
+class FileVersion(Base):
     pass

@@ -1,5 +1,6 @@
 import hashlib
 from threading import Lock
+from os.path import abspath
 
 from . common import *
 from .base import Base
@@ -11,7 +12,8 @@ class SyncPath(Base):
     ''' Model status of file system between scans '''
 
     HASMANY = ['my_files']
-   
+    BEFORE_SAVE = ['resolve_root']
+
     scanning        = False
     scanned_at      = 0
     scan_started_at = 0
@@ -26,7 +28,7 @@ class SyncPath(Base):
     _lock_no_change = Lock()
     _lock_deleted   = Lock()
     _lock_new       = Lock()
-    
+
     @defer.inlineCallbacks
     def is_state_hash_stale(self):
         ''' check files for change '''
@@ -64,6 +66,9 @@ class SyncPath(Base):
         self.state_hash = str(h.hexdigest())    
         self.state_hash_updated_at = int( round( time() * 1000 ) ) 
         defer.returnValue( self.state_hash )
+    
+    def resolve_root(self):
+        self.root = abspath(self.root)
 
     def _reset_counters(self):
         ''' mutexed counters '''
@@ -105,6 +110,7 @@ class SyncPath(Base):
 
     def scan(self):
         ''' '''
+        log.msg('scanning: %s' % self.root)
         @defer.inlineCallbacks
         def _scan(self, count=0):
             ''' start scan '''
@@ -129,6 +135,7 @@ class SyncPath(Base):
         
         def _scan_done(self):
             ''' callback for when callback complete '''
+            log.msg('scan complete')
             self.scanned_at = self.scan_started_at
             result = self._scan_stats()
             self._lock_scanned.release()
@@ -153,6 +160,7 @@ class SyncPath(Base):
         elif my_file.is_no_change():
             self._inc_no_change()
         elif my_file.is_new():
+            log.msg('new file: %s' % path)
             self._inc_new()
         elif my_file.is_deleted():
             # race condition between os.walk and scan?

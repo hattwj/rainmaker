@@ -5,9 +5,10 @@ from rainmaker_app.lib.util import ExportArray, time_now
 class Base(DBObject):
     #Column names
     #columns = None
-
+    sticky_table = False # allow console db clear
     BEFORE_CREATE = None# Before Created, but after validation
     BEFORE_SAVE = None  # Before Saved, but after validation
+    AFTER_CREATE = None
     FIRST_INIT = None   # Only for new records
     AFTER_INIT = None   # Every time a record in instantiated
 
@@ -46,6 +47,9 @@ class Base(DBObject):
     
     def beforeSave(self):
         return self.__run_hooks__(self.BEFORE_SAVE)
+
+    def afterCreate(self):
+        return self.__run_hooks__(self.AFTER_CREATE)
 
     @defer.inlineCallbacks
     def __run_hooks__(self, funcs):
