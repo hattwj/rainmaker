@@ -26,5 +26,5 @@ See [TODO](TODO.md) for other notices
 ## Ubuntu Dependencies ##
 ```bash
 sudo apt-get install python python-dev python-pip python-openssl
-sudo pip install watchdog twisted twistar ishell pyyaml
+sudo pip install watchdog twisted twistar ishell pyyaml ipython
 ```
