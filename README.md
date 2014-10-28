@@ -23,4 +23,8 @@ See [TODO](TODO.md) for other notices
 * [OpenSSH] (http://www.openssh.org/)
 * [Watchdog] (http://packages.python.org/watchdog/)
 
-this is a test
+## Ubuntu Dependencies ##
+```bash
+sudo apt-get install python python-dev python-pip python-openssl
+sudo pip install watchdog twisted twistar ishell pyyaml
+```
