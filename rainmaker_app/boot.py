@@ -49,6 +49,7 @@ def init_app():
 
     # Start logging
     log.startLogging(sys.stdout, setStdout=False)
+    #log.startLogging(sys.stdout, setStdout=True)
 
     # install?
     tasks.install(app.user_dir)
@@ -68,6 +69,7 @@ def init_app():
     app.run_loop.start(0.3)
 
     # gen ephemeral auth
+    log.msg('Generating key...')
     from .db.models import Authorization
     app.auth = Authorization(**app.auth_options)
 
