@@ -9,57 +9,11 @@ from rainmaker_app.lib.net import connections
 from rainmaker_app.lib.net.resources import files_resource, messages_resource 
 from rainmaker_app.db.models import *
 
-from .net_utils import is_compatible, require_secure, get_address, \
+from .net_utils import is_compatible, get_address, \
     report_errors
 from .exceptions import *
 from .commands import *
-
-class Session(object):
-
-    def __init__(self, auth):
-        self.auth = auth
-        self.rand = urandom(500)
-        self._peer_rand = None
-        self._peer_pass = None
-        self._peer_cert = None
-    
-    @defer.inlineCallbacks
-    def check(self, guid):
-        auth = 
-
-    @property
-    def peer_rand(self):
-        return self._peer_rand
-
-    @property.setter
-    def peer_rand(self, val):
-        '''
-            can only be set once
-        '''
-        if self._peer_rand:
-            raise AttributeError('already set')
-        self._peer_rand = val
-    
-    @property
-    def peer_sync(self):
-        return self._peer_sync
-
-    @property.setter
-    def peer_sync(self, val):
-        if self._peer_sync:
-            raise AttributeError('already set')
-        self._peer_sync = val
-    
-    @property
-    def peer_cert(self):
-        return self._peer_cert
-
-    @property.setter
-    def peer_cert(self, val):
-        if self._peer_cert:
-            raise AttributeError('already set')
-        self._peer_cert = val
-    
+from .session import Session, require_secure
 
 class ServerProtocol(amp.AMP):
     '''
@@ -70,25 +24,32 @@ class ServerProtocol(amp.AMP):
         c->s: set salt
         c->s: authenticate
     '''
-    authorization = None     
-    sync_path = None    # Set after authentication
-    __salt = None       #
-    __pepper = None     #
-
     def __init__(self, factory):
         self.factory = factory
-        self.peer_auth = None
 
     def connectionMade(self):
         log.msg('Connection Made')
         self.addr_port = self.transport.getHost()
-
+        self.session = Session(app.auth)
         connections.add(self)
 
     def connectionLost(self, reason):
         log.msg('Connection Lost')
         connections.remove(self)
-    
+    ####
+    #
+    ####
+    @require_secure
+    def connection_secure(self):
+        log.msg('The connection is now secure')  
+
+    def command_failed(self, *args):
+        log.msg('Command failed')
+        log.msg(args)
+
+    ####
+    #
+    ####
     @FindHostCommand.responder
     def find_host_command(self, **kwargs):
         hosts = app.node.find_nearest_hosts(**kwargs)
@@ -111,51 +72,52 @@ class ServerProtocol(amp.AMP):
             'errors' : []
         })
     
+    ####
+    #
+    ####
     @PingCommand.responder
     def ping_command_responder(self):
-        log.msg('received ping')
+        log.msg('Server: received ping')
         return {'code':200}
     
     @require_secure
     @SecurePingCommand.responder
     def secure_ping_command_responder(self):
-        log.msg('received secure ping')
+        log.msg('Server: received secure ping')
         return {'code':200}
 
     @VersionCheckCommand.responder
     def version_check_command_responder(self, version):
-        log.msg('client version: %s' % version)
+        log.msg('Server: client version: %s' % version)
         return {
             'response_code':200,
             'version': app.version
         }
 
+    ####
+    # Authentication functions
+    ####
     @SetPubkeyCommand.responder
     def set_pubkey_command_responder(self, cert):
-        print 'Recieved cert: ' + cert
-        self.peer_cert = cert
-        return {'code':200, 'cert': app.auth.cert_str}
+        log.msg('Server: Received cert')
+        log.msg("SERVER: Here is what we received:")
+        log.msg(cert)
+        self.session.peer_cert = cert
+        return {'cert': self.session.auth.cert_str}
     
     @amp.StartTLS.responder
-    def startTLS(self):
-        log.msg( "server/client: We are starting TLS" )
-        return app.auth.certParams(self.peer_cert)
+    def startTLS_responder(self):
+        log.msg( "Server: We are starting TLS" )
+        return self.session.certParams()
+     
     @require_secure
-    @InitAuthCommand.responder
-    def init_auth_command_responder(self, rand): 
-        return {'rand': urandom(50)}
-    @require_secure
-    @AuthCommand.responder   
+    @AuthCommand.responder
+    @defer.inlineCallbacks
     def auth_command_responder(self, result):
-        pass
-
-    @require_secure
-    def connection_secure(self):
-        log.msg('The connection is now secure')  
-
-    def command_failed(self, *args):
-        log.msg('Command failed')
-        log.msg(args)
+        log.msg('Server: running AuthCommand')
+        self.session.sync_path = yield SyncPath.find(where=["guid = ?",result['guid']])
+        self.session.authorize(result['rand'], result['enc_pass'])
+        defer.returnValue( {'code': 200})
 
 class ServerFactory(protocol.ServerFactory):
     listen_port = 8500
@@ -187,8 +149,8 @@ class ServerFactory(protocol.ServerFactory):
         host.tcp_port = self.listen_port
         host.udp_port = app.udp_server.listen_port
         host.signed_at = host.time_now()
-        host.pubkey_str = app.node.auth.pubkey_str
-        host.signature = app.node.auth.sign(host.signature_data)
+        #host.pubkey_str = app.node.auth.pubkey_str
+        #host.signature = app.node.auth.sign(host.signature_data)
     
     @property
     def address(self):

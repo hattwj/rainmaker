@@ -1,6 +1,10 @@
 ###################################
 # Exceptions
 ###################################
+
+
+
+
 class AuthRequiredError(Exception):
     pass
 

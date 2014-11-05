@@ -59,15 +59,19 @@ class DbAddSyncPathCommand(Command):
         Add a new sync path
     '''
     def run(self, line):
-        path = ' '.join(line.split()[3:])
-        if path != '':
-            sync_path = SyncPath(root=path)
-            sync_path.save().addCallback(self.scan)
-        else:
+        password_rw = ''.join(line.split()[3:4])
+        root = ' '.join(line.split()[4:])
+        if password_rw == '':
+            print 'empty password'
+            return
+        if root == '':
             print 'empty path'
+            return
+        d = SyncPath.new(root=root, password_rw=password_rw)
+        d.addCallback(self.result)
 
-    def scan(self, sync_path):
-        sync_path.scan()
+    def result(self, result):
+        print result
         
 class StatFingerTableCommand(Command):
     '''
@@ -149,12 +153,23 @@ class NetTcpSyncCommand(Command):
     '''
         Check host:port for connection
     '''
+    @defer.inlineCallbacks
     def run(self, line):
-        path = ''.join(line.split()[2:3])
+        password = ''.join(line.split()[3:4])
+        if not password:
+            print 'no password'
+            return
+        sync_path = yield SyncPath.find(where=["password_rw = ?",password], limit=1)
+        if not sync_path:
+            print "sync with password not found"
+            return
+        
         addr_port = get_addr_port(line)
+
         if not addr_port:
             return
-        ClientFactory.sync(addr_port, app.auth)
+        ClientFactory.sync(addr_port, app.auth, sync_path)
+
 import sys
 class ExitCommand(Command):
     '''

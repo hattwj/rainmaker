@@ -3,23 +3,10 @@ from socket import error as socket_error
 from twisted.python import log
 from twisted.internet import defer
 from rainmaker_app import app, version
-from .exceptions import AuthRequiredError
 
 ###################################
 # Utility functions
 ###################################
-def require_secure(func):    
-    ''' decorator to require secure connection '''
-    def sub_require_secure(self, *args, **kwargs):
-        ''' nested func to access func parameters'''
-        t = self.transport
-        if hasattr(t,'getPeerCertificate') and t.getPeerCertificate():
-            # run
-            d = func(self, *args, **kwargs)
-            return d # string
-        else:
-            raise AuthRequiredError() 
-    return sub_require_secure
 
 def report_errors(func):    
     ''' decorator to catch amp command errors  '''

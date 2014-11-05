@@ -5,10 +5,11 @@ from twisted.internet import protocol, reactor, ssl, defer
 from twisted.protocols import amp
 from twisted.python import log
 
-from .net_utils import is_compatible, require_secure
+from .net_utils import is_compatible
 from .exceptions import *
 from .commands import *
 from .start_tls import ServerProtocol
+from .session import Session, require_secure
 from rainmaker_app.lib.util import assign_attrs
 from rainmaker_app import app
 
@@ -73,12 +74,17 @@ class ClientHandshakeProtocol(ClientProtocol):
 
 class ClientSyncProtocol(ClientProtocol):
 
-    def __init__(self, factory, auth):
+    def __init__(self, factory, auth, sync_path):
         self.factory = factory
         self.auth = auth
+        self.sync_path = sync_path
     
     def connecting(self, d):
-        ''' '''
+        '''
+            Parent commands have run and now we get to act
+        '''
+        self.session = Session(app.auth)
+        self.session.sync_path = self.sync_path
         d.addCallbacks(self.set_pubkey, self.startup_failed)
         d.addCallbacks(self.start_tls, self.startup_failed)
         d.addCallbacks(self.verify_tls, self.startup_failed)
@@ -86,10 +92,15 @@ class ClientSyncProtocol(ClientProtocol):
 
     @defer.inlineCallbacks
     def set_pubkey(self, result): 
+        '''
+            Set the certificate string for this connection
+        '''
+        log.msg('Client: Setting pubkey')
         kwargs ={'cert':self.auth.cert_str}
         result = yield self.callRemote(SetPubkeyCommand, **kwargs)
-        log.msg(result)
-        self.peer_cert = result['cert']
+        print 'Here is the client result from set pubkey:'
+        print result
+        self.session.peer_cert = result['cert']
         defer.returnValue(True)
 
     @defer.inlineCallbacks
@@ -97,9 +108,15 @@ class ClientSyncProtocol(ClientProtocol):
         '''
             request TLS from server
         '''
-        result = yield self.callRemote(amp.StartTLS, **self.auth.certParams(self.peer_cert))
+        log.msg('Client: Requesting TLS')
+        result = yield self.callRemote(amp.StartTLS, **self.session.certParams())
         log.msg(result)
         defer.returnValue(True)
+    
+    @amp.StartTLS.responder
+    def startTLS_responder(self):
+        log.msg( "Client: We are starting TLS" )
+        return self.session.certParams()
 
     @defer.inlineCallbacks 
     def verify_tls(self, result):
@@ -108,32 +125,16 @@ class ClientSyncProtocol(ClientProtocol):
         '''
         result = yield self.callRemote(SecurePingCommand)
         self.connection_secure()
-        print 'We are connected securely'
+        log.msg('Client: We are connected securely')
 
     @defer.inlineCallbacks
     def authenticate(self, result):
         '''
             negotiate login details with server
         '''
-        my_rand = urandom(50)
-        guid = '458822'
-        password = 'abcdefg'
-        kwargs = {'rand': my_rand}
-        result = yield self.callRemote(InitAuthCommand, **kwargs)
-        
-        password = 'abcdefg'
-        peer_rand = result['rand']
-
-        enc_pass = self.auth.hashify(my_rand, password, self.peer_cert, self.auth.cert_str)
-        peer_pass = self.auth.hashify(peer_rand, password, self.peer_cert, self.auth.cert_str)
-        
-        kwargs = {
-            'guid': guid,
-            'encrypted_password': enc_pass 
-        }
-        result = yield self.callRemote(AuthCommand, **kwargs)
-        peer_pass != result['encrypted_password']
-        self.auth.valid_pass(peer_pass)
+        result = yield self.callRemote(AuthenticateCommand, **self.session.authenticateParams())
+        print result
+        print 'We have authenticated!'
 
 class ClientFactory(protocol.ClientFactory):
     '''
@@ -179,9 +180,9 @@ class ClientFactory(protocol.ClientFactory):
         klass(addr_port, ClientPingProtocol)
 
     @classmethod
-    def sync(klass, addr_port, auth):
+    def sync(klass, addr_port, auth, sync_path):
         '''
             securely connect and sync with remote server
         '''
-        klass(addr_port, ClientSyncProtocol, auth=auth)
+        klass(addr_port, ClientSyncProtocol, auth=auth, sync_path=sync_path)
 

@@ -1,5 +1,6 @@
 import hashlib
 from threading import Lock
+from os import urandom
 from os.path import abspath
 
 from . common import *
@@ -28,6 +29,15 @@ class SyncPath(Base):
     _lock_no_change = Lock()
     _lock_deleted   = Lock()
     _lock_new       = Lock()
+
+    @classmethod
+    @defer.inlineCallbacks
+    def new(klass, **kwargs):
+        sync = yield klass.findOrCreate(**kwargs)
+        if not sync.password_rw:
+            sync.password_rw = urandom(80).encode('base-64')
+        result = yield sync.save()
+        defer.returnValue(sync)
 
     @defer.inlineCallbacks
     def is_state_hash_stale(self):

@@ -37,7 +37,6 @@ class SetPubkeyCommand(amp.Command):
     ]
 
     response = [
-        ( 'code', amp.Integer() ),
         ( 'cert', amp.String() )
     ]
 
@@ -135,34 +134,32 @@ class SecurePingCommand(amp.Command):
     errors = {ErrNotSecure:'Connection not secure'}
 
 class ErrAuthInit(amp.AmpError):
+    pass    
+class ErrAuthRand(amp.AmpError):
     pass
-class ErrAuthGuid(amp.AmpError):
+class ErrAuthSyncPath(amp.AmpError):
     pass
 class ErrAuthFail(amp.AmpError):
     pass
 
-class InitAuthCommand(amp.Command):
-    commandName = 'init_auth'
-    arguments = [
-        ('rand', amp.String())
-    ]
-    response = [
-        ('rand', amp.String())
-    ]
 class AuthCommand(amp.Command):
     commandName='auth'
     arguments = [
+        ('rand', amp.String()),
         ('guid', amp.String()),
-        ('encrypted_password', amp.String())
+        ('enc_pass', amp.String())
     ]
     response = [
-        ('encrypted_password', amp.String())
+        ('rand', amp.String()),
+        ('enc_pass', amp.String())
     ]
     errors = {
-        ErrAuthInit: 'Init auth first',
-        ErrAuthGuid: 'Unknown guid',
-        ErrAuthFail: 'Invalid auth'
+        ErrAuthInit: 'Can only be run once',
+        ErrAuthRand: 'Random value has error',
+        ErrAuthSyncPath: 'SyncPath not found',
+        ErrAuthFail: 'Authentication Failed'
     }
+
 class StoreHostCommand(amp.Command):
     commandName = 'store_host'
     arguments = [

@@ -14,6 +14,7 @@ MIGRATIONS = {
     1 : """ CREATE TABLE sync_paths (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 root TEXT NOT NULL,
+                password_rw TEXT NOT NULL,
                 guid TEXT,
                 scanned_at INTEGER,
                 state_hash TEXT,
