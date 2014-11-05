@@ -47,7 +47,6 @@ class ClientPingProtocol(ClientProtocol):
     
     def connecting(self, d):
         ''' '''
-        print 66
         d.addCallbacks(self.ping, self.startup_failed)
    
     @defer.inlineCallbacks
@@ -72,39 +71,70 @@ class ClientHandshakeProtocol(ClientProtocol):
         for auth in auths:
             ClientFactory.sync(self.peer_addr_port, auth)
 
-class ClientSyncProtocol(ServerProtocol):
+class ClientSyncProtocol(ClientProtocol):
 
     def __init__(self, factory, auth):
         self.factory = factory
         self.auth = auth
     
-    def __connecting(self, d):
+    def connecting(self, d):
         ''' '''
         d.addCallbacks(self.set_pubkey, self.startup_failed)
         d.addCallbacks(self.start_tls, self.startup_failed)
+        d.addCallbacks(self.verify_tls, self.startup_failed)
         d.addCallbacks(self.authenticate, self.startup_failed)
 
     @defer.inlineCallbacks
-    def version_check(self):
-        result = yield self.callRemote( VersionCheckCommand, version = app.version)
-        if not is_compatible(result['version']):
-            raise StartTLSFailed('Incompatible Version: %s' % result['version'])
-        self.factory.connectionMade(self)
-
-    @defer.inlineCallbacks
-    def set_pubkey(self): 
-        kwargs ={'guid':self.auth.guid}
+    def set_pubkey(self, result): 
+        kwargs ={'cert':self.auth.cert_str}
         result = yield self.callRemote(SetPubkeyCommand, **kwargs)
         log.msg(result)
+        self.peer_cert = result['cert']
+        defer.returnValue(True)
 
     @defer.inlineCallbacks
-    def start_tls(self):
+    def start_tls(self, result):
         '''
             request TLS from server
         '''
-        result = yield self.callRemote(amp.StartTLS, **self.auth.certParams())
+        result = yield self.callRemote(amp.StartTLS, **self.auth.certParams(self.peer_cert))
         log.msg(result)
-     
+        defer.returnValue(True)
+
+    @defer.inlineCallbacks 
+    def verify_tls(self, result):
+        '''
+            verify that we are connected securely
+        '''
+        result = yield self.callRemote(SecurePingCommand)
+        self.connection_secure()
+        print 'We are connected securely'
+
+    @defer.inlineCallbacks
+    def authenticate(self, result):
+        '''
+            negotiate login details with server
+        '''
+        my_rand = urandom(50)
+        guid = '458822'
+        password = 'abcdefg'
+        kwargs = {'rand': my_rand}
+        result = yield self.callRemote(InitAuthCommand, **kwargs)
+        
+        password = 'abcdefg'
+        peer_rand = result['rand']
+
+        enc_pass = self.auth.hashify(my_rand, password, self.peer_cert, self.auth.cert_str)
+        peer_pass = self.auth.hashify(peer_rand, password, self.peer_cert, self.auth.cert_str)
+        
+        kwargs = {
+            'guid': guid,
+            'encrypted_password': enc_pass 
+        }
+        result = yield self.callRemote(AuthCommand, **kwargs)
+        peer_pass != result['encrypted_password']
+        self.auth.valid_pass(peer_pass)
+
 class ClientFactory(protocol.ClientFactory):
     '''
         class methods provide constructors for various client actions

@@ -70,8 +70,8 @@ def init_app():
 
     # gen ephemeral auth
     log.msg('Generating key...')
-    from .db.models import Authorization
-    app.auth = Authorization(**app.auth_options)
+    from .lib.net.ephemeral_auth import EphemeralAuth
+    app.auth = EphemeralAuth(**app.auth_options)
 
 ###############################################
 def init_network():
@@ -81,7 +81,7 @@ def init_network():
     
     # init
     app.node = dht_node.DHTNode(app.auth)
-    app.server = start_tls.ServerFactory(**app.tcp_server_options)
+    app.tcp_server = start_tls.ServerFactory(**app.tcp_server_options)
     app.udp_server = MulticastServerUDP(**app.udp_server_options)
     app.client = clients.ClientFactory.config(**app.tcp_client_options) 
     app.udp_server.dht = app.node
@@ -94,7 +94,7 @@ def start_network():
     app.udp_server.start()
     
     # start main server
-    app.server.start()
+    app.tcp_server.start()
 
     # start dht node
     app.node.start()

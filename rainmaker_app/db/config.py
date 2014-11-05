@@ -58,6 +58,7 @@ MIGRATIONS = {
                     AND m2.next_id IS NULL""",
     6 : """ CREATE TABLE authorizations(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sync_path_id INTEGER NOT NULL,
                 cert_str TEXT NOT NULL,
                 pk_str TEXT NOT NULL,
                 pubkey_str TEXT,
@@ -115,22 +116,26 @@ def _init_migrations( versions=[] ):
 
 @defer.inlineCallbacks
 def _check_schema():
-    q = """SELECT name FROM sqlite_master WHERE type='table' AND name='schema_migrations';"""
+    q = """
+    SELECT name 
+    FROM sqlite_master 
+    WHERE type='table' 
+        AND name='schema_migrations';
+    """
     name = yield Registry.DBPOOL.runQuery(q)
-
+    #hold ver names
     versions = []
-    
+    # see if we found the table
     if name:
         q = """SELECT version FROM schema_migrations"""
         result = yield Registry.DBPOOL.runQuery(q)
-        
         # collapse array of tuples to array
         for tup in result:
             versions.append( tup[0] )
-        
+        # schema migration table doesn't get a version
         if '0' not in versions:
             versions.append('0') # dont create schema migrations table
-
+    # return schema versions that already exist
     defer.returnValue( versions )
 
 def _db_connect(location):
@@ -162,7 +167,7 @@ def _model_introspection(model):
 def _init_failed(reason):
     import sys
     log.msg(reason.getTraceback())
-    sys.exit
+    sys.exit(1)
 
 def initDB(location):
     ''' init db connection and models '''
@@ -176,3 +181,4 @@ def initDB(location):
 
 def tearDownDB():
     return defer.succeed(True)
+

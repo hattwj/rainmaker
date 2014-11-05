@@ -566,7 +566,7 @@ class MulticastServerUDP(DatagramProtocol):
     
     @property
     def addr_port(self):
-        return (app.server.address, self.listen_port,)
+        return (app.tcp_server.address, self.listen_port,)
 
     def start(self):
         ''' start multicast server '''
@@ -635,7 +635,7 @@ class MulticastServerUDP(DatagramProtocol):
                 # Not the error we are looking for, re-raise
                 raise serr
             log.msg( 'Network unreachable')
-            app.server.setup_host()
+            app.tcp_server.setup_host()
             return True
         return False
 
@@ -656,7 +656,7 @@ class MulticastServerUDP(DatagramProtocol):
     ###########################################
  
     def ping_msg(self):
-        return 'rain:%s:%s:%s:%s:%s' % (version, 'self', app.server.listen_port, self.listen_port, app.server.host.signature )
+        return 'rain:%s:%s:%s:%s:%s' % (version, 'self', app.tcp_server.listen_port, self.listen_port, app.tcp_server.host.signature )
 
     def ping(self, addr_port):
         return self.send_message(addr_port, self.ping_msg())

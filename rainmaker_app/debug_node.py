@@ -13,7 +13,7 @@ class RainPP(protocol.ProcessProtocol):
         print "connectionMade!"
         for cmd in self.cmds:
             print 'sending: '+ cmd
-            self.transport.write(cmd+"\r")
+            self.transport.write(cmd+"\n\r")
     def outReceived(self, data):
         print "outReceived! with %d bytes!" % len(data)
         print data

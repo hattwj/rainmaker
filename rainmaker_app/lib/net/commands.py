@@ -15,6 +15,9 @@ def dump_resource_errors(resource):
             )
     return result
 
+class ErrVersion(amp.AmpError):
+    pass
+
 class VersionCheckCommand(amp.Command):
     commandName = 'version_check'
     arguments = [
@@ -24,17 +27,18 @@ class VersionCheckCommand(amp.Command):
         ( 'response_code', amp.Integer() ),
         ( 'version', amp.String() )
     ]
+    errors = {ErrVersion:'Incompatible version'}
 
 class SetPubkeyCommand(amp.Command):
     commandName = 'set_pubkey'
 
     arguments = [
-        ('guid', amp.String() )
+        ('cert', amp.String() )
     ]
 
     response = [
-        ( 'response_code', amp.Integer() ),
-        ( 'message', amp.String() )
+        ( 'code', amp.Integer() ),
+        ( 'cert', amp.String() )
     ]
 
 def my_file_params(optional, optional_columns=None):
@@ -116,14 +120,49 @@ class GetMessagesCommand(amp.Command):
         ('post', amp.ListOf( message_params(), optional=True ) )
     ]
 
-##########################################################
-# DHT Node Commands
-##########################################################
 class PingCommand(amp.Command):
     ''' ask server to send their info '''
-    commandName = 'ping_host'
-    response = resource_response() 
+    commandName = 'ping'
+    response = [('code', amp.Integer() )]
 
+class ErrNotSecure(amp.AmpError):
+    pass
+
+class SecurePingCommand(amp.Command):
+    ''' ask server to send their info '''
+    commandName = 'secure_ping'
+    response = [('code', amp.Integer() )]
+    errors = {ErrNotSecure:'Connection not secure'}
+
+class ErrAuthInit(amp.AmpError):
+    pass
+class ErrAuthGuid(amp.AmpError):
+    pass
+class ErrAuthFail(amp.AmpError):
+    pass
+
+class InitAuthCommand(amp.Command):
+    commandName = 'init_auth'
+    arguments = [
+        ('rand', amp.String())
+    ]
+    response = [
+        ('rand', amp.String())
+    ]
+class AuthCommand(amp.Command):
+    commandName='auth'
+    arguments = [
+        ('guid', amp.String()),
+        ('encrypted_password', amp.String())
+    ]
+    response = [
+        ('encrypted_password', amp.String())
+    ]
+    errors = {
+        ErrAuthInit: 'Init auth first',
+        ErrAuthGuid: 'Unknown guid',
+        ErrAuthFail: 'Invalid auth'
+    }
 class StoreHostCommand(amp.Command):
     commandName = 'store_host'
     arguments = [

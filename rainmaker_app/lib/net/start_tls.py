@@ -14,6 +14,52 @@ from .net_utils import is_compatible, require_secure, get_address, \
 from .exceptions import *
 from .commands import *
 
+class Session(object):
+
+    def __init__(self, auth):
+        self.auth = auth
+        self.rand = urandom(500)
+        self._peer_rand = None
+        self._peer_pass = None
+        self._peer_cert = None
+    
+    @defer.inlineCallbacks
+    def check(self, guid):
+        auth = 
+
+    @property
+    def peer_rand(self):
+        return self._peer_rand
+
+    @property.setter
+    def peer_rand(self, val):
+        '''
+            can only be set once
+        '''
+        if self._peer_rand:
+            raise AttributeError('already set')
+        self._peer_rand = val
+    
+    @property
+    def peer_sync(self):
+        return self._peer_sync
+
+    @property.setter
+    def peer_sync(self, val):
+        if self._peer_sync:
+            raise AttributeError('already set')
+        self._peer_sync = val
+    
+    @property
+    def peer_cert(self):
+        return self._peer_cert
+
+    @property.setter
+    def peer_cert(self, val):
+        if self._peer_cert:
+            raise AttributeError('already set')
+        self._peer_cert = val
+    
 
 class ServerProtocol(amp.AMP):
     '''
@@ -21,11 +67,13 @@ class ServerProtocol(amp.AMP):
         c->s: check version
         c->s: set_pubkey
         c->s: startTLS
-        s   : add connection
-        c   : add connection
+        c->s: set salt
+        c->s: authenticate
     '''
     authorization = None     
-    sync_path = None # Set after authentication
+    sync_path = None    # Set after authentication
+    __salt = None       #
+    __pepper = None     #
 
     def __init__(self, factory):
         self.factory = factory
@@ -66,10 +114,13 @@ class ServerProtocol(amp.AMP):
     @PingCommand.responder
     def ping_command_responder(self):
         log.msg('received ping')
-        return {
-            'code':200,
-            'errors': []
-        }
+        return {'code':200}
+    
+    @require_secure
+    @SecurePingCommand.responder
+    def secure_ping_command_responder(self):
+        log.msg('received secure ping')
+        return {'code':200}
 
     @VersionCheckCommand.responder
     def version_check_command_responder(self, version):
@@ -80,28 +131,24 @@ class ServerProtocol(amp.AMP):
         }
 
     @SetPubkeyCommand.responder
-    @defer.inlineCallbacks
-    def set_pubkey_command_responder(self, guid):
-        if self.peer_auth:
-            defer.returnValue( {
-                'response_code':400,'message':'pubkey set already'} )
-            return
-
-        auth = yield Authorization.find(where=['guid = ?',guid],limit=1)
-        if auth:
-            self.peer_auth = auth
-            defer.returnValue( {'response_code':200,'message':'Found pubkey'} )
-        else:
-            defer.returnValue( {'response_code':404,'message':'Unknown pubkey'} )
+    def set_pubkey_command_responder(self, cert):
+        print 'Recieved cert: ' + cert
+        self.peer_cert = cert
+        return {'code':200, 'cert': app.auth.cert_str}
     
     @amp.StartTLS.responder
     def startTLS(self):
         log.msg( "server/client: We are starting TLS" )
-        return {
-            'tls_localCertificate': self.auth.private_cert(),
-            'tls_verifyAuthorities': [self.peer_auth.certificate()]
-        }
- 
+        return app.auth.certParams(self.peer_cert)
+    @require_secure
+    @InitAuthCommand.responder
+    def init_auth_command_responder(self, rand): 
+        return {'rand': urandom(50)}
+    @require_secure
+    @AuthCommand.responder   
+    def auth_command_responder(self, result):
+        pass
+
     @require_secure
     def connection_secure(self):
         log.msg('The connection is now secure')  

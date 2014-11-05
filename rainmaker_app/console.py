@@ -1,4 +1,6 @@
 from twisted.internet import defer
+from twisted.internet.task import LoopingCall
+
 from ishell.console import Console
 from ishell.command import Command
 
@@ -50,7 +52,7 @@ class DbShowCommand(Command):
         records = yield self.model.all()
         for record in records:
             print record
-        print ''
+        print "\n"
 
 class DbAddSyncPathCommand(Command):
     '''
@@ -103,7 +105,7 @@ class StartDebugNodeCommand(Command):
         create rainmaker sub process to test with
     '''
     def run(self, line):
-        p_tcp = app.server.listen_port
+        p_tcp = app.tcp_server.listen_port
         args = '-k 512 --tcp %s' % (p_tcp+1)
         cmds=[
             'stat config',
@@ -112,37 +114,47 @@ class StartDebugNodeCommand(Command):
         ]
         debug_node.create(args, cmds=cmds)
 
+def get_addr_port(line):
+    addr_port = line.split()[-1].split(':') 
+    try:
+        assert addr_port[0] != '', 'no address listed'
+        assert len(addr_port)>1, 'no port listed'
+        assert len(addr_port)==2, 'too many args'
+        addr_port[1] = int(addr_port[1])
+        assert addr_port[1] > 0, 'positive ports only'
+        assert addr_port[1] < 2**16, 'port too high'
+        addr_port = tuple(addr_port)
+    except AssertionError as e:
+        print "\n".join(list(e.args))
+        return
+    except ValueError as e:
+        print "port must be number"
+        return
+    return addr_port
+
 class NetPingCommand(Command):
     '''
         Check host:port for connection
     '''
     def run(self, line):
-        protocol = ''.join(line.split()[1:2])
-        addr_port = ''.join(line.split()[2:3]).split(':')
-        try:
-            assert addr_port[0] != '', 'no address listed'
-            assert len(addr_port)>1, 'no port listed'
-            assert len(addr_port)==2, 'too many args'
-            addr_port[1] = int(addr_port[1])
-            assert addr_port[1] > 0, 'positive ports only'
-            assert addr_port[1] < 2**16, 'port too high'
-            addr_port = tuple(addr_port)
-        except AssertionError as e:
-            print "\n".join(list(e.args))
-            return
-        except ValueError as e:
-            print "port must be number"
+        protocol = ''.join(line.split()[2:3])
+        addr_port = get_addr_port(line)
+        if not addr_port:
             return
         if protocol != 'udp':
             ClientFactory.ping(addr_port)
         else:
             app.udp_server.ping(addr_port)
-
-class HaltCommand(Command):
+class NetTcpSyncCommand(Command):
+    '''
+        Check host:port for connection
+    '''
     def run(self, line):
-        pass 
-        
-
+        path = ''.join(line.split()[2:3])
+        addr_port = get_addr_port(line)
+        if not addr_port:
+            return
+        ClientFactory.sync(addr_port, app.auth)
 import sys
 class ExitCommand(Command):
     '''
@@ -204,8 +216,10 @@ db_command.addChild(db_add_command)
 # 3rd level
 net_udp_ping_command = NetPingCommand('ping', help='ping host:port')
 net_tcp_ping_command = NetPingCommand('ping', help='ping host:port')
+net_tcp_sync_command = NetTcpSyncCommand('sync', help='sync host:port path')
 net_udp_command.addChild(net_udp_ping_command)
 net_tcp_command.addChild(net_tcp_ping_command)
+net_tcp_command.addChild(net_tcp_sync_command)
 
 db_add_sync_path_command = DbAddSyncPathCommand('sync_path', help='create sync path')
 db_add_command.addChild(db_add_sync_path_command)
@@ -218,10 +232,14 @@ for model in models_arr:
 
 def run():
     try:
+        loop_flush = LoopingCall(sys.stdout.flush)
+        loop_flush.start(1)
         print 'Entering interactive mode'
         sys.stdout.flush()
         console.loop()
     except SystemExit as e:
         pass
+    loop_flush.stop()
     stop_app()
+
     print 'Good bye'

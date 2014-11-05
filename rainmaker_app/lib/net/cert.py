@@ -1,6 +1,13 @@
 from OpenSSL import crypto, SSL
 from time import gmtime, mktime
 
+def paramify( private_cert, *certs):
+    return {
+        'tls_localCertificate': private_cert,
+        'tls_verifyAuthorities': certs
+    }
+
+
 def create_cert(size=2048, as_objects=False):
     """
         Create a certificate and a private/public key pair
