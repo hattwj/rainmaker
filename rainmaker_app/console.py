@@ -114,7 +114,8 @@ class StartDebugNodeCommand(Command):
         cmds=[
             'stat config',
             'start tcp',
-            'net tcp ping localhost:%s' % p_tcp
+            'net tcp ping localhost:%s' % p_tcp,
+            'net tcp sync wibble localhost:%s' % p_tcp
         ]
         debug_node.create(args, cmds=cmds)
 

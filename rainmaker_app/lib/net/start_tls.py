@@ -113,11 +113,11 @@ class ServerProtocol(amp.AMP):
     @require_secure
     @AuthCommand.responder
     @defer.inlineCallbacks
-    def auth_command_responder(self, result):
+    def auth_command_responder(self, rand, guid, enc_pass):
         log.msg('Server: running AuthCommand')
-        self.session.sync_path = yield SyncPath.find(where=["guid = ?",result['guid']])
-        self.session.authorize(result['rand'], result['enc_pass'])
-        defer.returnValue( {'code': 200})
+        self.session.sync_path = yield SyncPath.find(where=["guid = ?", guid], limit=1)
+        result = self.session.authorize(rand, enc_pass)
+        defer.returnValue(result)
 
 class ServerFactory(protocol.ServerFactory):
     listen_port = 8500

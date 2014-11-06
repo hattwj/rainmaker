@@ -132,7 +132,7 @@ class ClientSyncProtocol(ClientProtocol):
         '''
             negotiate login details with server
         '''
-        result = yield self.callRemote(AuthCommand, **self.session.authenticateParams())
+        result = yield self.callRemote(AuthCommand, **self.session.authorizeParams())
         print result
         print 'We have authenticated!'
 

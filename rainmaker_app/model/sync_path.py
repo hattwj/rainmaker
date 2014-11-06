@@ -34,6 +34,8 @@ class SyncPath(Base):
     @defer.inlineCallbacks
     def new(klass, **kwargs):
         sync = yield klass.findOrCreate(**kwargs)
+        if not sync.guid:
+            sync.guid = urandom(80).encode('base-64')
         if not sync.password_rw:
             sync.password_rw = urandom(80).encode('base-64')
         result = yield sync.save()

@@ -146,7 +146,7 @@ class AuthCommand(amp.Command):
     commandName='auth'
     arguments = [
         ('rand', amp.String()),
-        ('guid', amp.String()),
+        ('guid', amp.Unicode()),
         ('enc_pass', amp.String())
     ]
     response = [

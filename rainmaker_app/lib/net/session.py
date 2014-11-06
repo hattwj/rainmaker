@@ -1,6 +1,7 @@
 from os import urandom
 
 from passlib.hash import bcrypt as hashify
+from passlib import exc
 from twisted.internet import defer
 
 from . commands import ErrAuthRand, ErrAuthSyncPath, ErrAuthInit, ErrAuthFail
@@ -26,26 +27,30 @@ class Session(object):
 
     def __init__(self, auth):
         self.auth = auth
-        self.rand = urandom(500)
+        self.rand = urandom(500).encode('base-64')
         self.authenticated = False
 
     def authorizeParams(self):
+        print self.sync_path.guid
         return {
             'rand': self.rand,
             'guid': self.sync_path.guid,
             'enc_pass': self.encrypted_password
         }
 
-    @defer.inlineCallbacks
     def authorize(self, rand, enc_pass):
-        self.peer_rand = rand
-        if not hashify.verify(enc_pass,self.peer_password):
+        self.peer_rand = rand 
+        try:
+            valid = hashify.verify(self.peer_password, enc_pass)
+        except ValueError as e:
+            raise ErrAuthFail(repr(e))
+        if not valid:
             raise ErrAuthFail('Authorization of peer failed')
         self.authenticated = True
-        defer.returnValue({
+        return {
             'rand': self.rand,
             'enc_pass': self.encrypted_password
-        })
+        }
 
     @property
     def encrypted_password(self):
@@ -56,11 +61,11 @@ class Session(object):
 
     @property
     def local_password(self):
-        return self.rand + self.auth.cert_str + self.sync_path.password
+        return self.rand + self.auth.cert_str + self.sync_path.password_rw
 
     @property 
     def peer_password(self):
-        return self.peer_rand + self.peer_cert + self.sync_path.password
+        return self.peer_rand + self.peer_cert + self.sync_path.password_rw
 
     # Random string sent from remote
     @property
@@ -76,7 +81,7 @@ class Session(object):
         '''
         if self._peer_rand:
             raise ErrAuthInit('random seed already set')
-        if len(rand) < 50:
+        if len(val) < 50:
             raise ErrAuthRand('random value too short')
         self._peer_rand = val
     
