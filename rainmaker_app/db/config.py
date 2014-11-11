@@ -7,7 +7,7 @@ from twistar.registry import Registry
 from rainmaker_app.lib import logger
 from rainmaker_app.db.models import *
 
-log = logger.create('Database')
+log = logger.create(__name__)
 
 MIGRATIONS = {
     0 : """CREATE TABLE schema_migrations (version TEXT)""",
@@ -17,11 +17,11 @@ MIGRATIONS = {
                 password_rw TEXT NOT NULL,
                 guid TEXT,
                 scanned_at INTEGER,
+                rolling_hash TEXT,
                 state_hash TEXT,
                 state_hash_updated_at INTEGER,
                 scanning BOOLEAN,
                 listening BOOLEAN,
-                local BOOLEAN,
                 updating BOOLEAN
             )""",
     2 : """ CREATE TABLE my_files (
@@ -40,61 +40,68 @@ MIGRATIONS = {
                 updated_at INTEGER, 
                 scanned_at INTEGER
             )""", # TODO: try: created_at DEFAULT (datetime('now','localtime'))
-    4 : """ CREATE TABLE sync_comparisons (
+    3 : """ CREATE TABLE sync_comparisons (
                 my_file_id INTEGER, 
-                sync_path_id INTEGER
+                host_sync_path_id INTEGER
             )""",
-    5 : """ CREATE VIEW differences AS
-                SELECT DISTINCT m1.id AS my_file_id
+    4 : """ CREATE TABLE authorizations(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sync_path_id INTEGER NOT NULL,
+                cert_str TEXT NOT NULL,
+                pk_str TEXT NOT NULL,
+                pubkey_str TEXT
+            )""",
+    5 : """ CREATE TABLE pubkeys(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                pubkey_str TEXT NOT NULL
+            )""",
+    6 : """ CREATE TABLE hosts(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                address TEXT NOT NULL,
+                udp_port INTEGER NOT NULL,
+                tcp_port INTEGER NOT NULL,
+                pubkey_str TEXT,
+                signature TEXT,
+                signed_at INTEGER,
+                created_at INTEGER,
+                updated_at INTEGER
+            )""",
+    7 : """ CREATE TABLE host_sync_paths( 
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                host_id INTEGER NOT NULL,
+                sync_path_id INTEGER NOT NULL,
+                rolling_hash TEXT,
+                state_hash TEXT,
+                name TEXT NOT NULL
+            )""",
+    8 : """ CREATE TABLE host_files (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                host_sync_path_id INTEGER NOT NULL,
+                path TEXT NOT NULL, 
+                fhash TEXT, 
+                size INTEGER DEFAULT 0, 
+                state INTEGER, 
+                is_dir BOOLEAN NOT NULL,
+                created_at INTEGER,
+                updated_at INTEGER,
+                next_id INTEGER
+            )""", # TODO: try: created_at DEFAULT (datetime('now','localtime'))
+    9 : """ CREATE VIEW differences AS
+                SELECT DISTINCT 
+                    m1.id AS my_file_id,
+                    hsp.id AS host_sync_path_id
                 FROM my_files m1
-                LEFT JOIN my_files m2
+                LEFT JOIN host_sync_paths hsp
+                    ON hsp.sync_path_id = m1.sync_path_id
+                LEFT JOIN host_files m2
                     ON m1.path = m2.path
-                    AND m1.sync_path_id != m2.sync_path_id
                     AND m1.fhash = m2.fhash 
                     AND m1.is_dir = m2.is_dir
                     AND m1.size = m2.size
                     AND m1.state = m2.state
                 WHERE m2.id IS NULL
                     AND m1.next_id IS NULL
-                    AND m2.next_id IS NULL""",
-    6 : """ CREATE TABLE authorizations(
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                sync_path_id INTEGER NOT NULL,
-                cert_str TEXT NOT NULL,
-                pk_str TEXT NOT NULL,
-                pubkey_str TEXT,
-                pubkey_id INTEGER
-            )""",
-    7 : """ CREATE TABLE messages(
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                pubkey_id INTEGER NOT NULL,
-                data TEXT NOT NULL,
-                signature TEXT NOT NULL,
-                signed_at INTEGER NOT NULL,
-                route TEXT,
-                created_at INTEGER
-            )""",
-    8 : """ CREATE TABLE pubkeys(
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                pubkey_str TEXT NOT NULL
-            )""",
-    9 : """ CREATE TABLE hosts(
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                address TEXT,
-                udp_port INTEGER,
-                tcp_port INTEGER,
-                pubkey_str TEXT,
-                signed_at INTEGER,
-                created_at INTEGER,
-                updated_at INTEGER
-            )""",
-    10 : """ CREATE TABLE broadcasts(
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                host_id INTEGER NOT NULL,
-                message_id INTEGER NOT NULL
-            )""",
-    11 : """CREATE INDEX broadcasts_index ON broadcasts(host_id, message_id);"""
-            
+                    AND m2.next_id IS NULL"""
 }
 
 @defer.inlineCallbacks
@@ -108,10 +115,10 @@ def _init_migrations( versions=[] ):
 
     for k, v in MIGRATIONS.iteritems():
         if str(k) in versions:
-            log.info( 'Skipping migration %s' % k)
-            pass
+            log.debug( 'Skipping migration %s' % k)
         else:
             log.info( 'Running migration %s' % k)
+            log.debug(v)
             yield Registry.DBPOOL.runQuery(v)
             yield SchemaMigration(version=k).save()
 
@@ -167,7 +174,7 @@ def _model_introspection(model):
 
 def _init_failed(reason):
     import sys
-    log.msg(reason.getTraceback())
+    log.error(reason.getTraceback())
     sys.exit(1)
 
 def initDB(location):

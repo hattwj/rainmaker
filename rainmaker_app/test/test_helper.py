@@ -29,7 +29,11 @@ db_path = os.path.join(user_dir, 'test.sqlite')
 fs = FsActions()
 
 from random import random
-def write_many(path,count=10):
+def write_many(path, count=10):
+    '''
+        create many random files
+        return their paths
+    '''
     result = []
     for n in range(0, count):
         cur_path = os.path.join(path, str(random()) )

@@ -35,6 +35,7 @@ def create(name='',style=None,level=None):
         level = 'error'
     else:
         level = log_level
+    #level = 'info'
     level = levels[level] if level else levels[log_level]
     style = style if style else config['styles'][verbosity]
 

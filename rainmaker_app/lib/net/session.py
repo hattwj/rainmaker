@@ -135,5 +135,5 @@ def require_secure(func):
             d = func(self, *args, **kwargs)
             return d # string
         else:
-            raise AuthRequiredError() 
+            raise AuthRequiredError('Auth required') 
     return sub_require_secure

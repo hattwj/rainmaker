@@ -20,10 +20,14 @@ class SyncPathTest(unittest.TestCase):
     def test_refresh_state_hash(self):
         sync_path = yield SyncPath.find(limit=1)
         state = yield sync_path.refresh_state_hash()
-        print state
-        
         yield MyFile(is_dir=False,path='df',sync_path_id=1, fhash='3578').save()
         is_stale = yield sync_path.is_state_hash_stale()
-        print is_stale
-        state = yield sync_path.refresh_state_hash()
-        print state
+        self.assertEquals(is_stale, True)
+        new_state = yield sync_path.refresh_state_hash()
+        self.assertEquals( new_state != state, True)
+
+    def test_ability_to_scan(self):
+        '''
+            test ability to scan files
+        '''
+

@@ -4,7 +4,6 @@ from os import urandom
 from os.path import abspath
 
 from . common import *
-from .base import Base
 from . my_file import MyFile
 
 from rainmaker_app.lib.lib_hash import RollingHash
@@ -38,6 +37,7 @@ class SyncPath(Base):
             sync.guid = urandom(80).encode('base-64')
         if not sync.password_rw:
             sync.password_rw = urandom(80).encode('base-64')
+        yield sync.scan()
         result = yield sync.save()
         defer.returnValue(sync)
 
@@ -61,6 +61,9 @@ class SyncPath(Base):
 
     @defer.inlineCallbacks
     def refresh_state_hash(self, incremental = False):
+        '''
+            recalculate state
+        '''
         bufr = ''
         
         if incremental:
@@ -70,18 +73,21 @@ class SyncPath(Base):
             self.state_hash = None
 
         f_ubound = len(my_files) - 1
+        h = RollingHash()
         for i, f in enumerate(my_files):
             bufr += '%s-%s-%s-%s' % (f.path, f.state, f.fhash, f.is_dir)
             if len(bufr) > 4096 or i == f_ubound:
                 h.update(bufr)
                 bufr = ''
         self.state_hash = str(h.hexdigest())    
-        self.state_hash_updated_at = int( round( time() * 1000 ) ) 
+        self.state_hash_updated_at = self.time_now() 
         defer.returnValue( self.state_hash )
     
     def resolve_root(self):
         self.root = abspath(self.root)
 
+    ##
+    # State counters
     def _reset_counters(self):
         ''' mutexed counters '''
         self._count_scanned = 0
@@ -121,7 +127,9 @@ class SyncPath(Base):
         }
 
     def scan(self):
-        ''' '''
+        '''
+            scan files/subdirs
+        '''
         log.msg('scanning: %s' % self.root)
         @defer.inlineCallbacks
         def _scan(self, count=0):

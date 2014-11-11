@@ -6,7 +6,7 @@ import rainmaker_app
 from rainmaker_app import app
 from rainmaker_app.lib.util import assign_attrs
 from rainmaker_app.lib.net import connections
-from rainmaker_app.lib.net.resources import files_resource, messages_resource 
+from rainmaker_app.lib.net.resources import files_resource
 from rainmaker_app.db.models import *
 
 from .net_utils import is_compatible, get_address, \
@@ -36,6 +36,7 @@ class ServerProtocol(amp.AMP):
     def connectionLost(self, reason):
         log.msg('Connection Lost')
         connections.remove(self)
+    
     ####
     #
     ####
@@ -46,32 +47,7 @@ class ServerProtocol(amp.AMP):
     def command_failed(self, *args):
         log.msg('Command failed')
         log.msg(args)
-
-    ####
-    #
-    ####
-    @FindHostCommand.responder
-    def find_host_command(self, **kwargs):
-        hosts = app.node.find_nearest_hosts(**kwargs)
-        for host in hosts:
-            self.callRemote(StoreHostCommand, **host.to_dict() )
-        return {'code', 200}
-
-    @StoreHostCommand.responder
-    @defer.inlineCallbacks
-    def store_host_command(self, **kwargs):
-        host = Host(**kwargs)
-        d =  host.isValid()
-        d.addErrback( self.command_failed )
-        valid = yield d
-        if valid:
-            finger_table.add(host)
-        code = 200 if valid else 500
-        defer.returnValue( {
-            'code': code,
-            'errors' : []
-        })
-    
+ 
     ####
     #
     ####
@@ -118,6 +94,15 @@ class ServerProtocol(amp.AMP):
         self.session.sync_path = yield SyncPath.find(where=["guid = ?", guid], limit=1)
         result = self.session.authorize(rand, enc_pass)
         defer.returnValue(result)
+    
+    ####
+    # Sync functions
+    ####
+    @require_secure
+    @GetSyncPathCommand.responder
+    def get_sync_path_command_responder(self):
+        return self.session.sync_path.to_dict()
+
 
 class ServerFactory(protocol.ServerFactory):
     listen_port = 8500
@@ -166,9 +151,4 @@ class ServerFactory(protocol.ServerFactory):
         '''
             dict of host
         '''
-        return self.host.to_dict()
-    
-def simple_router(resource, server, **kwargs):
-    for k in kwargs.keys():
-        if kwargs[k] != None:
-            return getattr(resource, k)(server, kwargs[k])
+        return self.host.to_dict() 

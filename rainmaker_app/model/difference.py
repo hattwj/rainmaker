@@ -10,9 +10,34 @@ q_versions = '''
         AND c.sync_path_id IN %(sync_path_ids)s
     ORDER BY m.updated_at DESC;'''
 
+'''
+    sync_path:
+        - has calculated state from all files
+        - how do we make this fast on file update?
+        - automatically every time a file changes (slow?)
+        - when were told to?
+            - after initial scan
+            - after remote update complete?
+
+        - clients tell us about remote changes
+        -   c->s: whats your sync state?
+            c->s: i have:
+                - changes
+                    - drill down to find diffs
+                        - have diffs
+                        - need diffs
+                        - have conflicts
+                - no changes
+
+    sync_path
+        dir_path
+            file_path
+                file_part
+    all of these have versions
+'''
 
 class Difference(Base):
-    sticky_table = True # dont allow console db clear
+    sticky_table = True # don't allow console db clear
     
     q_difference = """
                 SELECT DISTINCT m1.id AS my_file_id

@@ -58,7 +58,7 @@ class MyFile(Base):
             int_date
         ], orderby='path,state,fhash,is_dir')
         defer.returnValue( my_files )
-                    
+    
     def init_state(self):
         ''' only runs on new records '''
         if self.state == self.NEW:
@@ -159,7 +159,7 @@ class MyFile(Base):
             if has_changed and self.is_new() == False:
                 self.state = self.MODIFIED
         
-        self.scanned_at = int( round( time() * 1000 ) )
+        self.scanned_at = self.time_now()
         try:
             _scan(self)
         except:

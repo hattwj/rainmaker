@@ -2,8 +2,8 @@
 
 verbosity:
     Rainmaker: 0
+    rainmaker_app.db.config: 0
     Tests: 4
-    Database: 1
     FsActions: 1
     AppLoop: 1
     AppProfiles: 1

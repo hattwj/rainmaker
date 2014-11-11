@@ -40,11 +40,10 @@ class SetPubkeyCommand(amp.Command):
         ( 'cert', amp.String() )
     ]
 
-def my_file_params(optional, optional_columns=None):
-    columns = ['size', 'fhash', 'inode', 'mtime', 'ctime', 'path', 'state', 'is_dir' ]
-    params = []
-    return amp.AmpList([
-        ('path', amp.String()),
+
+def my_file_params(optional=None):
+    return [
+        ('path', amp.String() ),
         ('fhash', amp.String() ),
         ('size', amp.Integer() ),
         ('inode', amp.Integer() ),
@@ -52,7 +51,7 @@ def my_file_params(optional, optional_columns=None):
         ('ctime', amp.Integer() ),
         ('state', amp.Integer() ),
         ('is_dir', amp.Boolean() )
-    ], optional = optional)
+    ]
 
 class FilesResource(amp.Command):
 
@@ -160,21 +159,35 @@ class AuthCommand(amp.Command):
         ErrAuthFail: 'Authentication Failed'
     }
 
-class StoreHostCommand(amp.Command):
-    commandName = 'store_host'
-    arguments = [
-        ('address', amp.String()),
-        ('tcp_port', amp.Integer()),
-        ('udp_port', amp.Integer()),
-        ('pubkey_str', amp.String()),
-        ('signature', amp.String()),
-        ('signed_at', amp.Integer())
-    ]
-    response = resource_response() 
 
-class FindHostCommand(amp.Command):
-    commandName = 'find_host'
-    arguments = [
-        ('node_id', amp.String())
+def sync_path_params():
+    return [
+        ('state_hash',              amp.String()),
+        ('state_hash_updated_at',   amp.Integer()),
+        ('updating',                amp.Boolean()),
+        ('guid',                    amp.Unicode())
     ]
-    response = resource_response() 
+
+class GetSyncPathCommand(amp.Command):
+    commandName='sync_path'
+    arguments = sync_path_params()
+    response = sync_path_params()
+
+def file_params():
+    return (
+        ('path', amp.String() ),
+        ('fhash', amp.String() ),
+        ('size', amp.Integer() ),
+        ('inode', amp.Integer() ),
+        ('mtime', amp.Integer() ),
+        ('ctime', amp.Integer() ),
+        ('state', amp.Integer() ),
+        ('is_dir', amp.Boolean() )
+    )
+
+class PutFilesCommand(amp.Command):
+    commandName='my_files'
+    arguments  = [
+        ('files', amp.ListOf(my_file_params()))
+    ]
+
