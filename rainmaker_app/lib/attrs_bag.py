@@ -1,33 +1,6 @@
 from copy import deepcopy
 from pipes import quote                 #repr
-from .record_script import RecordScript
-
-def convert_dict(a_dict):
-    ''' convert a dict with . keys into a nested dict '''
-    result = {}
-    for k, v in a_dict.iteritems():
-        ksplit = k.split('.')
-        cur = result
-        for attr in ksplit[:-1]:
-            if not attr in cur.keys():
-                cur[attr] = {}
-            elif not isinstance( cur[attr], dict):
-                cur[attr] = {}
-            cur = cur[attr]
-        cur[ksplit[-1]] = v
-    return result
-
-def nested_merge(old, new):
-    ''' perform nested merge on two dicts '''
-    for k, v in new.iteritems():
-        # recurse on nested dict
-        if isinstance(v, dict):
-            if not k in old.keys():
-                old[k] = {}
-            nested_merge(old[k], new[k])
-            continue
-        old[k]=v
-    return old
+from .record_script import RecordScript, nested_merge, convert_dict
 
 class AttrsBag(object):
     
@@ -39,10 +12,10 @@ class AttrsBag(object):
         if not attrs: return
         self.add_attrs(attrs)
     
-    def add_attrs(self,a_dict):
+    def add_attrs(self, a_dict):
         ''' merge with dict '''
         if not a_dict:
-            return
+            raise AttributeError('nothing to add')
         # prevent accidental byref
         a_dict = convert_dict( a_dict )
         attrs = object.__getattribute__(self,'attrs') 

@@ -1,6 +1,6 @@
 from twisted.internet import protocol, reactor, ssl, defer
 from twisted.protocols import amp
-from twisted.python import log
+#from twisted.python import log
 
 import rainmaker_app
 from rainmaker_app import app
@@ -8,6 +8,8 @@ from rainmaker_app.lib.util import assign_attrs
 from rainmaker_app.lib.net import connections
 from rainmaker_app.lib.net.resources import files_resource
 from rainmaker_app.db.models import *
+from rainmaker_app.lib import logger
+log = logger.create(__name__)
 
 from .net_utils import is_compatible, get_address, \
     report_errors

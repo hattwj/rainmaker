@@ -72,7 +72,7 @@ MIGRATIONS = {
                 sync_path_id INTEGER NOT NULL,
                 rolling_hash TEXT,
                 state_hash TEXT,
-                name TEXT NOT NULL
+                machine_name TEXT NOT NULL
             )""",
     8 : """ CREATE TABLE host_files (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

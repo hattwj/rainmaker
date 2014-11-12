@@ -7,7 +7,34 @@ from os.path import abspath,basename,expanduser  #cmd
 from .path import which,current_user    #cmd
 from .logger import create              #logging
 
-from IPython.core.debugger import Tracer
+#from IPython.core.debugger import Tracer
+
+def convert_dict(a_dict):
+    ''' convert a dict with . keys into a nested dict '''
+    result = {}
+    for k, v in a_dict.iteritems():
+        ksplit = k.split('.')
+        cur = result
+        for attr in ksplit[:-1]:
+            if not attr in cur.keys():
+                cur[attr] = {}
+            elif not isinstance( cur[attr], dict):
+                cur[attr] = {}
+            cur = cur[attr]
+        cur[ksplit[-1]] = v
+    return result
+
+def nested_merge(old, new):
+    ''' perform nested merge on two dicts '''
+    for k, v in new.iteritems():
+        # recurse on nested dict
+        if isinstance(v, dict):
+            if not k in old.keys():
+                old[k] = {}
+            nested_merge(old[k], new[k])
+            continue
+        old[k]=v
+    return old
 
 class RecordScript(object):
     ''' RecordScipt: The active yaml templating dsl ''' 
@@ -27,8 +54,8 @@ class RecordScript(object):
         return val
 
     # add/update attrs dict 
-    def attrs_update(self,attrs):
-        self.attrs = dict( self.attrs.items()+attrs.items() )
+    def attrs_update(self, attrs):
+        self.attrs = nested_merge(self.attrs, attrs)
      
     # substitute val template with attrs dict
     def subst(self, val, attrs=None,times=7,search_paths=[]):

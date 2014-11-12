@@ -86,7 +86,8 @@ class StatConfigCommand(Command):
     '''
     def run(self, line):
         print 'Showing config...'
-        print app
+        import yaml
+        print yaml.dump(app.attrs, default_flow_style=False)
 
 class StartUdpCommand(Command):
     '''

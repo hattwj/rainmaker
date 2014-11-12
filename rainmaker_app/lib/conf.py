@@ -11,7 +11,7 @@ def load(path,abspath=False,from_dir=None):
     if not abspath: 
         path = ('%s/%s' % (from_dir,path)).split('/') 
         path = os.path.sep.join(path)
-    with open( path,'r') as f: 
+    with open(path, 'r') as f: 
         data=yaml.safe_load(f.read())
     return data
 

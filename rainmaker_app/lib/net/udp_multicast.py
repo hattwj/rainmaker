@@ -9,7 +9,6 @@ UDP P2P Multicast server
 # imports for everyone
 from twisted.internet import reactor, defer
 from twisted.application.internet import MulticastServer
-from twisted.python import log
 
 # imports for RequestParser
 import json
@@ -27,6 +26,8 @@ from rainmaker_app.lib.util import assign_attrs, snake_case, time_now
 from rainmaker_app import app, version
 from rainmaker_app.lib.net import finger_table
 from rainmaker_app.lib.net.clients import ClientFactory
+from rainmaker_app.lib import logger
+log = logger.create(__name__)
 
 class Param(object):
     

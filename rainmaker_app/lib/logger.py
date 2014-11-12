@@ -38,7 +38,7 @@ def create(name='',style=None,level=None):
     #level = 'info'
     level = levels[level] if level else levels[log_level]
     style = style if style else config['styles'][verbosity]
-
+    
     log = logging.getLogger(name)
     log.v=verbosity
 
@@ -50,7 +50,8 @@ def create(name='',style=None,level=None):
 
     handler.setLevel(level)
     log.setLevel(level)
-
+    # Allow log.msg to act like log.info
+    log.msg = log.info
     # set a format which is simpler for f_log use
     formatter = logging.Formatter(style)
     

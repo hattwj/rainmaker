@@ -11,6 +11,7 @@ tmp_dir: '${abspath:${user_dir}/tmp}'
 config_path: '${user_dir}/config.yml'
 database_path: '${user_dir}/rainmaker.sqlite'
 
+
 # server / client settings
 auth_options:
     key_size: 2048

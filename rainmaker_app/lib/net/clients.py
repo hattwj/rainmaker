@@ -3,7 +3,7 @@ from os import urandom
 from threading import Lock
 from twisted.internet import protocol, reactor, ssl, defer
 from twisted.protocols import amp
-from twisted.python import log
+#from twisted.python import log
 
 from .net_utils import is_compatible
 from .exceptions import *
@@ -11,8 +11,10 @@ from .commands import *
 from .start_tls import ServerProtocol
 from .session import Session, require_secure
 from rainmaker_app.lib.util import assign_attrs
-from rainmaker_app import app
+from rainmaker_app.lib import logger
+log = logger.create(__name__)
 
+from rainmaker_app import app
 
 class ClientProtocol(ServerProtocol):
 

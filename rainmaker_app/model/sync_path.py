@@ -13,6 +13,11 @@ class SyncPath(Base):
 
     HASMANY = ['my_files']
     BEFORE_SAVE = ['resolve_root']
+    ATTR_ACCESSIBLE = [
+        'machine_name',
+        'rolling_hash',
+        'state_hash'
+    ]
 
     scanning        = False
     scanned_at      = 0
@@ -58,6 +63,11 @@ class SyncPath(Base):
         if my_files:
             defer.returnValue( True )
         defer.returnValue( False )
+
+    @property
+    def machine_name(self):
+        from rainmaker_app import app
+        return app.machine_name
 
     @defer.inlineCallbacks
     def refresh_state_hash(self, incremental = False):

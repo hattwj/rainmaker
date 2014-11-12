@@ -52,8 +52,8 @@ def init_app():
     #log.startLogging(sys.stdout, setStdout=True)
 
     # install?
-    tasks.install(app.user_dir)
-    app.fs.touch(app.config_path)
+    tasks.install()
+    #app.fs.touch(app.config_path)
     
     # process user config
     args = load(app.config_path, abspath=True) 
@@ -119,6 +119,8 @@ def cli_parse(app, args=None):
     parser.add_argument('-i', action="store_true", dest='start_console', default=False)
     # set config  path
     parser.add_argument('-c', '--config', action="store", dest='config_path', default=app.get('config_path'))
+    # set user dir
+    parser.add_argument('--dir', action="store", dest='user_dir', default=app.get('user_dir'))
     # don't log to screen
     parser.add_argument('-q','--quiet', action="store_true", dest='log.quiet',default=False)
     # set logfile path

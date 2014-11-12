@@ -3,8 +3,11 @@
 verbosity:
     Rainmaker: 0
     rainmaker_app.db.config: 0
+    rainmaker_app.lib.net.start_tls: 0
+    rainmaker_app.lib.net.clients: 0
+    rainmaker_app.lib.net.udp_multicast: 0
     Tests: 4
-    FsActions: 1
+    rainmaker_app.lib.fs_actions: 0
     AppLoop: 1
     AppProfiles: 1
     AppParser: 1
@@ -19,7 +22,7 @@ verbosity:
     Callbacks: 4
     RegexDict: 4
 styles:
-    - ''
+    - '%(message)s'
     - '%(message)s'
     - '%(message)s'
     - '%(name)-12s %(message)s'
