@@ -103,8 +103,8 @@ class ServerProtocol(amp.AMP):
     @require_secure
     @GetSyncPathCommand.responder
     def get_sync_path_command_responder(self):
-        return self.session.sync_path.to_dict()
-
+        attrs = GetSyncPathCommand.response_keys()
+        return self.session.sync_path.to_dict(attrs)
 
 class ServerFactory(protocol.ServerFactory):
     listen_port = 8500

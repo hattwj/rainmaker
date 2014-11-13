@@ -3,15 +3,18 @@ import yaml
 
 import rainmaker_app
 
-def load(path,abspath=False,from_dir=None):
-    ''' load yml file from conf directory '''
-    global root
-
-    from_dir = from_dir if from_dir else root
-    if not abspath: 
-        path = ('%s/%s' % (from_dir,path)).split('/') 
-        path = os.path.sep.join(path)
-    with open(path, 'r') as f: 
+def load(path, abspath=False, from_dir=None):
+    ''' load yml file '''
+    paths = [from_dir] if from_dir else rainmaker_app.app.paths
+    fpath = None
+    if abspath:
+       fpath = path 
+    else:
+        for path_dir in paths: 
+            fpath = os.path.join(path_dir, path)
+            if os.path.isfile(fpath):
+                break
+    with open(fpath, 'r') as f: 
         data=yaml.safe_load(f.read())
     return data
 

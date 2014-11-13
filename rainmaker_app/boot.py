@@ -9,36 +9,42 @@ from twisted.internet.task import LoopingCall
 from twisted.python import log
 
 from .lib.conf import load
-from .lib import logger, path, AttrsBag
+from .lib import path
+from .lib.attrs_bag import AttrsBag
 
 import rainmaker_app
-from rainmaker_app.db.config import initDB
-from rainmaker_app import app, lib, tasks, db
+from rainmaker_app import app, lib, tasks, db, version
 
 def init_pre():
     '''
         pre init application
     '''
     global app
-
-    # set base attributes
-    app_attrs = load('rainmaker_app.yml')
-    app.add_attrs( app_attrs )
-
+    # Start logging
+    log.startLogging(sys.stdout, setStdout=False)
+    #log.startLogging(sys.stdout, setStdout=True)
     # set reactor, mark self as running
     app.reactor = reactor
-
     # set root app directory
     app.root = path.root
-
-    # logging/monitor fs events
-    app.fs = lib.FsActions()
-
-def init_cli(args=None):
-    # process cli
-    global app
-    args = cli_parse(app, args)
+    app.paths = [os.path.join(app.root, 'conf')]
+    # load default config
+    args = load('config.yml')
     app.add_attrs(args)
+    # process cli
+    cli_args = cli_parse(app)
+    app.add_attrs(cli_args) 
+    app.paths.insert(0, app.user_dir)
+    # logging/monitor fs events
+    from rainmaker_app.lib.fs_actions import FsActions
+    app.fs = FsActions()
+    # install?
+    from rainmaker_app.tasks import install
+    install.run()
+    # process user config
+    args = load(app.config_path, abspath=True)
+    app.add_attrs(args)
+    app.add_attrs(cli_args)
 
 @defer.inlineCallbacks
 def init_app():
@@ -46,18 +52,7 @@ def init_app():
         init db, install user dir, init networking
     '''
     global app
-
-    # Start logging
-    log.startLogging(sys.stdout, setStdout=False)
-    #log.startLogging(sys.stdout, setStdout=True)
-
-    # install?
-    tasks.install()
-    #app.fs.touch(app.config_path)
-    
-    # process user config
-    args = load(app.config_path, abspath=True) 
-    app.add_attrs(args)
+    from rainmaker_app.db.config import initDB
 
     # create/init db run migrations 
     yield initDB(app.database_path)
@@ -115,53 +110,53 @@ def cli_parse(app, args=None):
     ''' 
         command line parser
     '''
-    parser = argparse.ArgumentParser(version=app.version, add_help=True)
+    from rainmaker_app.lib import logger
+    parser = argparse.ArgumentParser(version=version, add_help=True)
     parser.add_argument('-i', action="store_true", dest='start_console', default=False)
     # set config  path
-    parser.add_argument('-c', '--config', action="store", dest='config_path', default=app.get('config_path'))
+    parser.add_argument('-c', '--config', action="store", dest='config_path')
     # set user dir
-    parser.add_argument('--dir', action="store", dest='user_dir', default=app.get('user_dir'))
+    parser.add_argument('--dir', action="store", dest='user_dir')
     # don't log to screen
-    parser.add_argument('-q','--quiet', action="store_true", dest='log.quiet',default=False)
+    parser.add_argument('-q','--quiet', action="store_true", dest='log.quiet')
     # set logfile path
     parser.add_argument('--log', 
         action="store", 
         dest='log.level', 
-        choices=app.log_levels, 
-        default='warn')
+        choices=logger.levels.keys())
     # Dont broadcast
     parser.add_argument('--nobroadcast', 
         action="store_false", 
-        default=app.udp_server_options['broadcast'], 
         dest='udp_server_options.broadcast')
     # Do broadcast
     parser.add_argument('--broadcast', 
-        action="store_true", 
-        default=app.udp_server_options['broadcast'], 
+        action="store_true",
         dest='udp_server_options.broadcast')
     # ephemeral key size
     parser.add_argument('-k', action="store", 
-        dest='auth_options.key_size', 
-        default=app.auth_options['key_size'])
+        dest='auth_options.key_size')
     # udp: listen_port, broadcast, multicast
     parser.add_argument('--udp-b', action="store", 
-        dest='udp_server_options.broadcast_port', 
-        default=app.udp_server_options['broadcast_port'])
+        dest='udp_server_options.broadcast_port')
     parser.add_argument('--udp', action="store", 
-        dest='udp_server_options.listen_port', 
-        default=app.udp_server_options['listen_port'])
+        dest='udp_server_options.listen_port')
     parser.add_argument('-m','--mgroup', action="store", 
-        dest='udp_server_options.multicast_group', 
-        default=app.udp_server_options['multicast_group'])
+        dest='udp_server_options.multicast_group')
     parser.add_argument('--tcp', action="store", 
-        dest='tcp_server_options.listen_port', 
-        default=app.tcp_server_options['listen_port'])
+        dest='tcp_server_options.listen_port')
 
+
+    keys = ['udp_server_options.broadcast_port',
+        'udp_server_options.listen_port',
+        'tcp_server_options.listen_port',
+        'auth_options.key_size']
+    result = {}
     # parse args and convert result to dict
-    args = vars( parser.parse_args(args) )
-    # argument post processing
-    args['udp_server_options.broadcast_port'] = int(args['udp_server_options.broadcast_port'])
-    args['udp_server_options.listen_port'] = int(args['udp_server_options.listen_port'])
-    args['tcp_server_options.listen_port'] = int(args['tcp_server_options.listen_port']) 
-    args['auth_options.key_size'] = int(args['auth_options.key_size']) 
-    return args
+    kargs = vars( parser.parse_args(args) )
+    for k, v in kargs.iteritems():
+        if v:
+            if k in keys:
+                result[k] = int(v)
+            else:
+                result[k] = v
+    return result

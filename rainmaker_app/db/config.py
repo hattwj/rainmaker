@@ -147,6 +147,7 @@ def _check_schema():
     defer.returnValue( versions )
 
 def _db_connect(location):
+    print location
     Registry.DBPOOL = adbapi.ConnectionPool(
         'sqlite3', 
         location, 

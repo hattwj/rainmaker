@@ -52,11 +52,15 @@ class Object:
 
 import json
 class ExportArray(list):
-    def to_json(self):
+    
+    def to_dict(self, keys=None):
         result = []
         for v in self:
             if hasattr(v, 'serialized_data'):
-                result.append(v.serialized_data)
+                result.append(v.to_json(keys))
             else:
                 result.append(v)
-        return json.dumps(result)
+        return result
+
+    def to_json(self, keys=None):
+        return json.dumps(self.to_dict(result, keys))

@@ -108,20 +108,18 @@ class Base(DBObject):
         if where:
             q_str = '%s AND (%s)' % (where[0], q_str)
             q_vals = where[1:] + q_vals
-        return klass.find(where=[q_str] + q_vals)
-    
-    @property
-    def serialized_data(self):
-        result = {}
-        for k in self.ATTR_ACCESSIBLE:
-            result[k] = getattr(self, k)
-        return result 
+        return klass.find(where=[q_str] + q_vals) 
 
-    def to_json(self):
-        return json.dumps( self.serialized_data )
+    def to_json(self, keys=None):
+        return json.dumps( self.to_dict(keys) )
  
-    def to_dict(self):
-        return self.serialized_data
+    def to_dict(self, keys=None):
+        result = {}
+        if not keys:
+            keys = self.ATTR_ACCESSIBLE
+        for k in self.keys:
+            result[k] = getattr(self, k)
+        return result
 
     def _do_attr_accessible(self, kwargs):
         """ Create all attr accessible attributes """

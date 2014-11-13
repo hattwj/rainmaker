@@ -91,6 +91,7 @@ class ClientSyncProtocol(ClientProtocol):
         d.addCallbacks(self.start_tls, self.startup_failed)
         d.addCallbacks(self.verify_tls, self.startup_failed)
         d.addCallbacks(self.authenticate, self.startup_failed)
+        d.addCallbacks(self.sync, self.startup_failed)
 
     @defer.inlineCallbacks
     def set_pubkey(self, result): 
@@ -100,8 +101,6 @@ class ClientSyncProtocol(ClientProtocol):
         log.msg('Client: Setting pubkey')
         kwargs ={'cert':self.auth.cert_str}
         result = yield self.callRemote(SetPubkeyCommand, **kwargs)
-        print 'Here is the client result from set pubkey:'
-        print result
         self.session.peer_cert = result['cert']
         defer.returnValue(True)
 
@@ -135,8 +134,14 @@ class ClientSyncProtocol(ClientProtocol):
             negotiate login details with server
         '''
         result = yield self.callRemote(AuthCommand, **self.session.authorizeParams())
-        print result
-        print 'We have authenticated!'
+        log.msg('We have authenticated!')
+    @defer.inlineCallbacks
+    def sync(self, result):
+        '''
+        '''
+        keys = GetSyncPathCommand.arguments_keys()
+        data = self.session.sync_path.to_dict(keys)
+        result = yield self.callRemote(GetSyncPathCommand, **data)
 
 class ClientFactory(protocol.ClientFactory):
     '''

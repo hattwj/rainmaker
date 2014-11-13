@@ -18,14 +18,13 @@ This file is part of Rainmaker.
 
 import sys
 from twisted.internet import reactor, threads
-from rainmaker_app import boot, lib, console
+from rainmaker_app import boot, lib
 
 def main():
     ''' Run the application ''' 
     # rainmaker_app must be in py_path
     sys.path.insert(1, lib.path.root)
     boot.init_pre()
-    boot.init_cli()
     d = boot.init_app()
     d.addCallback(start)
 
@@ -34,6 +33,7 @@ def start(pp):
     if not boot.app.start_console:
         boot.start_network()
     else:
+        from rainmaker_app import console
         threads.deferToThread(console.run)
 
 if __name__ == "__main__":

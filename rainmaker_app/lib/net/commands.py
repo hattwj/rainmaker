@@ -89,10 +89,19 @@ def sync_path_params():
         ('state_hash',              amp.String())
     ]
 
-class GetSyncPathCommand(amp.Command):
+class BaseCommand(amp.Command):
+    @classmethod
+    def arguments_keys(klass):
+        return [k[0] for k in klass.arguments]
+    @classmethod
+    def response_keys(klass):
+        return [k[0] for k in klass.response]
+    
+class GetSyncPathCommand(BaseCommand):
     commandName='sync_path'
     arguments = sync_path_params()
     response = sync_path_params()
+
 
 def file_params():
     return (

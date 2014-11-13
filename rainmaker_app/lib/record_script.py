@@ -5,7 +5,6 @@ from pipes import quote                 #cmd
 from os.path import abspath,basename,expanduser  #cmd
 
 from .path import which,current_user    #cmd
-from .logger import create              #logging
 
 #from IPython.core.debugger import Tracer
 
@@ -39,7 +38,7 @@ def nested_merge(old, new):
 class RecordScript(object):
     ''' RecordScipt: The active yaml templating dsl ''' 
     def __init__(self,attrs={},depth=3):
-        self.log = create(self.__class__.__name__)
+        #log = create(self.__class__.__name__)
         self.attrs=attrs
         self._formatter = Formatter() 
     
@@ -92,7 +91,7 @@ class RecordScript(object):
             # execute command if one is present and the command
             # doesn't have an override attribute set
             if cmd and not match:
-                self.log.debug("cmd: %s" % cmd_key)
+                #log.debug("cmd: %s" % cmd_key)
                 data = safe_load( tup[2] ) if tup[2] else None
                 if isinstance(data,dict):
                     rep_val = cmd(attrs,search_paths,**data)
@@ -107,7 +106,7 @@ class RecordScript(object):
             else:
                 raise KeyError( [key,search_paths,attrs] )    
             if rep_val==None or not rep_key:
-                self.log.warn("subst missing val or key:\n\tval=%s\n\tkey=%s" % (rep_val,rep_key))
+                #log.warn("subst missing val or key:\n\tval=%s\n\tkey=%s" % (rep_val,rep_key))
                 continue
             if isinstance(rep_val,list):
                 rep_val = ''.join(rep_val)
@@ -117,7 +116,8 @@ class RecordScript(object):
         if times >= 1 and has_flags:
             result = self.subst(result,attrs,times-1,search_paths)
         else:
-            self.log.debug("output: %s" % result)
+            pass
+            #log.debug("output: %s" % result)
         return result
 
     def search(self,key_str,attrs,paths=[]):

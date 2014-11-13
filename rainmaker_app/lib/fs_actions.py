@@ -42,12 +42,12 @@ class FsActions(object):
             f.close()
             log.info('[created] %s' % path)
 
-    def copy(self,p1,path):
+    def copy(self, p1, path):
         if not os.path.exists(path):
             log.info('[created] %s' % path)
         else:
             log.info('[replaced] %s' % path)
-        shutil.copy(p1,path)
+        shutil.copy(p1, path)
 
     def append(self, path, val):
         with open(path, "a") as myfile:

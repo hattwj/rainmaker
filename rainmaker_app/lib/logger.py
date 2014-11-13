@@ -1,10 +1,9 @@
 import logging
-
 from rainmaker_app.lib.conf import load
-config=load('logger.yml')
 
+config=load('logger.yml')
 init_done = False 
-log_level=config['level']
+log_level = config['level']
 levels = {
     'debug':logging.DEBUG,
     'info':logging.INFO,
@@ -12,8 +11,7 @@ levels = {
     'error':logging.ERROR,
     'none':logging.NOTSET
     }
-
-verbosity=0
+verbosity = 0
 
 def set_verbosity(val):
     ''' Set logging verbosity '''
