@@ -102,23 +102,18 @@ class StartTcpCommand(Command):
         Start tcp server
     '''
     def run(self, line):
-        print line
         app.tcp_server.start()
 
-class StartDebugNodeCommand(Command):
+class StartNodeCommand(Command):
     '''
         create rainmaker sub process to test with
     '''
     def run(self, line):
-        p_tcp = app.tcp_server.listen_port
-        args = '-k 512 --tcp %s' % (p_tcp+1)
-        cmds=[
-            'stat config',
-            'start tcp',
-            'net tcp ping localhost:%s' % p_tcp,
-            'net tcp sync wibble localhost:%s' % p_tcp
-        ]
-        debug_node.create(args, cmds=cmds)
+        args = line.split()
+        node = args[2]
+        args = args[3:]
+        print args
+        debug_node.get(node, args)
 
 def get_addr_port(line):
     addr_port = line.split()[-1].split(':') 
@@ -171,6 +166,7 @@ class NetTcpSyncCommand(Command):
         if not addr_port:
             return
         ClientFactory.sync(addr_port, app.auth, sync_path)
+        
 
 import sys
 class ExitCommand(Command):
@@ -205,10 +201,10 @@ net_command.addChild(net_udp_command)
 net_command.addChild(net_tcp_command)
 
 ## start cmds
-start_debug_node_command = StartDebugNodeCommand('debug_node', 'Start debug node')
+start_node_command = StartNodeCommand('node', 'Start debug node')
 start_udp_command = StartUdpCommand('udp', 'Start udp server')
 start_tcp_command = StartTcpCommand('tcp', 'Start tcp server')
-start_command.addChild(start_debug_node_command)
+start_command.addChild(start_node_command)
 start_command.addChild(start_udp_command)
 start_command.addChild(start_tcp_command)
 
@@ -247,10 +243,24 @@ for model in models_arr:
     cmd.model = model
     db_show_command.addChild(cmd)
 
+def run_script(console, script):
+    '''
+        run a script
+    '''
+    for cmd_set in script['commands']:
+        target, cmds = cmd_set[0], cmd_set[1:]
+        for cmd in cmds:
+            cmd = cmd.strip()
+            if target == 'self':
+                console.walk_and_run(cmd)
+            else:
+                debug_node.get(target).send(cmd)
 def run():
     try:
         loop_flush = LoopingCall(sys.stdout.flush)
         loop_flush.start(1)
+        if app.debug_script:
+            run_script(console, app.debug_script)
         print 'Entering interactive mode'
         sys.stdout.flush()
         console.loop()

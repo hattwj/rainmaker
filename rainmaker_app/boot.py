@@ -33,6 +33,11 @@ def init_pre():
     app.add_attrs(args)
     # process cli
     cli_args = cli_parse(app)
+    app.debug_script = None
+    if 'debug_script_path' in cli_args:
+        cli_args['start_console'] = True
+        app.debug_script = load(cli_args['debug_script_path'], abspath=True)
+
     app.add_attrs(cli_args) 
     app.paths.insert(0, app.user_dir)
     # logging/monitor fs events
@@ -144,19 +149,23 @@ def cli_parse(app, args=None):
         dest='udp_server_options.multicast_group')
     parser.add_argument('--tcp', action="store", 
         dest='tcp_server_options.listen_port')
-
-
+    # debug script
+    parser.add_argument('--script', action="store", 
+        dest='debug_script_path')
+    
     keys = ['udp_server_options.broadcast_port',
         'udp_server_options.listen_port',
         'tcp_server_options.listen_port',
         'auth_options.key_size']
     result = {}
     # parse args and convert result to dict
-    kargs = vars( parser.parse_args(args) )
+    kargs = vars( parser.parse_args(args))
+    # load script if specified
     for k, v in kargs.iteritems():
         if v:
             if k in keys:
                 result[k] = int(v)
             else:
                 result[k] = v
+
     return result

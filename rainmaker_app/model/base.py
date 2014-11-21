@@ -117,7 +117,7 @@ class Base(DBObject):
         result = {}
         if not keys:
             keys = self.ATTR_ACCESSIBLE
-        for k in self.keys:
+        for k in keys:
             result[k] = getattr(self, k)
         return result
 

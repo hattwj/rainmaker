@@ -1,25 +1,23 @@
 from twisted.internet import protocol, reactor, defer
 
 class RainPP(protocol.ProcessProtocol):
-    def __init__(self, cmds):
-        if not isinstance(cmds, list):
-            cmds = []
-        self.cmds = cmds
+    def __init__(self):
         self.data = ""
     def exit(self):
         self.transport.write("exit\r")
         self.transport.loseConnection()
     def connectionMade(self):
         print "connectionMade!"
-        for cmd in self.cmds:
-            print 'sending: '+ cmd
-            self.transport.write(cmd+"\n\r")
+    def send(self, cmd):
+        print 'sending: '+ cmd
+        self.transport.write(cmd+"\n\r")
     def outReceived(self, data):
         print "outReceived! with %d bytes!" % len(data)
         print data
         self.data = self.data + data
     def errReceived(self, data):
         print "errReceived! with %d bytes!" % len(data)
+        print data
     def inConnectionLost(self):
         print "inConnectionLost! stdin is closed! (we probably did it)"
     def outConnectionLost(self):
@@ -33,22 +31,28 @@ class RainPP(protocol.ProcessProtocol):
     #def processEnded(self, reason):
     #    print "processEnded, status %d" % (reason.value.exitCode,)
 
-procs = []
-def create(args=None, cmds=None):
+procs = {}
+
+def get(name, args=None):
+    '''
+        return or create and return a rainmaker subprocess
+    '''
     global procs
     if isinstance(args, str):
         args = args.split()
     if not isinstance(args, list): 
         args=[]
-    args = ["./rainmaker.py", '-i'] + args 
-    pp = RainPP(cmds)
-    procs.append(pp)
+    if name in procs:
+        return procs[name]
+    args = ["./rainmaker.py", '-i'] + args
+    pp = RainPP()
+    procs[name] = pp
     reactor.spawnProcess(pp, args[0], args, {})
     return pp
 
 def stop_all():
     global procs
-    for pp in procs:
+    for k, pp in procs.iteritems():
         print 'Signaling sub process to close'
         pp.exit()
 

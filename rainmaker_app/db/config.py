@@ -61,10 +61,11 @@ MIGRATIONS = {
                 udp_port INTEGER NOT NULL,
                 tcp_port INTEGER NOT NULL,
                 pubkey_str TEXT,
+                cert_str TEXT,
                 signature TEXT,
                 signed_at INTEGER,
                 created_at INTEGER,
-                updated_at INTEGER
+                last_contacted_at INTEGER
             )""",
     7 : """ CREATE TABLE host_sync_paths( 
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -112,7 +113,7 @@ def _init_migrations( versions=[] ):
     """
     if versions == None:
         versions = []
-
+    
     for k, v in MIGRATIONS.iteritems():
         if str(k) in versions:
             log.debug( 'Skipping migration %s' % k)
@@ -147,7 +148,6 @@ def _check_schema():
     defer.returnValue( versions )
 
 def _db_connect(location):
-    print location
     Registry.DBPOOL = adbapi.ConnectionPool(
         'sqlite3', 
         location, 

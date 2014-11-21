@@ -4,7 +4,7 @@ from twisted.protocols import amp
 
 import rainmaker_app
 from rainmaker_app import app
-from rainmaker_app.lib.util import assign_attrs
+from rainmaker_app.lib.util import assign_attrs, time_now
 from rainmaker_app.lib.net import connections
 from rainmaker_app.lib.net.resources import files_resource
 from rainmaker_app.db.models import *
@@ -75,13 +75,16 @@ class ServerProtocol(amp.AMP):
     ####
     # Authentication functions
     ####
-    @SetPubkeyCommand.responder
-    def set_pubkey_command_responder(self, cert):
-        log.msg('Server: Received cert')
+    @SetGetHostCommand.responder
+    @defer.inlineCallbacks
+    def set_get_host_command_responder(self, **kwargs):
+        log.msg('Server: Received host info')
         log.msg("SERVER: Here is what we received:")
-        log.msg(cert)
-        self.session.peer_cert = cert
-        return {'cert': self.session.auth.cert_str}
+        log.msg(kwargs)
+        host = Host(**kwargs)
+        yield host.save()
+        self.session.host = host
+        defer.returnValue(self.factory.host_params)
     
     @amp.StartTLS.responder
     def startTLS_responder(self):
@@ -97,14 +100,49 @@ class ServerProtocol(amp.AMP):
         result = self.session.authorize(rand, enc_pass)
         defer.returnValue(result)
     
+    @require_secure
+    @GetHostsCommand.responder
+    @defer.inlineCallbacks
+    def get_hosts_command_responder(self, guid):
+        '''
+            return our host or find host
+        '''
+        keys = GetHostsCommand.responder_keys()
+        @defer.inlineCallbacks
+        def _get_host(guid):
+            host = yield Host.find(where=['guid = ?', guid], limit=1)
+            if host:
+                result = host.to_dict(keys)
+                defer.returnValue([result])
+            else:
+                raise ErrNotImplemented('finger lookups not ready')
+        if guid:
+            return _get_host(guid)
+        else:
+            return [self.factory.host.to_dict(keys)]
+    @require_secure
+    @PutHostsCommand.responder
+    def put_hosts_command_responder(self, hosts):
+        for host_params in hosts:
+            host = Host(**host_params)
+            host.save()
+
     ####
     # Sync functions
     ####
     @require_secure
     @GetSyncPathCommand.responder
-    def get_sync_path_command_responder(self):
+    @defer.inlineCallbacks
+    def get_sync_path_command_responder(self, **kwargs):
+        hsp = yield HostSyncPath.findOrCreate(
+            machine_name=kwargs['machine_name'], 
+            sync_path_id = self.session.sync_path.id,
+            host_id = self.session.host.id
+        )
+        hsp.state_hash = kwargs['state_hash']
+        hsp.rolling_hash = kwargs['rolling_hash']
         attrs = GetSyncPathCommand.response_keys()
-        return self.session.sync_path.to_dict(attrs)
+        defer.returnValue(self.session.sync_path.to_dict(attrs))
 
 class ServerFactory(protocol.ServerFactory):
     listen_port = 8500
@@ -135,9 +173,10 @@ class ServerFactory(protocol.ServerFactory):
         host.address = address
         host.tcp_port = self.listen_port
         host.udp_port = app.udp_server.listen_port
-        host.signed_at = host.time_now()
-        #host.pubkey_str = app.node.auth.pubkey_str
-        #host.signature = app.node.auth.sign(host.signature_data)
+        host.signed_at = time_now()
+        host.cert_str = app.auth.cert_str
+        host.pubkey_str = app.auth.pubkey_str
+        host.signature = app.node.auth.sign(host.signature_data)
     
     @property
     def address(self):
@@ -149,8 +188,8 @@ class ServerFactory(protocol.ServerFactory):
         self.setup_host()
 
     @property
-    def host_args(self):
+    def host_params(self):
         '''
             dict of host
         '''
-        return self.host.to_dict() 
+        return self.host.to_dict(host_param_keys) 

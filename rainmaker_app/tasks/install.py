@@ -17,10 +17,6 @@ def run():
         ipath = os.path.join(app.user_dir, p)
         if not os.path.isdir( ipath ):
             fs.mkdir(ipath)
-    print app.user_dir
-    print app.config_path
-    #if not os.path.exists(app.database_path):
-    #    app.fs.touch(app.database_path)
     if not os.path.exists(app.config_path):
         config_path = os.path.join(app.root,'conf', 'config.yml')
         app.fs.copy(config_path, app.config_path)

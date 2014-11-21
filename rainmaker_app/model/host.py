@@ -1,4 +1,6 @@
 from hashlib import sha256
+
+from twisted.internet import ssl
 from rainmaker_app.model.common import *
 from rainmaker_app.lib.net.cert import Pubkey
 from rainmaker_app import app
@@ -13,6 +15,8 @@ class Host(Base):
     __pubkey__ = None   # pubkey object
     pubkey_str = None
     signature  = None
+    __certificate__ = None
+    cert_str = None
     __node_id__ = None
 
     @property
@@ -20,10 +24,16 @@ class Host(Base):
         ''' return pubkey object '''
         if self.__pubkey__:
             return self.__pubkey__
-        if not self.pubkey_str:
-            raise AttributeError('No pubkey loaded')
         self.__pubkey__ = Pubkey(self.pubkey_str)
         return self.__pubkey__
+    
+    @property
+    def certificate(self):
+        ''' return certificate  object '''
+        if self.__certificate__:
+            return self.__certificate__
+        self.__certificate__ = ssl.Certificate.loadPEM(self.cert_str)
+        return self.__certificate__
 
     @property
     def is_stale(self):
@@ -38,8 +48,13 @@ class Host(Base):
     @property
     def signature_data(self):
         if not self.signed_at:
-            self.signed_at = self.time_now()
-        return "%s%s%s%s" % (self.address, self.udp_port, self.tcp_port, self.signed_at)
+            self.signed_at = time_now()
+        return "%s%s%s%s%s" % (
+            self.cert_str,
+            self.address, 
+            self.udp_port, 
+            self.tcp_port, 
+            self.signed_at)
 
     def __set_last_seen_at__(self):
         ''' update last seen at '''
@@ -68,6 +83,10 @@ class Host(Base):
     @property
     def addr_port(self):
         return (self.address, self.tcp_port)
+
+    @addr_port.setter
+    def addr_port(self, val):
+        self.address, self.tcp_port = val
 ##
 # custom validators
 def validate_host_pubkey(self):

@@ -39,6 +39,9 @@ class EphemeralAuth(object):
         self.cert_str, self.pk_str = create_cert(int(self.key_size))
         self.pubkey_str = pkey_str_to_pubkey_str(self.pk_str)
         return True
+    
+    def sign(self, msg):
+        return sign_data(self.pk_str, msg)
 
     @property
     def guid(self):

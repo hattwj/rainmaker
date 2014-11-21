@@ -12,14 +12,16 @@ from .start_tls import ServerProtocol
 from .session import Session, require_secure
 from rainmaker_app.lib.util import assign_attrs
 from rainmaker_app.lib import logger
+from rainmaker_app.model.host import Host
 log = logger.create(__name__)
 
 from rainmaker_app import app
 
 class ClientProtocol(ServerProtocol):
 
-    def __init__(self, factory):
+    def __init__(self, factory, host):
         self.factory = factory
+        self.host = host
     
     def connectionMade(self):
         ''' '''
@@ -27,7 +29,6 @@ class ClientProtocol(ServerProtocol):
         peer = self.transport.getPeer()
         self.peer_addr_port = (peer.host, peer.port,)
         d = self.version_check()
-        #d.addErrback(self.startup_failed)
         self.connecting(d)        
 
     def connecting(self, d):
@@ -58,51 +59,36 @@ class ClientPingProtocol(ClientProtocol):
         log.msg(result)
         self.transport.loseConnection()
 
-class ClientHandshakeProtocol(ClientProtocol):
-
-    def connecting(self, d):
-        print 66
-        d.addCallbacks(self.get_pubkeys, self.startup_failed)
-        
-    @defer.inlineCallbacks
-    def get_pubkeys(self):
-        result = yield self.callRemote(GetPubkeysCommand)
-        pubkeys = result['pubkeys']
-        if len(pubkeys) == 0:
-            return
-        auths = yield Authorization(where=['pubkey_str IN (?)', pubkeys], limit=1)
-        for auth in auths:
-            ClientFactory.sync(self.peer_addr_port, auth)
-
 class ClientSyncProtocol(ClientProtocol):
 
     def __init__(self, factory, auth, sync_path):
         self.factory = factory
         self.auth = auth
         self.sync_path = sync_path
-    
+
     def connecting(self, d):
         '''
             Parent commands have run and now we get to act
         '''
         self.session = Session(app.auth)
         self.session.sync_path = self.sync_path
-        d.addCallbacks(self.set_pubkey, self.startup_failed)
+        d.addCallbacks(self.setup_hosts, self.startup_failed)
         d.addCallbacks(self.start_tls, self.startup_failed)
         d.addCallbacks(self.verify_tls, self.startup_failed)
         d.addCallbacks(self.authenticate, self.startup_failed)
         d.addCallbacks(self.sync, self.startup_failed)
-
-    @defer.inlineCallbacks
-    def set_pubkey(self, result): 
+    @defer.inlineCallbacks 
+    def setup_hosts(self, result):
         '''
-            Set the certificate string for this connection
+            swap host information with server            
         '''
-        log.msg('Client: Setting pubkey')
-        kwargs ={'cert':self.auth.cert_str}
-        result = yield self.callRemote(SetPubkeyCommand, **kwargs)
-        self.session.peer_cert = result['cert']
-        defer.returnValue(True)
+        log.msg('Client: sending host info')
+        kwargs = app.tcp_server.host.to_dict(host_param_keys)
+        d = self.callRemote(SetGetHostCommand, **kwargs)
+        d.addErrback(self.startup_failed)
+        kwargs = yield d
+        self.session.host = yield Host.findOrCreate(**kwargs)
+        #defer.returnValue(True)
 
     @defer.inlineCallbacks
     def start_tls(self, result):
@@ -112,7 +98,7 @@ class ClientSyncProtocol(ClientProtocol):
         log.msg('Client: Requesting TLS')
         result = yield self.callRemote(amp.StartTLS, **self.session.certParams())
         log.msg(result)
-        defer.returnValue(True)
+        #defer.returnValue(True)
     
     @amp.StartTLS.responder
     def startTLS_responder(self):
@@ -127,33 +113,36 @@ class ClientSyncProtocol(ClientProtocol):
         result = yield self.callRemote(SecurePingCommand)
         self.connection_secure()
         log.msg('Client: We are connected securely')
-
+        #defer.returnValue(True)
     @defer.inlineCallbacks
     def authenticate(self, result):
         '''
             negotiate login details with server
         '''
         result = yield self.callRemote(AuthCommand, **self.session.authorizeParams())
+        self.session.authorize(**result)
         log.msg('We have authenticated!')
+        #defer.returnValue(True)
     @defer.inlineCallbacks
     def sync(self, result):
         '''
         '''
+        log.msg('Client: we are starting sync')
         keys = GetSyncPathCommand.arguments_keys()
         data = self.session.sync_path.to_dict(keys)
         result = yield self.callRemote(GetSyncPathCommand, **data)
-
+        #defer.returnValue(True)
+        
 class ClientFactory(protocol.ClientFactory):
     '''
         class methods provide constructors for various client actions
         - client protocol classes each provide pre-programmed functionality
     '''
-
     def __init__(self, addr_port, protocol, **kwargs):
         self.kwargs = kwargs
-        self.addr, self.port = addr_port
+        addr, port = addr_port
         self.protocol = protocol
-        app.reactor.connectTCP(self.addr, self.port, self)
+        app.reactor.connectTCP(addr, port, self)
 
     def buildProtocol(self, addr):
         return self.protocol(self, **self.kwargs)

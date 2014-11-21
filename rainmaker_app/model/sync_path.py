@@ -90,6 +90,7 @@ class SyncPath(Base):
                 h.update(bufr)
                 bufr = ''
         self.state_hash = str(h.hexdigest())    
+        self.rolling_hash = str(h.hexdigest())    
         self.state_hash_updated_at = self.time_now() 
         defer.returnValue( self.state_hash )
     
@@ -158,9 +159,10 @@ class SyncPath(Base):
             if self._count_scanned == 0:
                 yield None
             
-            # dont count dissapearing files
+            # don't count disappearing files
             self._count_scanned -= self._count_deleted
             yield self.find_deleted_my_files()
+            yield self.refresh_state_hash()
             defer.returnValue(self)
         
         def _scan_done(self):

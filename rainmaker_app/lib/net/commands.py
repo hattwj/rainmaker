@@ -14,7 +14,8 @@ def dump_resource_errors(resource):
                 "%s:%s:%s" % (k, reason, resource.to_json())
             )
     return result
-
+class ErrNotImplemented(amp.AmpError):
+    pass
 class ErrVersion(amp.AmpError):
     pass
 
@@ -84,9 +85,9 @@ class AuthCommand(amp.Command):
 
 def sync_path_params():
     return [
-        ('machine_name',              amp.String()),
-        ('rolling_hash',              amp.String()),
-        ('state_hash',              amp.String())
+        ('machine_name', amp.String()),
+        ('rolling_hash', amp.Unicode()),
+        ('state_hash',   amp.Unicode())
     ]
 
 class BaseCommand(amp.Command):
@@ -115,9 +116,66 @@ def file_params():
         ('is_dir', amp.Boolean() )
     )
 
-class PutFilesCommand(amp.Command):
-    commandName='my_files'
+class PutFilesCommand(BaseCommand):
+    commandName='put_files'
     arguments  = [
         ('files', amp.ListOf(file_params()))
     ]
 
+class ErrHostServer(amp.AmpError):
+    '''
+        Host didn't send host info when requested 
+    '''
+    pass
+class ErrHostInvalid(amp.AmpError):
+    '''
+        A host with invalid data was sent
+    '''
+    pass
+
+def host_params():
+    return [
+        ('address',  amp.String() ),
+        ('tcp_port', amp.Integer() ),
+        ('udp_port', amp.Integer() ),
+        ('pubkey_str', amp.String() ),
+        ('cert_str', amp.String() ),
+        ('signature', amp.String()  ),
+        ('signed_at', amp.Integer() )
+    ]
+
+host_param_keys = [k for k, v in host_params()]
+class SetGetHostCommand(BaseCommand):
+    '''
+    '''
+    commandName = 'set_get_host'
+    arguments = host_params()
+    response = host_params()
+    errors = {
+        ErrHostInvalid: 'Invalid host'
+    }
+
+class GetHostsCommand(BaseCommand):
+    '''
+        get one or more hosts from peer
+    '''
+    commandName = 'get_hosts'
+    arguments = [
+        ('guid', amp.String(optional=True) )
+    ] 
+    response = [
+        ('hosts', amp.ListOf(host_params()) )
+    ]
+    errors = {
+        ErrHostInvalid: 'Invalid host sent',        
+        ErrHostServer: 'missing server host info'
+    }
+
+class PutHostsCommand(BaseCommand):
+    '''
+        get one or more hosts from peer
+    '''
+    commandName = 'put_hosts'
+    arguments = [
+        ('hosts', amp.ListOf(host_params()))
+    ]

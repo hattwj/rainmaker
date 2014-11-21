@@ -21,8 +21,7 @@ class AttrsBag(object):
         attrs = object.__getattribute__(self,'attrs') 
         attrs = nested_merge( attrs, a_dict)
         object.__setattr__(self,'attrs', attrs )
-        attrs = object.__getattribute__(self,'attrs') 
-        print attrs
+        attrs = object.__getattribute__(self,'attrs')  
         # update script attributes
         self.script.attrs_update( attrs )
     

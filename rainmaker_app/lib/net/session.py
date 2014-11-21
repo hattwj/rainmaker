@@ -5,6 +5,7 @@ from passlib import exc
 from twisted.internet import defer
 
 from . commands import ErrAuthRand, ErrAuthSyncPath, ErrAuthInit, ErrAuthFail
+from rainmaker_app.model.host import Host
 
 class Session(object):
     '''
@@ -19,10 +20,10 @@ class Session(object):
     ##
     # Class Instance Variables
     ##
+    _host = None
     _sync_path = None
     _peer_rand = None
     _peer_pass = None
-    _peer_cert = None
     _encrypted_password = None
 
     def __init__(self, auth):
@@ -65,7 +66,7 @@ class Session(object):
 
     @property 
     def peer_password(self):
-        return self.peer_rand + self.peer_cert + self.sync_path.password_rw
+        return self.peer_rand + self.host_cert_str + self.sync_path.password_rw
 
     # Random string sent from remote
     @property
@@ -104,25 +105,30 @@ class Session(object):
             raise ErrAuthSyncPath('SyncPath not found')
         self._sync_path = val
     
-    # TLS Certificate String from Remote
+    # return the parameters used to start the session
+    def certParams(self):
+        return self.auth.certParams(self.host.cert_str)
+   
     @property
-    def peer_cert(self):
-        if not self._peer_cert:
-            raise ErrAuthInit('certificate not set')
-        return self._peer_cert
+    def host_cert_str(self):
+        if not self.host.cert_str:
+            raise ErrAuthInit('host cert not set')
+        return self.host.cert_str
 
-    @peer_cert.setter
-    def peer_cert(self, val):
+    @property
+    def host(self):
+        if not self._host:
+            raise ErrAuthInit('host not set')
+        return self._host
+
+    @host.setter
+    def host(self, val):
         '''
             can only be set once
         '''
-        if self._peer_cert:
-            raise ErrAuthInit('certificate already set')
-        self._peer_cert = val
-    
-    # return the parameters used to start the session
-    def certParams(self):
-        return self.auth.certParams(self.peer_cert)
+        if self._host:
+            raise ErrAuthInit('host already set')
+        self._host = val
 
 from .exceptions import AuthRequiredError
 def require_secure(func):    
@@ -135,5 +141,19 @@ def require_secure(func):
             d = func(self, *args, **kwargs)
             return d # string
         else:
-            raise AuthRequiredError('Auth required') 
+            raise AuthRequiredError('Require TLS failed') 
     return sub_require_secure
+
+def require_auth(func):    
+    ''' decorator to require authorization '''
+    def sub_require_auth(self, *args, **kwargs):
+        ''' nested func to access func parameters'''
+        t = self.session
+        if hasattr(t,'authorization') and t.authorization:
+            # run
+            d = func(self, *args, **kwargs)
+            return d # string
+        else:
+            raise AuthRequiredError('Require Auth failed') 
+    return sub_require_auth
+
