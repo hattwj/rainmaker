@@ -1,4 +1,5 @@
-from twisted.internet import defer
+import os
+from twisted.internet import defer, threads
 from twisted.internet.task import LoopingCall
 
 from ishell.console import Console
@@ -12,7 +13,6 @@ from . lib import util
 import debug_node
 
 console = Console(prompt="rainmaker ", prompt_delim="#")
-
 class FilesScanCommand(Command):
     '''
         scan a sync path or all sync paths
@@ -46,10 +46,13 @@ class DbShowCommand(Command):
         Dynamic command for showing contents of db tables
     '''
     model=None
+    model_name = None
 
     @defer.inlineCallbacks
     def run(self, line):
         records = yield self.model.all()
+        if len(records)==0:
+            print "No %s found" % self.model_name
         for record in records:
             print record
         print "\n"
@@ -58,6 +61,7 @@ class DbAddSyncPathCommand(Command):
     '''
         Add a new sync path
     '''
+    @defer.inlineCallbacks
     def run(self, line):
         password_rw = ''.join(line.split()[3:4])
         root = ' '.join(line.split()[4:])
@@ -67,11 +71,10 @@ class DbAddSyncPathCommand(Command):
         if root == '':
             print 'empty path'
             return
-        d = SyncPath.new(root=root, password_rw=password_rw)
-        d.addCallback(self.result)
-
-    def result(self, result):
-        print result
+        sp = SyncPath(root=root, password_rw=password_rw)
+        yield sp.save()
+        print sp
+        print sp.errors
         
 class StatFingerTableCommand(Command):
     '''
@@ -152,13 +155,14 @@ class NetTcpSyncCommand(Command):
     '''
     @defer.inlineCallbacks
     def run(self, line):
-        password = ''.join(line.split()[3:4])
-        if not password:
-            print 'no password'
+        root = os.path.abspath(''.join(line.split()[3:4]))
+        print root
+        if not root:
+            print 'no root'
             return
-        sync_path = yield SyncPath.find(where=["password_rw = ?",password], limit=1)
+        sync_path = yield SyncPath.find(where=["root = ?",root], limit=1)
         if not sync_path:
-            print "sync with password not found"
+            print "sync with root not found"
             return
         
         addr_port = get_addr_port(line)
@@ -241,6 +245,7 @@ for model in models_arr:
     name = util.snake_case(model.__name__)
     cmd = DbShowCommand(name, help='show records')
     cmd.model = model
+    cmd.model_name = name
     db_show_command.addChild(cmd)
 
 def run_script(console, script):

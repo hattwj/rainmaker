@@ -130,7 +130,10 @@ class ClientSyncProtocol(ClientProtocol):
         log.msg('Client: we are starting sync')
         keys = GetSyncPathCommand.arguments_keys()
         data = self.session.sync_path.to_dict(keys)
+        log.msg(data)
         result = yield self.callRemote(GetSyncPathCommand, **data)
+        log.msg(result)
+        
         #defer.returnValue(True)
         
 class ClientFactory(protocol.ClientFactory):

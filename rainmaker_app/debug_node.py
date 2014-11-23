@@ -18,6 +18,7 @@ class RainPP(protocol.ProcessProtocol):
     def errReceived(self, data):
         print "errReceived! with %d bytes!" % len(data)
         print data
+        self.data = self.data + data
     def inConnectionLost(self):
         print "inConnectionLost! stdin is closed! (we probably did it)"
     def outConnectionLost(self):

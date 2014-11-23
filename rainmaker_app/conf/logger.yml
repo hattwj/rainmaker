@@ -2,6 +2,8 @@
 
 verbosity:
     Rainmaker: 0
+    rainmaker_app.console: 0
+    rainmaker_app.debug_node: 0
     rainmaker_app.db.config: 0
     rainmaker_app.lib.net.start_tls: 0
     rainmaker_app.lib.net.clients: 0

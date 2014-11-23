@@ -1,5 +1,8 @@
 from OpenSSL import crypto, SSL
 from time import gmtime, mktime
+# https://pythonhosted.org/passlib/lib/passlib.hash.bcrypt_sha256.html
+# bcrypt with sha256 to prevent truncation
+from passlib.hash import bcrypt_sha256 as hashify
 
 def paramify( private_cert, *certs):
     return {

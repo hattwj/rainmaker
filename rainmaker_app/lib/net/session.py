@@ -1,11 +1,11 @@
 from os import urandom
 
-from passlib.hash import bcrypt as hashify
 from passlib import exc
 from twisted.internet import defer
 
 from . commands import ErrAuthRand, ErrAuthSyncPath, ErrAuthInit, ErrAuthFail
 from rainmaker_app.model.host import Host
+from . cert import hashify
 
 class Session(object):
     '''

@@ -1,0 +1,14 @@
+commands: [
+    [self,
+        start tcp,
+        'start node n1 -k 512 --dir ./tmp/app2 --tcp 8001',
+        stat_config
+    ],
+    [n1,
+        start tcp,
+        stat config,
+        'net tcp sync ./tmp/sync2 localhost:8000'
+    ]
+]
+    
+    

@@ -7,12 +7,18 @@ from . common import *
 from . my_file import MyFile
 
 from rainmaker_app.lib.lib_hash import RollingHash
+from rainmaker_app.lib.util import time_now
+from rainmaker_app.lib.net.cert import hashify
+
+HROUNDS=12
 
 class SyncPath(Base):
     ''' Model status of file system between scans '''
 
     HASMANY = ['my_files']
-    BEFORE_SAVE = ['resolve_root']
+    BEFORE_VALIDATE = ['resolve_root']
+    BEFORE_CREATE = ['_gen_pass', '_gen_guid']
+    BEFORE_SAVE = ['scan']
     ATTR_ACCESSIBLE = [
         'machine_name',
         'rolling_hash',
@@ -38,14 +44,19 @@ class SyncPath(Base):
     @defer.inlineCallbacks
     def new(klass, **kwargs):
         sync = yield klass.findOrCreate(**kwargs)
-        if not sync.guid:
-            sync.guid = urandom(80).encode('base-64')
-        if not sync.password_rw:
-            sync.password_rw = urandom(80).encode('base-64')
-        yield sync.scan()
         result = yield sync.save()
         defer.returnValue(sync)
-
+    def _gen_pass(self):
+        if not self.password_rw:
+            self.password_rw = urandom(80).encode('base-64')
+    def _gen_guid(self):
+        if not self.guid:
+            h = hashlib.md5()
+            h.update(self.password_rw[:9])
+            self.guid = h.hexdigest()
+    @property
+    def _password(self):
+        return self.password_rw[9:]
     @defer.inlineCallbacks
     def is_state_hash_stale(self):
         ''' check files for change '''
@@ -73,9 +84,7 @@ class SyncPath(Base):
     def refresh_state_hash(self, incremental = False):
         '''
             recalculate state
-        '''
-        bufr = ''
-        
+        '''        
         if incremental:
             my_files = yield MyFile.active_files_since(self.id, self.state_hash_updated_at)
         else:
@@ -84,6 +93,8 @@ class SyncPath(Base):
 
         f_ubound = len(my_files) - 1
         h = RollingHash()
+        bufr = ''
+        h.update(bufr)
         for i, f in enumerate(my_files):
             bufr += '%s-%s-%s-%s' % (f.path, f.state, f.fhash, f.is_dir)
             if len(bufr) > 4096 or i == f_ubound:
@@ -149,7 +160,7 @@ class SyncPath(Base):
 
             self._lock_scanned.acquire()
             self._reset_counters()
-            self.scan_started_at = int( round( time() * 1000 ) )  
+            self.scan_started_at = time_now()  
             
             # scan self
             for root, dirs, files in os.walk(path):
@@ -171,7 +182,6 @@ class SyncPath(Base):
             self.scanned_at = self.scan_started_at
             result = self._scan_stats()
             self._lock_scanned.release()
-            self.save()
             return result
         
         d = _scan(self)
@@ -219,6 +229,22 @@ class SyncPath(Base):
             else:
                 print 'A file that we thought was deleted still exists'
         defer.returnValue(self)
+
+def beforeValidate(sync_path):
+    return sync_path.beforeValidate()
+
+def password_rw_len_validator(sync_path):
+    if len(sync_path.password_rw) < 40:
+        sync_path.errors.add('password_rw', 'too short')
+        return False
+    if len(sync_path.password_rw) > 4000:
+        sync_path.errors.add('password_rw', 'too long')
+        return False
+    return True
+
+SyncPath.addValidator(beforeValidate)
+SyncPath.addValidator(password_rw_len_validator)
+SyncPath.validatesUniquenessOf('root')
 
 class ScannerError(Exception):
     ''' Error while scanning files '''

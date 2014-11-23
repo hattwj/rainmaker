@@ -6,6 +6,8 @@ class Base(DBObject):
     #Column names
     #columns = None
     sticky_table = False # allow console db clear
+    BEFORE_VALIDATE = None
+    AFTER_VALIDATE = None
     BEFORE_CREATE = None# Before Created, but after validation
     BEFORE_SAVE = None  # Before Saved, but after validation
     AFTER_CREATE = None
@@ -20,9 +22,7 @@ class Base(DBObject):
     data_was = None
    
     def __init__(self, **kwargs):
-        # Create attr_accessible attributes first
-        # or init will wipe them
-        self._do_attr_accessible(kwargs)
+        # Init t
         DBObject.__init__(self, **kwargs)
         # Save original values
         self._do_data_was()
@@ -51,6 +51,12 @@ class Base(DBObject):
     def afterCreate(self):
         return self.__run_hooks__(self.AFTER_CREATE)
 
+    def beforeValidate(self):
+        return self.__run_hooks__(self.BEFORE_VALIDATE)
+
+    def afterValidate(self):
+        return self.__run_hooks__(self.AFTER_VALIDATE)
+    
     @defer.inlineCallbacks
     def __run_hooks__(self, funcs):
         ''' run the included list of functions '''
@@ -120,14 +126,6 @@ class Base(DBObject):
         for k in keys:
             result[k] = getattr(self, k)
         return result
-
-    def _do_attr_accessible(self, kwargs):
-        """ Create all attr accessible attributes """
-        if self.ATTR_ACCESSIBLE:
-            for k in self.ATTR_ACCESSIBLE:
-                if k in kwargs.keys():
-                    v = kwargs.pop(k)
-                    setattr(self, k, v)
 
     def _do_data_was(self):
         ''' record the old value of the data so we can see if anything changes '''
