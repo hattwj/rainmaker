@@ -22,6 +22,7 @@ class MyFile(Base):
     CREATE_NEW_AND_SAVE = [MODIFIED, MOVED]
 
     #Defaults
+    __sync_path = None
     state = NEW
     mtime = None
     ctime = None
@@ -47,7 +48,17 @@ class MyFile(Base):
             sync_path_id
         ], orderby='path,state,fhash,is_dir')
         defer.returnValue( my_files )
-    
+
+    @property
+    def _sync_path(self):
+        if not self.__sync_path:
+            raise AttributeError('Sync path Not set')
+        return self.__sync_path
+
+    @_sync_path.setter
+    def _sync_path(self, val):
+        self.__sync_path = val
+
     @classmethod
     @defer.inlineCallbacks
     def active_files_since(klass, sync_path_id, int_date ): 
@@ -56,7 +67,7 @@ class MyFile(Base):
             klass.DELETED,
             sync_path_id,
             int_date
-        ], orderby='path,state,fhash,is_dir')
+        ], orderby='path, state, fhash, is_dir')
         defer.returnValue( my_files )
     
     def init_state(self):
@@ -110,7 +121,7 @@ class MyFile(Base):
 
     def is_new(self):
         ''' check if record is new '''
-        return self.state == self.NEW
+        return not(self.id > 0)
     
     def is_error(self):
         ''' check if record is new '''

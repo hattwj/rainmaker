@@ -10,31 +10,6 @@ q_versions = '''
         AND c.sync_path_id IN %(sync_path_ids)s
     ORDER BY m.updated_at DESC;'''
 
-'''
-    sync_path:
-        - has calculated state from all files
-        - how do we make this fast on file update?
-        - automatically every time a file changes (slow?)
-        - when were told to?
-            - after initial scan
-            - after remote update complete?
-
-        - clients tell us about remote changes
-        -   c->s: whats your sync state?
-            c->s: i have:
-                - changes
-                    - drill down to find diffs
-                        - have diffs
-                        - need diffs
-                        - have conflicts
-                - no changes
-
-    sync_path
-        dir_path
-            file_path
-                file_part
-    all of these have versions
-'''
 
 class Difference(Base):
     sticky_table = True # don't allow console db clear
@@ -42,9 +17,10 @@ class Difference(Base):
     q_difference = """
                 SELECT DISTINCT m1.id AS my_file_id
                 FROM my_files m1
-                LEFT JOIN my_files m2
+                LEFT JOIN host_files m2
                     ON m1.path = m2.path
-                    AND m1.sync_path_id != m2.sync_path_id
+                    AND m1.sync_path_id =  
+                    AND m2.sync_path_id = 
                     AND m1.fhash = m2.fhash 
                     AND m1.is_dir = m2.is_dir
                     AND m1.size = m2.size
@@ -81,4 +57,5 @@ def versions(my_file_id, sync_path_ids):
     defer.returnValue( my_files )
 
 def sql_arr(arr):
+    ''' return array as str for use in sql query '''
     return "(%s)" % ','.join( [str(i) for i in arr] )

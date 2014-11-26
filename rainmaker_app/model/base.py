@@ -22,6 +22,9 @@ class Base(DBObject):
     data_was = None
    
     def __init__(self, **kwargs):
+        
+        preload = kwargs.pop('cached_associations', None)
+        
         # Init t
         DBObject.__init__(self, **kwargs)
         # Save original values
@@ -29,6 +32,24 @@ class Base(DBObject):
         self.__run_hooks__(self.AFTER_INIT)
         if self.new_record:
             self.afterInit()
+        if preload:
+            self._loadCachedAssociations(preload)
+
+    def _loadCachedAssociations(self, assocs_dict):
+        '''
+            set values
+        '''
+        for k, v in assocs_dict.iteritems():
+            if not hasattr(self, k):
+                setattr(self, k, v)
+
+    @classmethod
+    def findOrCreate(klass, **attrs):
+        return with_cached_associations(super(Base, klass).findOrCreate, **attrs)
+    
+    @classmethod
+    def find(klass, **attrs):
+        return with_cached_associations(super(Base, klass).find, **attrs)
 
     @property 
     def new_record(self):
@@ -148,3 +169,15 @@ class Base(DBObject):
 class NoSafeColsError(Exception):
     ''' no safe cols defined for class'''
     pass
+
+
+def with_cached_associations(func, **attrs):
+    def _handle(record, **preload):
+        record._loadCachedAssociations(preload)
+        return record
+    preload = attrs.pop('cached_associations', None)
+    d = func(**attrs)
+    if preload:
+        d.addCallback(_handle, **preload)
+    return d
+

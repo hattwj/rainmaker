@@ -72,6 +72,11 @@ def init_app():
     log.msg('Generating key...')
     from .lib.net.ephemeral_auth import EphemeralAuth
     app.auth = EphemeralAuth(**app.auth_options)
+    # scan folders
+    from .model.sync_path import SyncPath
+    sync_paths = yield SyncPath.all()
+    for sync_path in sync_paths:
+        sync_path.scan()
 
 ###############################################
 def init_network():

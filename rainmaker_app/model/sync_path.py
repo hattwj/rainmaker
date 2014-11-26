@@ -192,9 +192,9 @@ class SyncPath(Base):
     def update_my_file( self, path, count):
         my_file = yield MyFile.findOrCreate( 
             path=path, 
-            sync_path_id=self.id
+            sync_path_id=self.id,
+            cached_associations={'_sync_path': self}
         )
-        
         my_file.scan()
 
         if my_file.is_stale():
@@ -230,6 +230,10 @@ class SyncPath(Base):
                 print 'A file that we thought was deleted still exists'
         defer.returnValue(self)
 
+class ScannerError(Exception):
+    ''' Error while scanning files '''
+    pass
+
 def beforeValidate(sync_path):
     return sync_path.beforeValidate()
 
@@ -244,8 +248,6 @@ def password_rw_len_validator(sync_path):
 
 SyncPath.addValidator(beforeValidate)
 SyncPath.addValidator(password_rw_len_validator)
+# TODO: add sql unique also
 SyncPath.validatesUniquenessOf('root')
 
-class ScannerError(Exception):
-    ''' Error while scanning files '''
-    pass

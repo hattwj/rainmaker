@@ -127,14 +127,16 @@ class ClientSyncProtocol(ClientProtocol):
     def sync(self, result):
         '''
         '''
-        log.msg('Client: we are starting sync')
+        # Exchange sync path details#
+        sync_path = self.session.sync_path
+        log.msg('Client: syncing  %s' % sync_path.root)
         keys = GetSyncPathCommand.arguments_keys()
-        data = self.session.sync_path.to_dict(keys)
+        data = sync_path.to_dict(keys)
         log.msg(data)
         result = yield self.callRemote(GetSyncPathCommand, **data)
         log.msg(result)
-        
-        #defer.returnValue(True)
+        # get diffs from server
+        # send diffs to server
         
 class ClientFactory(protocol.ClientFactory):
     '''
