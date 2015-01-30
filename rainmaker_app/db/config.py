@@ -57,9 +57,11 @@ MIGRATIONS = {
             )""",
     6 : """ CREATE TABLE hosts(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sync_path_id INTEGER NOT NULL,
                 address TEXT NOT NULL,
                 udp_port INTEGER NOT NULL,
                 tcp_port INTEGER NOT NULL,
+                tox_pubkey TEXT,
                 pubkey_str TEXT,
                 cert_str TEXT,
                 signature TEXT,
@@ -102,7 +104,14 @@ MIGRATIONS = {
                     AND m1.state = m2.state
                 WHERE m2.id IS NULL
                     AND m1.next_id IS NULL
-                    AND m2.next_id IS NULL"""
+                    AND m2.next_id IS NULL""",
+    10 : ''' CREATE TABLE tox_servers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ipv4 TEXT NOT NULL,
+                port INTEGER NOT NULL,
+                pubkey TEXT NOT NULL
+            )
+    '''
 }
 
 @defer.inlineCallbacks

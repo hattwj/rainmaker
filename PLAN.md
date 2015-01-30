@@ -1,25 +1,131 @@
-Most of the work left is to wire all the systems together
 Top priorities:
 - ability to send/recv pings
 - authenticate hosts on store_host
-- add hosts to dht
-
 
 List of todo items:
+
+tcp_server:
+    - authenticate connections
+    - provide sync interface
+        - send/recv files
+
+sync_path_manager:
+    - map fs_man events 
+        - tox_manager
+        - scanner
+    - params: sync_path
+    - methods:
+        - scan
+        - shutdown
+    - errors:
+        - scan aborted
+        - path missing
+
+    scanner:
+        - params: sync_path
+        - errors:
+            - path missing
+        - events:
+            - scan_complete
+            - scan_aborted
+            - scan_started
+        - methods:
+            - start/abort
+            - rescan path
+    
+    tox_manager:
+        - listen for peers
+        - listen for fs events
+        - broadcast peers
+        - broadcast fs event
+        - params: sync_path
+        - errors:
+            - NotConnected
+            - NoPeers
+        - methods: 
+            - l send_fs_event
+            - l send_peer_info
+            - delegate_authority
+        - event handlers:
+            - r store_fs_event peer_id, event_params
+            - r store_peer_info
+            - r recv_authority become primary
+        - events:
+            - r new_fs_event peer, event
+            - r new_peer peer
+        - classes:
+            fs_event
+            peer_event
+
+    sync_manager:
+        - listen for tox peer events
+        - listen for tox fs events
+        - listen for udp peer events
+        - methods:
+            - add_peer
+            - fs_event
+        - generate connection for new peers
+        - timer to regulate
+            - old/invalid peers
+            - connection attempts
+        - manage connections
+        - params: none
+
+        sync_client:
+            - authenticate peer
+            - complete sync and disconnect
+            - gather remote fs state
+            - send fs states
+            - get/send fs parts
+            - calc fs differences
+            - get/send file_parts
+            - params: sync_path, peer
+            - methods:
+                - connect
+                - disconnect
+            - errors:
+                - connection lost
+            - events:
+                sync_complete
+
+            session:
+                - hold connection session info
+                - params: client/server connection
+            
+            client_authenticator:
+                - authenticate session
+                - params: client_connection
+                - events:
+                    auth_complete
+                - errors:
+                    auth_failed
+            
+            client_file_state_sync:
+                - sync fs states
+                - log new_files, conflicts
+                - params: client_connection
+
+            client_file_part_sync:
+                - get missing file parts data
+                - params: client_connection
+
+
+    fs_manager:
+        - update db on fs changes
+        - params: sync_path
+        - methods:
+            - start / stop
+            - ignore_file
+        - events:
+            - file_change_event event
+        - classes:
+            - ignored_file
+            - file_event
 
 udp_multicast:
     - periodically send out a ping on multicast
     - acts as central transport/handler for commands
     - everything sent is signed by Authorization
-
-finger_table:
-    - reserve list of hosts to use for dht
-    - hosts only added when verified
-
-dht:
-    - split into buckets
-    - keeps network map in memory
-    - periodically send ping to all hosts
 
 fs_events:
     - send 'recv_changes' to peers on fs event

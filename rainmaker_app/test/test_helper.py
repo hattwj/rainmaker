@@ -3,18 +3,9 @@ import shutil
 import yaml
 import sys
 
-from rainmaker_app.tasks import install
-from rainmaker_app.lib import logger, util
-from rainmaker_app.lib import FsActions
-
-import rainmaker_app
 from rainmaker_app import boot, app
 
 #boot.pre_init()
-
-logger.config['level']='warn'
-logger.verbosity = 0
-logger.create('Tests',level='warn')
 
 root = os.path.abspath(os.path.join(os.path.dirname(__file__),'..') )
 
@@ -26,7 +17,25 @@ backups_dir = os.path.join(temp_dir, 'backups')
 data_dir = os.path.join(temp_dir, 'sync1')
 db_path = os.path.join(user_dir, 'test.sqlite')
 
+app.paths = [os.path.join(root, 'conf')]
+app.root = root
+app.user_dir = user_dir
+app.temp_dir = temp_dir
+app.events_dir = events_dir
+app.backups_dir = backups_dir
+app.data_dir = data_dir
+app.db_path = db_path
+app.config_path = app.paths[0]
+
+from rainmaker_app.tasks.install import run as install
+from rainmaker_app.lib import logger, util
+from rainmaker_app.lib.fs_actions import FsActions
+import rainmaker_app
+
 fs = FsActions()
+logger.config['level']='warn'
+logger.verbosity = 0
+logger.create('Tests',level='warn')
 
 from random import random
 def write_many(path, count=10):
@@ -47,7 +56,7 @@ def clean_temp_dir(tdirs=[],create=True):
     fs.rmdir(backups_dir)
     fs.rmdir(data_dir)
     if create:
-        install(user_dir)
+        install()
         fs.mkdir(backups_dir)
         fs.mkdir(events_dir)
         fs.mkdir(data_dir)

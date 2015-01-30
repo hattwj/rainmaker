@@ -170,14 +170,14 @@ class MyFile(Base):
             if has_changed and self.is_new() == False:
                 self.state = self.MODIFIED
         
-        self.scanned_at = self.time_now()
+        self.scanned_at = time_now()
         try:
             _scan(self)
         except:
             if not os.path.exists( self.path ):
                 self.state = self.DELETED
             else:
-                self,state = self.ERROR
+                self.state = self.ERROR
 
 @defer.inlineCallbacks
 def must_be_unique(my_file):

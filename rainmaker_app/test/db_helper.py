@@ -8,6 +8,7 @@ from twistar.dbconfig.base import InteractionBase
 
 from rainmaker_app.db.config import initDB, tearDownDB
 from rainmaker_app.db.models import *
+from rainmaker_app.db import models
 
 @inlineCallbacks
 def load_fixture(test_name, data):

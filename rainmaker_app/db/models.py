@@ -7,9 +7,10 @@ from rainmaker_app.model.authorization import Authorization
 from rainmaker_app.model.host import Host
 from rainmaker_app.model.host_sync_path import HostSyncPath
 from rainmaker_app.model.host_file import HostFile
+from rainmaker_app.model.tox_server import ToxServer
 
 models_arr = [ 
-    SchemaMigration, MyFile, SyncPath, Difference,
+    ToxServer, SchemaMigration, MyFile, SyncPath, Difference,
     SyncComparison, Authorization, 
     Host, HostSyncPath, HostFile
 ]
