@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" class="client-nojs">
+<head>
+<title>Nodes - Tox Wiki</title>
+<meta charset="UTF-8" />
+<meta name="generator" content="MediaWiki 1.19.14+dfsg-1" />
+<link rel="shortcut icon" href="/favicon.ico" />
+<link rel="search" type="application/opensearchdescription+xml" href="/opensearch_desc.php" title="Tox Wiki (en)" />
+<link rel="EditURI" type="application/rsd+xml" href="https://wiki.tox.im/api.php?action=rsd" />
+<link rel="alternate" type="application/atom+xml" title="Tox Wiki Atom feed" href="/index.php?title=Special:RecentChanges&amp;feed=atom" />
+<link rel="stylesheet" href="https://wiki.tox.im/load.php?debug=false&amp;lang=en&amp;modules=mediawiki.legacy.commonPrint%2Cshared%7Cskins.vector&amp;only=styles&amp;skin=vector&amp;*" />
+<meta name="ResourceLoaderDynamicStyles" content="" />
+<link rel="stylesheet" href="https://wiki.tox.im/load.php?debug=false&amp;lang=en&amp;modules=site&amp;only=styles&amp;skin=vector&amp;*" />
+<style>a:lang(ar),a:lang(ckb),a:lang(fa),a:lang(kk-arab),a:lang(mzn),a:lang(ps),a:lang(ur){text-decoration:none}a.new,#quickbar a.new{color:#ba0000}
+
+/* cache key: my_wiki:resourceloader:filter:minify-css:7:c88e2bcd56513749bec09a7e29cb3ffa */
+</style>
+
+<script src="https://wiki.tox.im/load.php?debug=false&amp;lang=en&amp;modules=startup&amp;only=scripts&amp;skin=vector&amp;*"></script>
+<script>if(window.mw){
+mw.config.set({"wgCanonicalNamespace":"","wgCanonicalSpecialPageName":false,"wgNamespaceNumber":0,"wgPageName":"Nodes","wgTitle":"Nodes","wgCurRevisionId":304,"wgArticleId":2,"wgIsArticle":true,"wgAction":"view","wgUserName":null,"wgUserGroups":["*"],"wgCategories":[],"wgBreakFrames":false,"wgPageContentLanguage":"en","wgSeparatorTransformTable":["",""],"wgDigitTransformTable":["",""],"wgRelevantPageName":"Nodes","wgRestrictionEdit":["sysop"],"wgRestrictionMove":["sysop"]});
+}</script><script>if(window.mw){
+mw.loader.implement("user.options",function($){mw.user.options.set({"ccmeonemails":0,"cols":80,"date":"default","diffonly":0,"disablemail":0,"disablesuggest":0,"editfont":"default","editondblclick":0,"editsection":1,"editsectiononrightclick":0,"enotifminoredits":0,"enotifrevealaddr":0,"enotifusertalkpages":1,"enotifwatchlistpages":0,"extendwatchlist":0,"externaldiff":0,"externaleditor":0,"fancysig":0,"forceeditsummary":0,"gender":"unknown","hideminor":0,"hidepatrolled":0,"highlightbroken":1,"imagesize":2,"justify":0,"math":1,"minordefault":0,"newpageshidepatrolled":0,"nocache":0,"noconvertlink":0,"norollbackdiff":0,"numberheadings":0,"previewonfirst":0,"previewontop":1,"quickbar":5,"rcdays":7,"rclimit":50,"rememberpassword":0,"rows":25,"searchlimit":20,"showhiddencats":0,"showjumplinks":1,"shownumberswatching":1,"showtoc":1,"showtoolbar":1,"skin":"vector","stubthreshold":0,"thumbsize":2,"underline":2,"uselivepreview":0,"usenewrc":0,"watchcreations":0,"watchdefault":0,"watchdeletion":0,
+"watchlistdays":3,"watchlisthideanons":0,"watchlisthidebots":0,"watchlisthideliu":0,"watchlisthideminor":0,"watchlisthideown":0,"watchlisthidepatrolled":0,"watchmoves":0,"wllimit":250,"variant":"en","language":"en","searchNs0":true,"searchNs1":false,"searchNs2":false,"searchNs3":false,"searchNs4":false,"searchNs5":false,"searchNs6":false,"searchNs7":false,"searchNs8":false,"searchNs9":false,"searchNs10":false,"searchNs11":false,"searchNs12":false,"searchNs13":false,"searchNs14":false,"searchNs15":false});;},{},{});mw.loader.implement("user.tokens",function($){mw.user.tokens.set({"editToken":"+\\","watchToken":false});;},{},{});
+
+/* cache key: my_wiki:resourceloader:filter:minify-js:7:9983699ab6150ffa89a90653b2338ac8 */
+}</script>
+<script>if(window.mw){
+mw.loader.load(["mediawiki.page.startup","mediawiki.legacy.wikibits","mediawiki.legacy.ajax"]);
+}</script>
+<!--[if lt IE 7]><style type="text/css">body{behavior:url("/skins/vector/csshover.min.htc")}</style><![endif]--></head>
+<body class="mediawiki ltr sitedir-ltr ns-0 ns-subject page-Nodes skin-vector action-view">
+		<div id="mw-page-base" class="noprint"></div>
+		<div id="mw-head-base" class="noprint"></div>
+		<!-- content -->
+		<div id="content" class="mw-body">
+			<a id="top"></a>
+			<div id="mw-js-message" style="display:none;"></div>
+						<!-- firstHeading -->
+			<h1 id="firstHeading" class="firstHeading">
+				<span dir="auto">Nodes</span>
+			</h1>
+			<!-- /firstHeading -->
+			<!-- bodyContent -->
+			<div id="bodyContent">
+								<!-- tagline -->
+				<div id="siteSub">From Tox Wiki</div>
+				<!-- /tagline -->
+								<!-- subtitle -->
+				<div id="contentSub"></div>
+				<!-- /subtitle -->
+																<!-- jumpto -->
+				<div id="jump-to-nav" class="mw-jump">
+					Jump to: <a href="#mw-head">navigation</a>,
+					<a href="#p-search">search</a>
+				</div>
+				<!-- /jumpto -->
+								<!-- bodycontent -->
+				<div id="mw-content-text" lang="en" dir="ltr" class="mw-content-ltr"><p>In order to facilitate quick connections with other people using Tox, and to make life easier, Tox employs bootstrap nodes that each client connects to in order to retrieve a list of current clients connected to the pool. Below are a list of active nodes that you can use to connect to. For security reasons, this article is locked and only administrators can edit the list. If you have a node you want to add, please contact <a rel="nofollow" class="external text" href="http://wiki.tox.im/index.php?title=Special%3AListUsers&amp;username=&amp;group=sysop&amp;limit=50">an admin</a>. Want to help out by running a node? Checkout out <a href="/Run_a_node" title="Run a node"> Running a node</a>.
+</p>
+<table border="0" cellpadding="10" cellspacing="0" style="color:#fff;background-color:#000;text-align:center;">
+<tr>
+<th>IPv4
+</th>
+<th>IPv6
+</th>
+<th>port
+</th>
+<th>client id
+</th>
+<th>maintainer
+</th>
+<th>location
+</th>
+<th>STATUS
+</th></tr>
+<tr style="color:#000;background-color:#aafaaa;">
+<td>192.254.75.102
+</td>
+<td>2607:5600:284::2
+</td>
+<td>33445
+</td>
+<td>951C88B7E75C867418ACDB5D273821372BB5BD652740BCDF623A4FA293E75D2F
+</td>
+<td>Tox RELENG
+</td>
+<td>US
+</td>
+<td>UP
+</td></tr>
+<tr style="color:#000;background-color:#aafaaa;">
+<td>144.76.60.215
+</td>
+<td>2a01:4f8:191:64d6::1
+</td>
+<td>33445
+</td>
+<td>04119E835DF3E78BACF0F84235B300546AF8B936F035185E2A8E9E0A67C8924F
+</td>
+<td>sonOfRa
+</td>
+<td>DE
+</td>
+<td>UP
+</td></tr>
+<tr style="color:#000;background-color:#aafaaa;">
+<td>23.226.230.47
+</td>
+<td>2604:180:1::3ded:b280
+</td>
+<td>33445
+</td>
+<td>A09162D68618E742FFBCA1C2C70385E6679604B2D80EA6E84AD0996A1AC8A074
+</td>
+<td>stal
+</td>
+<td>US
+</td>
+<td>UP
+</td></tr>
+<tr style="color:#000;background-color:#aafaaa;">
+<td>178.62.125.224
+</td>
+<td>2a03:b0c0:1:d0::178:6001
+</td>
+<td>33445
+</td>
+<td>10B20C49ACBD968D7C80F2E8438F92EA51F189F4E70CFBBB2C2C8C799E97F03E
+</td>
+<td>astonex
+</td>
+<td>US
+</td>
+<td>UP
+</td></tr>
+<tr style="color:#000;background-color:#aafaaa;">
+<td>178.21.112.187
+</td>
+<td>2a02:2308::216:3eff:fe82:eaef
+</td>
+<td>33445
+</td>
+<td>4B2C19E924972CB9B57732FB172F8A8604DE13EEDA2A6234E348983344B23057
+</td>
+<td>SylvieLorxu
+</td>
+<td>NL
+</td>
+<td>UP
+</td></tr>
+<tr style="color:#000;background-color:#aafaaa;">
+<td>195.154.119.113
+</td>
+<td>2001:bc8:3698:101::1
+</td>
+<td>33445
+</td>
+<td>E398A69646B8CEACA9F0B84F553726C1C49270558C57DF5F3C368F05A7D71354
+</td>
+<td>Munrek
+</td>
+<td>FR
+</td>
+<td>UP
+</td></tr>
+<tr style="color:#000;background-color:#aafaaa;">
+<td>192.210.149.121
+</td>
+<td>NONE
+</td>
+<td>33445
+</td>
+<td>F404ABAA1C99A9D37D61AB54898F56793E1DEF8BD46B1038B9D822E8460FAB67
+</td>
+<td>nurupo
+</td>
+<td>US
+</td>
+<td>UP
+</td></tr>
+<tr style="color:#000;background-color:#aafaaa;">
+<td>104.219.184.206
+</td>
+<td>NONE
+</td>
+<td>443
+</td>
+<td>8CD087E31C67568103E8C2A28653337E90E6B8EDA0D765D57C6B5172B4F1F04C
+</td>
+<td>Jfreegman
+</td>
+<td>US
+</td>
+<td>UP
+</td></tr>
+<tr style="color:#000;background-color:#aafaaa;">
+<td>76.191.23.96
+</td>
+<td>NONE
+</td>
+<td>33445
+</td>
+<td>93574A3FAB7D612FEA29FD8D67D3DD10DFD07A075A5D62E8AF3DD9F5D0932E11
+</td>
+<td>bunslow
+</td>
+<td>US
+</td>
+<td>UP
+</td></tr>
+<tr style="color:#000;background-color:#aafaaa;">
+<td>46.38.239.179
+</td>
+<td>NONE
+</td>
+<td>33445
+</td>
+<td>F5A1A38EFB6BD3C2C8AF8B10D85F0F89E931704D349F1D0720C3C4059AF2440A
+</td>
+<td>Martin Schröder
+</td>
+<td>DE
+</td>
+<td>UP
+</td></tr>
+<tr style="color:#000;background-color:#aafaaa;">
+<td>178.62.250.138
+</td>
+<td>2a03:b0c0:2:d0::16:1
+</td>
+<td>33445
+</td>
+<td>788236D34978D1D5BD822F0A5BEBD2C53C64CC31CD3149350EE27D4D9A2F9B6B
+</td>
+<td>Impyy
+</td>
+<td>NL
+</td>
+<td>UP
+</td></tr>
+<tr style="color:#000;background-color:#aafaaa;">
+<td>78.225.128.39
+</td>
+<td>NONE
+</td>
+<td>33445
+</td>
+<td>7A2306BFBA665E5480AE59B31E116BE9C04DCEFE04D9FE25082316FA34B4DA0C
+</td>
+<td>Thierry Thomas
+</td>
+<td>FR
+</td>
+<td>UP
+</td></tr>
+<tr style="color:#000;background-color:#aafaaa;">
+<td>130.133.110.14
+</td>
+<td>2001:6f8:1c3c:babe::14:1
+</td>
+<td>33445
+</td>
+<td>461FA3776EF0FA655F1A05477DF1B3B614F7D6B124F7DB1DD4FE3C08B03B640F
+</td>
+<td>Manolis
+</td>
+<td>DE
+</td>
+<td>UP
+</td></tr>
+<tr style="color:#000;background-color:#aafaaa;">
+<td>104.167.101.29
+</td>
+<td>NONE
+</td>
+<td>33445
+</td>
+<td>5918AC3C06955962A75AD7DF4F80A5D7C34F7DB9E1498D2E0495DE35B3FE8A57
+</td>
+<td>noisykeyboard
+</td>
+<td>CA
+</td>
+<td>UP
+</td></tr>
+<tr style="color:#000;background-color:#aafaaa;">
+<td>195.154.109.148
+</td>
+<td>NONE
+</td>
+<td>33445
+</td>
+<td>391C96CB67AE893D4782B8E4495EB9D89CF1031F48460C06075AA8CE76D50A21
+</td>
+<td>aceawan
+</td>
+<td>FR
+</td>
+<td>UP
+</td></tr>
+<tr style="color:#000;background-color:#aafaaa;">
+<td>192.3.173.88
+</td>
+<td>NONE
+</td>
+<td>33445
+</td>
+<td>3E1FFDEB667BFF549F619EC6737834762124F50A89C8D0DBF1DDF64A2DD6CD1B
+</td>
+<td>pastly
+</td>
+<td>US
+</td>
+<td>UP
+</td></tr>
+<tr style="color:#000;background-color:#aafaaa;">
+<td>205.185.116.116
+</td>
+<td>NONE
+</td>
+<td>33445
+</td>
+<td>A179B09749AC826FF01F37A9613F6B57118AE014D4196A0E1105A98F93A54702
+</td>
+<td>Busindre
+</td>
+<td>US
+</td>
+<td>UP
+</td></tr>
+<tr style="color:#000;background-color:#aafaaa;">
+<td>198.98.51.198
+</td>
+<td>2605:6400:1:fed5:22:45af:ec10:f329
+</td>
+<td>33445
+</td>
+<td>1D5A5F2F5D6233058BF0259B09622FB40B482E4FA0931EB8FD3AB8E7BF7DAF6F
+</td>
+<td>Busindre
+</td>
+<td>US
+</td>
+<td>UP
+</td></tr>
+<tr style="color:#000;background-color:#aafaaa;">
+<td>80.232.246.79
+</td>
+<td>NONE
+</td>
+<td>33445
+</td>
+<td>0B8DCEAA7BDDC44BB11173F987CAE3566A2D7057D8DD3CC642BD472B9391002A
+</td>
+<td>fUNKIAM
+</td>
+<td>LV
+</td>
+<td>UP
+</td></tr>
+<tr style="color:#000;background-color:#aafaaa;">
+<td>108.61.165.198
+</td>
+<td>NONE
+</td>
+<td>33445
+</td>
+<td>8E7D0B859922EF569298B4D261A8CCB5FEA14FB91ED412A7603A585A25698832
+</td>
+<td>ray65536
+</td>
+<td>NL
+</td>
+<td>UP
+</td></tr></table><b>
+<ul><li> For most cli clients, you can connect to these public nodes with: <code>/connect IPv4 PORT ID</code> or <code>/connect IPv6 PORT ID</code></b>
+</li></ul>
+
+<!-- 
+NewPP limit report
+Preprocessor node count: 1/1000000
+Post‐expand include size: 0/2097152 bytes
+Template argument size: 0/2097152 bytes
+Expensive parser function count: 0/100
+-->
+
+<!-- Saved in parser cache with key my_wiki:pcache:idhash:2-0!*!0!*!*!*!* and timestamp 20150129222652 -->
+</div>				<!-- /bodycontent -->
+								<!-- printfooter -->
+				<div class="printfooter">
+				Retrieved from "<a href="https://wiki.tox.im/index.php?title=Nodes&amp;oldid=304">https://wiki.tox.im/index.php?title=Nodes&amp;oldid=304</a>"				</div>
+				<!-- /printfooter -->
+												<!-- catlinks -->
+				<div id='catlinks' class='catlinks catlinks-allhidden'></div>				<!-- /catlinks -->
+												<div class="visualClear"></div>
+				<!-- debughtml -->
+								<!-- /debughtml -->
+			</div>
+			<!-- /bodyContent -->
+		</div>
+		<!-- /content -->
+		<!-- header -->
+		<div id="mw-head" class="noprint">
+			
+<!-- 0 -->
+<div id="p-personal" class="">
+	<h5>Personal tools</h5>
+	<ul>
+		<li id="pt-login"><a href="/index.php?title=Special:UserLogin&amp;returnto=Nodes" title="You are encouraged to log in; however, it is not mandatory [o]" accesskey="o">Log in</a></li>
+	</ul>
+</div>
+
+<!-- /0 -->
+			<div id="left-navigation">
+				
+<!-- 0 -->
+<div id="p-namespaces" class="vectorTabs">
+	<h5>Namespaces</h5>
+	<ul>
+					<li  id="ca-nstab-main" class="selected"><span><a href="/Nodes"  title="View the content page [c]" accesskey="c">Page</a></span></li>
+					<li  id="ca-talk" class="new"><span><a href="/index.php?title=Talk:Nodes&amp;action=edit&amp;redlink=1"  title="Discussion about the content page [t]" accesskey="t">Discussion</a></span></li>
+			</ul>
+</div>
+
+<!-- /0 -->
+
+<!-- 1 -->
+<div id="p-variants" class="vectorMenu emptyPortlet">
+	<h4>
+		</h4>
+	<h5><span>Variants</span><a href="#"></a></h5>
+	<div class="menu">
+		<ul>
+					</ul>
+	</div>
+</div>
+
+<!-- /1 -->
+			</div>
+			<div id="right-navigation">
+				
+<!-- 0 -->
+<div id="p-views" class="vectorTabs">
+	<h5>Views</h5>
+	<ul>
+					<li id="ca-view" class="selected"><span><a href="/Nodes" >Read</a></span></li>
+					<li id="ca-viewsource"><span><a href="/index.php?title=Nodes&amp;action=edit"  title="This page is protected.&#10;You can view its source [e]" accesskey="e">View source</a></span></li>
+					<li id="ca-history" class="collapsible"><span><a href="/index.php?title=Nodes&amp;action=history"  title="Past revisions of this page [h]" accesskey="h">View history</a></span></li>
+			</ul>
+</div>
+
+<!-- /0 -->
+
+<!-- 1 -->
+<div id="p-cactions" class="vectorMenu emptyPortlet">
+	<h5><span>Actions</span><a href="#"></a></h5>
+	<div class="menu">
+		<ul>
+					</ul>
+	</div>
+</div>
+
+<!-- /1 -->
+
+<!-- 2 -->
+<div id="p-search">
+	<h5><label for="searchInput">Search</label></h5>
+	<form action="/index.php" id="searchform">
+				<div>
+			<input type="search" name="search" title="Search Tox Wiki [f]" accesskey="f" id="searchInput" />			<input type="submit" name="go" value="Go" title="Go to a page with this exact name if exists" id="searchGoButton" class="searchButton" />			<input type="submit" name="fulltext" value="Search" title="Search the pages for this text" id="mw-searchButton" class="searchButton" />					<input type='hidden' name="title" value="Special:Search"/>
+		</div>
+	</form>
+</div>
+
+<!-- /2 -->
+			</div>
+		</div>
+		<!-- /header -->
+		<!-- panel -->
+			<div id="mw-panel" class="noprint">
+				<!-- logo -->
+					<div id="p-logo"><a style="background-image: url(/skins/common/images/tox_wiki_logo.png);" href="/Main_Page"  title="Visit the main page"></a></div>
+				<!-- /logo -->
+				
+<!-- navigation -->
+<div class="portal" id='p-navigation'>
+	<h5>Navigation</h5>
+	<div class="body">
+		<ul>
+			<li id="n-mainpage-description"><a href="/Main_Page" title="Visit the main page [z]" accesskey="z">Main page</a></li>
+			<li id="n-recentchanges"><a href="/Special:RecentChanges" title="A list of recent changes in the wiki [r]" accesskey="r">Recent changes</a></li>
+			<li id="n-randompage"><a href="/Special:Random" title="Load a random page [x]" accesskey="x">Random page</a></li>
+		</ul>
+	</div>
+</div>
+
+<!-- /navigation -->
+
+<!-- SEARCH -->
+
+<!-- /SEARCH -->
+
+<!-- TOOLBOX -->
+<div class="portal" id='p-tb'>
+	<h5>Tools</h5>
+	<div class="body">
+		<ul>
+			<li id="t-whatlinkshere"><a href="/Special:WhatLinksHere/Nodes" title="A list of all wiki pages that link here [j]" accesskey="j">What links here</a></li>
+			<li id="t-recentchangeslinked"><a href="/Special:RecentChangesLinked/Nodes" title="Recent changes in pages linked from this page [k]" accesskey="k">Related changes</a></li>
+			<li id="t-specialpages"><a href="/Special:SpecialPages" title="A list of all special pages [q]" accesskey="q">Special pages</a></li>
+			<li><a href="/index.php?title=Nodes&amp;printable=yes" rel="alternate">Printable version</a></li>
+			<li id="t-permalink"><a href="/index.php?title=Nodes&amp;oldid=304" title="Permanent link to this revision of the page">Permanent link</a></li>
+		</ul>
+	</div>
+</div>
+
+<!-- /TOOLBOX -->
+
+<!-- LANGUAGES -->
+
+<!-- /LANGUAGES -->
+			</div>
+		<!-- /panel -->
+		<!-- footer -->
+		<div id="footer">
+							<ul id="footer-info">
+											<li id="footer-info-lastmod"> This page was last modified on 29 January 2015, at 17:26.</li>
+											<li id="footer-info-viewcount">This page has been accessed 458,960 times.</li>
+									</ul>
+							<ul id="footer-places">
+											<li id="footer-places-privacy"><a href="/Tox_Wiki:Privacy_policy" title="Tox Wiki:Privacy policy">Privacy policy</a></li>
+											<li id="footer-places-about"><a href="/Tox_Wiki:About" title="Tox Wiki:About">About Tox Wiki</a></li>
+											<li id="footer-places-disclaimer"><a href="/Tox_Wiki:General_disclaimer" title="Tox Wiki:General disclaimer">Disclaimers</a></li>
+									</ul>
+										<ul id="footer-icons" class="noprint">
+					<li id="footer-poweredbyico">
+						<a href="//www.mediawiki.org/"><img src="/skins/common/images/poweredby_mediawiki_88x31.png" alt="Powered by MediaWiki" width="88" height="31" /></a>
+					</li>
+				</ul>
+						<div style="clear:both"></div>
+		</div>
+		<!-- /footer -->
+		<script src="https://wiki.tox.im/load.php?debug=false&amp;lang=en&amp;modules=skins.vector&amp;only=scripts&amp;skin=vector&amp;*"></script>
+<script>if(window.mw){
+mw.loader.load(["mediawiki.user","mediawiki.page.ready"], null, true);
+}</script>
+<script src="https://wiki.tox.im/load.php?debug=false&amp;lang=en&amp;modules=site&amp;only=scripts&amp;skin=vector&amp;*"></script>
+<!-- Served in 0.017 secs. -->
+	</body>
+</html>

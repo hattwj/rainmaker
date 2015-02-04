@@ -8,20 +8,16 @@ from rainmaker_app.model.tox_server import ToxServer
 
 
 @defer.inlineCallbacks
-def configure():
+def configure(**opts):
     # load settings
-    conf = app.tox_settings
-    for k, v in app.tox_settings.iteritems():
+    for k, v in opts.iteritems():
         setattr(tox.tox_env, k, v)
 
-    # instantiate servers
-    tox.tox_env.servers = tox.tox_ring.ToxServers()
     # check db
     tox_servers = yield ToxServer.all()
     # load server data
     if not tox_servers:
-        print('Downloading Tox server list')
-        nodes = tox.tox_updater.fetch()
+        nodes = tox.tox_updater.fetch(opts.get('tox_html', None))
         if not nodes:
             print('Unable to find any nodes')
             exit()
@@ -34,5 +30,5 @@ def configure():
         print('Unable to find any nodes')
         exit()
     for ts in tox_servers:
-        tox.tox_env.servers.add(ts.ipv4, ts.port, ts.pubkey)
+        tox.tox_env.add_server(ts.ipv4, ts.port, ts.pubkey)
     print('Found %s tox servers' % len(tox_servers))

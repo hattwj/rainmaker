@@ -24,8 +24,7 @@ def spin(stop=threading.Event):
             sys.stdout.flush()
             time.sleep(0.1)
 
-def fetch():
-
+def download():
     print("Downloading")
     stop = threading.Event()
     spinner = threading.Thread(target=spin, args=(stop,))
@@ -38,10 +37,17 @@ def fetch():
         print("Couldn't download")
         stop.set()
         return
-
+    
     stop.set()
     sys.stdout.write("\b")
     sys.stdout.flush()
+
+    return raw_page
+
+def fetch(raw_page=None):
+    if raw_page is None:
+        raw_page = download()
+
     print("Parsing")
 
     # Get rid of everything around the table

@@ -67,13 +67,15 @@ def clean_temp_dir(tdirs=[],create=True):
         if create:
             fs.mkdir(tdir)
 
-def load(path,abspath=False,from_dir=None):
+def load(path,abspath=False,from_dir=None, raw=False):
     ''' Load yml path rel to root '''
     from_dir = from_dir if from_dir else root
     if not abspath: 
         path = ('%s/%s' % (from_dir,path)).split('/') 
         path = os.path.sep.join(path)
     with open( path,'r') as f: 
+        if raw:
+            return f.read()
         data=yaml.safe_load(f.read())
     return data
 
