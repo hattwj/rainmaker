@@ -22,7 +22,9 @@ MIGRATIONS = {
                 state_hash_updated_at INTEGER,
                 scanning BOOLEAN,
                 listening BOOLEAN,
-                updating BOOLEAN
+                updating BOOLEAN,
+                tox_primary_bot_data BLOB DEFAULT NULL,
+                tox_sync_bot_data BLOB DEFAULT NULL
             )""",
     2 : """ CREATE TABLE my_files (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

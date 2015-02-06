@@ -57,10 +57,11 @@ class EventHandler(object):
         self.parent = parent
         self.__cmds__ = {}
     
-    def call_event(self, name, params):
+    def call_event(self, name, params=None):
         '''
             Call all functions for event name
         '''
+        params = {} if params is None else params
         event = Event(name, params, self.parent)
         funcs = self.__cmds__.get(name, None)
         if funcs is None:
@@ -75,7 +76,8 @@ class EventHandler(object):
         '''
             Method called when no registered handlers
         '''
-        print('no handlers for %s' % event.name)
+        pass
+        #print('no handlers for %s' % event.name)
 
     def register(self, name, func):
         '''
@@ -145,43 +147,15 @@ def require_auth(func):
             raise tox_errors.ToxAuthorizationError()
         func(self, event)
     return wrapper
-'''
-on_search failed
-    - set state                   - 0
-on_connect_timed_out
-    start trying_to_connect       - 1
-
-start:
-    start loop
-        - runlevels
-            0 - stop
-            1 - try to connect
-                up:
-                    conn to rand_server
-                    yield  start_conn_wait
-                down:
-                    stop_conn_wait
-                    disconnect
-            3 - look for primary
-                up:
-                    start cc_do_loop
-                    yield search 1/0
-                down:
-                    stop cc_do_loop
-                    stop search
-            5 - maintain primary
-                up: 
-                    start cc_do loop
-                    yield start maintain loop
-                down:
-                    stop maintain loop
-            6 - cc, do, idle
-                up/down: None
-'''
 
 class RunLevel(object):
-
+    '''
+        Generic run_level for state machine
+    '''
     def __init_vars__(self):
+        '''
+            Initialize vars
+        '''
         self.running = False
         self.should_run = True
         self.should_wait = True
@@ -199,14 +173,23 @@ class RunLevel(object):
     
     @property
     def status_changed(self):
+        '''
+            Has status changed?
+        '''
         return self.prev_action != self.action
 
     def loop(self):
+        '''
+            Do loop once, record result
+        '''
         self.prev_action = self.action
         self.action = self.__loop__()
         return self.action
 
     def __loop__(self):
+        '''
+            Do loop
+        '''
         if self.running and self.should_run:
             if self.is_valid():
                 return StateMachine.DO_NEXT
@@ -258,8 +241,9 @@ class StateMachine(object):
     DO_WAIT     = 2
     DID_RESTART = 3
     DO_NEXT     = 4
-
-    IGNORES = [] #[DID_NO_OP, DO_WAIT, DO_NEXT]
+    
+    # Filter out these events
+    IGNORES = [DID_NO_OP, DO_WAIT]#, DO_NEXT]
 
     ACTION_NAMES = {
         DID_NO_OP:    'ignoring' ,
@@ -270,7 +254,7 @@ class StateMachine(object):
         DO_NEXT:      'completed'
     }
 
-    def __init__(self, wait_time=0.02):
+    def __init__(self, wait_time=1):
         self.run_levels = []
         self.wait_time = wait_time
         
@@ -291,12 +275,12 @@ class StateMachine(object):
             run_level.should_run = self.do_next 
             action = run_level.loop()
             if run_level.status_changed and not self.level_filter(action):
-                self.level_changed(action, run_level.name)
+                self.level_changed(run_level.name, run_level.action, run_level.prev_action)
             if action != self.DO_NEXT:
                 self.do_next = False
                 levels = []
                 for jdx, level in enumerate(self.run_levels):
-                    if jdx > idx:
+                    if jdx > idx and level.running:
                         levels.append(level)
                 for level in reversed(levels):
                     level.should_run = False
@@ -308,7 +292,7 @@ class StateMachine(object):
     def level_filter(self, action):
         return action in self.IGNORES
 
-    def level_changed(self, action, name):
+    def level_changed(self, name, action, prev_action):
         '''
             Override level changed event
         '''
@@ -322,6 +306,8 @@ class StateMachine(object):
         return False
 
     def add(self, run_level):
+        if not hasattr(run_level, 'should_run'):
+            raise AttributeError('Not a run level')
         self.run_levels.append(run_level)
 
     def stop(self):
@@ -344,26 +330,51 @@ class ToxBase(Tox):
             self.load(data)
         # events received from tox client
         self.router = EventHandler(self)
-        # events to send up
+        # events handler
         self.events = EventHandler(self)
+        # connection state manager
         self.state_machine = StateMachine()
         self.state_machine.add(self.__conn_run_level__())
         self.start = self.state_machine.start
         self.stop = self.state_machine.stop
-        
+        self.state_machine.level_changed = self.state_level_changed
+
+    def state_level_changed(self, name, code, prev_code):
+        print('%s: %s %s' % (self.__class__.__name__, StateMachine.ACTION_NAMES[code], name)) 
+        ename = '%s_%s' % (name, StateMachine.ACTION_NAMES[code])
+        self.events.call_event(ename)
+
     def __conn_run_level__(self):
+        from threading import Thread
+        from time import sleep
+        
+        def _tox_do():
+            # TODO: do_interval always returns 50
+            #if self.do_interval() < 60:
+            #    self.do()
+            while True:
+                self.do()
+                sleep(0.04)
+                if not run_level.should_run:
+                    break
+        
         def _start():
             ip, port, pubk = tox_env.random_server()
             self.bootstrap_from_address(ip, port, pubk)
-            
+        
         def _stop():
             pass
-
+            #timer.stop()
+        
         def _valid():
-            self.do()
             return self.isconnected()
         
-        name = 'tox connection'
+        _tox_thread = Thread(target=_tox_do)
+        _tox_thread.daemon = True
+        _tox_thread.start()
+        
+        #timer = LoopingCall(_tox_do) 
+        name = 'tox_connection'
         run_level = RunLevel(name, _start, _stop, _valid, 30)
         return run_level
           
@@ -424,58 +435,36 @@ class SyncBot(ToxBase):
         self.router.register('primary', self.__cmd_primary__)
         self.primary = False
         self.primary_address = primary_address
-        self.stop_timer = Timer(tox_env.TIMEOUT, self.stop)
-        self.search_timer = Timer(2, self.__search__, loop=True)
-        self.state_machine.level_changed = self.state_level_changed
+        self.state_machine.add(self.__search_run_level__())
 
-    def state_level_changed(self, code, name):
-        print('SyncBot: %s %s' % (StateMachine.ACTION_NAMES[code], name)) 
+    def __search_run_level__(self):
+        
+        self.__search_tries_left = 2
+        
+        def _start():
+            self.__search_tries_left -= 1
+            if len(self.get_friendlist()) == 0:
+                print('Adding primary')
+                msg = Event('authorize', {}).serialize()
+                self.add_friend(self.primary_address, msg)
+        
+        def _stop():
+            if self.__search_tries_left <= 0:
+                self.state_machine.stop()
+        
+        def _valid():
+            if self.get_friend_connection_status(0):
+                self.__search_tries_left = 2
+                return True
+            else:
+                return False
+        
+        return RunLevel('tox_search', _start, _stop, _valid, 40)
 
-    def on_dht_connected(self):
-        '''
-            Enable search/stop timers while connected
-        '''
-        self.stop_timer.on()
-        self.search_timer.on()
-
-    def on_dht_disconnected(self):
-        '''
-            Disable search/stop timers while disconnected
-        '''
-        self.stop_timer.off()
-        self.search_timer.off()
-    
     def on_group_invite(self, friend_num, gtype, grp_pubkey):
         print('Joining group: %s' % gtype)
         group_id = self.join_groupchat(friend_num, grp_pubkey)
-        
-    def __search__(self):
-        '''
-            Try to find primary
-        '''
-        if len(self.get_friendlist()) == 0:
-            print('Adding primary')
-            self.__request_auth__()
-        if self.get_friend_connection_status(0):
-            print('Primary found!')
-            self.stop_timer.off()
-        else:
-            if not self.stop_timer.running:
-                self.stop_timer.on()
-            print('Primary not found')
-
-    def __request_auth__(self):
-        msg = Event('authorize', {}).serialize()
-        self.add_friend(self.primary_address, msg)
-
-    def stop(self):
-        '''
-            Stop searching and start primary
-        '''
-        self.search_timer.off()
-        self.on_start_primary()
-        super(SyncBot, self).stop()
-    
+         
     def on_start_primary(self, event):
         '''
             Overridden in tox_manager

@@ -15,25 +15,26 @@ class ToxSearchTest(unittest.TestCase):
         tox_html = test_helper.load('test/fixtures/tox_nodes.html', raw=True)
         yield initializers.tox.configure(tox_html=tox_html)
         self.primary_fired = False
-        #self.data = load('test/fixtures/unit/sync_manager/tox_manager_test.yml')
-        #yield load_fixture( 'setup', self.data )
-        #yield load_fixture( self._testMethodName, self.data )
 
     @defer.inlineCallbacks
     def tearDown(self):
         yield db_helper.tearDownDB()
     
-    def on_start_primary(self):
+    def on_tox_event(self, event):
         self.primary_fired = True
-    
+        self.sb.stop()
+        self.pb.stop()
+
     @defer.inlineCallbacks
-    def test_can_find_primary_node(self):
+    def test_can_find_primary_node(self): 
         pb = tox_ring.PrimaryBot()
         sb = tox_ring.SyncBot(pb.get_address())
-        sb.on_start_primary = self.on_start_primary
+        sb.events.register('tox_search_completed', self.on_tox_event)
+        self.sb = sb
         d = sb.start()
-        pb.start()
+        dd = pb.start()
+        self.pb = pb
         yield d
-        pb.stop()
+        yield dd
         self.assertEquals(self.primary_fired, True)
 

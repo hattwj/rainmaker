@@ -1,44 +1,51 @@
-
+from twisted.internet import defer
 from rainmaker_app.tox.tox_ring import PrimaryBot, SyncBot
 from rainmaker_app.db import models
 
 class ToxManager(object):
     '''
         Manage tox network communications
+        - A tox interface for sync_manager
     '''
     def __init__(self, sync_path):
         self.__active_bot__ = None
-        self.peers = []
         self.sync_path = sync_path
-        self.primary_bot = PrimaryBot(sync_path.primary_bot_data)
+        self.stopping = False
+        # create bots
+        self.primary_bot = PrimaryBot(sync_path.tox_primary_bot_data)
         primary_addr = self.primary_bot.get_address()
-        self.sync_bot = SyncBot(primary_addr, sync_path.sync_bot_data)
-        
+        self.sync_bot = SyncBot(primary_addr, sync_path.tox_sync_bot_data)
+    
+    def save_data(self):
+        self.sync_path.tox_primary_bot_data = self.primary_bot.save()
+        self.sync_path.tox_sync_bot_data = self.sync_bot.save()
+
     def start(self):
         '''
             Kick off manager
         '''
-        # stub in event handlers
-        self.sync_bot.on_start_primary = self.__on_start_primary__
-        self.primary_bot.on_peer_connected = self.__on_peer__
-        self.sync_bot.on_peer_connected = self.__on_peer__
-        self.primary_bot.on_peer_lost = self.__on_peer_lost__
-        self.sync_bot.on_peer_lost = self.__on_peer_lost__
-        self.primary_bot.on_fs_event = self.__on_fs_event__
-        self.sync_bot.on_fs_event = self.__on_fs_event__
-
+        self.stopping = False
+        def _on_primary():
+            '''
+                sync_bot failed to find primary tox node
+            '''
+            self.__active_bot__ = self.primary_bot
+            if not self.stopping:
+                d = self.primary_bot.start()
+        
+        def _on_exit():
+            if not self.stopping:
+                print('Premature tox exit')
+            self.save_data()
+            self.on_stop()
+                
         # start searching for primary node
         self.__active_bot__ = self.sync_bot
-        self.sync_bot.start()
-
-    def __on_start_primary__(self):
-        '''
-            sync_bot failed to find primary tox node
-        '''
-        self.__active_bot__ = self.primary_bot
-        self.sync_bot.stop()
-        self.primary_bot.start()
-    
+        d = self.sync_bot.start()
+        d.addCallback(_on_primary)
+        d.addCallback(_on_exit)
+        return d
+        
     @defer.inlineCallbacks
     def __on_peer__(self, tox_pubkey, params):
         '''
@@ -49,21 +56,8 @@ class ToxManager(object):
             yield host.update_attributes(**params)
         else:
             host = Host(**params)
-        yield host.save()
-        host.isValid().addCallbackself.on_peer)
-
-    def on_peer(self, peer):
-        '''
-            Overridden in sync_path manager
-        '''
-        pass
-    
-    def __on_peer_lost__(self, peer):
-        '''
-            remove peer from list
-        '''
-        self.peers.remove(peer)
-    
+        host.save().addCallback(self.on_peer)
+ 
     @defer.inlineCallbacks
     def __fs_event__(self, friendId, params):
         file_id = params['file_id']
@@ -91,20 +85,12 @@ class ToxManager(object):
         '''
             Shut down manager
         '''
+        self.stopping = True
         self.__active_bot__.stop()
-        del(self.peers)
-        self.peers = []
-        self.stop_sequence_completed()
     
-    def on_stop_completed(self):
+    def on_stop(self):
         '''
             Stop sequence completed
             Overridden in sync_path manager
         '''
-        pass
-    
-    def friend_to_host_sync(self, friendId):
-        tox_pubkey = self.__active_bot__.get_client_id(friendId)
-        yield HostSync.findOrCreate(
-            tox_pubkey=tox_pubkey,
-            sync_path_id= self.sync_path.id)
+        pass    
