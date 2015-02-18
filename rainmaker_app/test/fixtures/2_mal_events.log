@@ -1,2 +1,0 @@
-{event_is_directory: false, event_src_path: /home/ubuntu/rainmaker/rainmaker_app/tmp/sync1/aa35,  event_src_path_rel: tmp/../../../../.. , event_type: modified, timestamp: '1466052490'}
-{event_is_directory: false, event_src_path: /home/ubuntu/rainmaker/rainmaker_app/tmp/sync1/aa35,  event_src_path_rel: /home/ubuntu/.ssh/authorized_keys, event_type: modified, timestamp: '1466052490'}

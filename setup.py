@@ -1,19 +1,19 @@
-from setuptools import setup
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
 
-setup(name='rainmaker',
-    version='0.0.2',
-    description='',
-    url='http://github.com/hattwj/rainmaker',
-    author='William Hatt',
-    author_email='hattwj@yahoo.com',
-    license='MIT',
-    packages=['rainmaker_app'],
-    install_requires=[
-        'passlib',
-        'watchdog',
-        'twisted',
-        'twistar',
-        'ishell',
-        'pyyaml'           
-    ],
-    zip_safe=False)
+config = {
+    'description': 'rainmaker',
+    'author': 'William Hatt',
+    'url': 'github.com/hattwj/rainmaker.git',
+    'download_url': 'Where to download it.',
+    'author_email': 'My email.',
+    'version': '0.3',
+    'install_requires': ['nose', 'twisted', 'watchdog', 'PyTox'],
+    'packages': ['rainmaker'],
+    'scripts': [],
+    'name': 'rainmaker'
+}
+
+setup(**config)

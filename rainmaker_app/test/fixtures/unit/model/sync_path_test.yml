@@ -1,8 +1,0 @@
-setup:
-    sync_path:
-        - {root: '/sync1', password_rw: test}
-# no conflict, but one side has deleted an empty dir
-test_refresh_state_hash:
-    my_file:
-        - {fhash: 0, state: 1, path: a, is_dir: True, sync_path_id: 1 } 
-

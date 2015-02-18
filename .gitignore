@@ -2,4 +2,7 @@
 *.sw*
 _trial_temp
 build/
+dist/
+*egg-info/
+develop-eggs/
 tmp/

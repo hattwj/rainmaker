@@ -1,0 +1,11 @@
+#!/usr/bin/python3
+
+import sys
+sys.path[0:0] = [
+  '/usr/local/lib/python3.2/dist-packages',
+  ]
+
+import zc.buildout.buildout
+
+if __name__ == '__main__':
+    sys.exit(zc.buildout.buildout.main())

@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+import sys
+import rainmaker.main
+import rainmaker.cli
+import rainmaker.tasks
+
+def main():
+    rainmaker.cli.parse()
+    app = rainmaker.main.Application() 
+    rainmaker.tasks.auto_run(app)
+    app.reactor.run()
+
+if __name__ == '__main__':
+    sys.exit(main())
