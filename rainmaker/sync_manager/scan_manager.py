@@ -2,6 +2,7 @@ import os
 import hashlib
 
 from rainmaker.db.main import Sync, SyncFile
+from rainmaker import utils
 
 def md5Checksum(path, chunk_size=8192):
     m = hashlib.md5()
@@ -17,6 +18,8 @@ def md5Checksum(path, chunk_size=8192):
 
 def quick_check(sync_file):
     ''' Check for file changes '''
+    print(sync_file.sync.path)
+    print(sync_file.path)
     with open( sync_file.path, 'rb' ) as f:
         finfo = os.fstat(f.fileno()) 
     if sync_file.file_size != finfo.st_size:
@@ -31,8 +34,8 @@ def quick_check(sync_file):
     if sync_file.inode != finfo.st_ino:
         sync_file.inode = finfo.st_ino
         sync_file.file_hash = None
-    if sync_path.file_hash is None:
-        sync_path.file_hash = md5Checksum(sync_file.path)
+    if sync_file.file_hash is None:
+        sync_file.file_hash = md5Checksum(sync_file.path)
     sync_file.stime = utils.time_now()
 
 def scan(session):
@@ -73,6 +76,7 @@ def scan(session):
 
     def _find_or_init(sync, fpath):
         rel_path = sync.rel_path(fpath)
+        
         sync_file = session.query(SyncFile).\
             filter(SyncFile.sync_id == sync.id, 
                     SyncFile.rel_path == rel_path).first()
@@ -80,6 +84,8 @@ def scan(session):
             sync_file = SyncFile(sync_id=sync.id, rel_path=rel_path)
         sync_file.sync = sync
         sync_file.path = fpath
+        print(sync_file.rel_path)
+        print(sync_file.path)
         return sync_file
 
     def _check_for_deleted(sync):

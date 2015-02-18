@@ -67,10 +67,10 @@ class Sync(RainBase):
     #    assert os.path.isdir(val) == True 
     
     def rel_path(self, val):
-        print(val)
+        print('sync_rel: ', val, 'to: ', val[len(self.path):][1:])
         assert val.startswith(self.path)
         assert len(val) > len(self.path)
-        return val[len(self.path):]
+        return val[len(self.path):][1:]
 
 def __inc_version__(context):
     ver = context.current_parameters['next_ver']
@@ -109,13 +109,15 @@ class SyncFile(RainBase):
         assert self.rel_path is not None
         if self._path is None:
             self._path = os.path.join(self.sync.path, self.rel_path)
+        print('spath: ', self.sync.path, 'rel: ', self.rel_path, '_path: ',self._path)
         return self._path
     
     @path.setter
     def path(self, val):
         assert self.sync is not None
         assert val.startswith(self.sync.path)
-        self.rel_path = val[len(self.sync.path):]
+        self.rel_path = val[len(self.sync.path):][1:]
+        print('set: ', val, 'to: ', self.rel_path)
 
 class SyncFileVersion(RainBase):
     __tablename__ = 'sync_file_versions'

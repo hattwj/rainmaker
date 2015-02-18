@@ -14,4 +14,4 @@ def test_scan_path():
     scan_manager.scan(session)
     sync_files = session.query(SyncFile).\
         join(Sync).filter(Sync.id==sync.id).all()
-    print(sync_files) 
+    assert len(sync_files) == 10 
