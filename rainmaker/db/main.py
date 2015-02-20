@@ -5,7 +5,7 @@
 '''
 import os
 
-from sqlalchemy import create_engine, ForeignKey, UniqueConstraint, desc
+from sqlalchemy import create_engine, ForeignKey, UniqueConstraint, desc, event
 from sqlalchemy import Column, Integer, Text, String, Binary, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref, validates, sessionmaker, object_mapper
@@ -38,14 +38,9 @@ class RainBase(Base):
     created_at = Column(Integer, default=utils.time_now, nullable=False)
 
     def __repr__(self):
-        mapper = object_mapper(self)
-        items = [(p.key, getattr(self, p.key))
-            for p in [
-                    mapper.get_property_by_column(c) for c in mapper.primary_key]]
         return "{0}({1})".format(
             self.__class__.__name__,
-            ', '.join(['{0}={1!r}'.format(*_) for _ in items]))
-
+            ', '.join(['{0}={1!r}'.format(*_) for _ in self.as_dict().items()]))
 
     def as_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
@@ -58,19 +53,22 @@ class Sync(RainBase):
     id = Column(Integer, primary_key=True)
     
     path = Column(Text, unique=True, nullable=False, index=True)
-    last_ver_id = Column(Integer)
+    stime_start = Column(Integer, index=True, default=0)
+    stime = Column(Integer, index=True, default=0)
     tox_primary_blob = Column(Binary)    
     tox_sync_blob = Column(Binary)    
     
-    #@validates('xroot')
-    #def validate_root(self, key, val):
-    #    assert os.path.isdir(val) == True 
     
     def rel_path(self, val):
-        print('sync_rel: ', val, 'to: ', val[len(self.path):][1:])
         assert val.startswith(self.path)
         assert len(val) > len(self.path)
         return val[len(self.path):][1:]
+
+#@event.listens_for(Sync, 'before_update')
+#def validates_sync_root(mapper, connection, target):
+#    print(mapper, connection, target)
+#    #assert os.path.isdir(val) == True
+
 
 def __inc_version__(context):
     ver = context.current_parameters['next_ver']
@@ -93,12 +91,15 @@ class SyncFile(RainBase):
     file_parts = Column(Text)
     mtime = Column(Integer)
     ctime = Column(Integer)
-    stime = Column(Integer)
+    stime = Column(Integer, index=True, default=0)
+    stime_start = Column(Integer, index=True, default=0)
     inode = Column(Integer)
     is_dir = Column(Boolean)
     does_exist = Column(Boolean)
     next_ver = Column(Integer, 
         default=0, nullable=False, onupdate=__inc_version__)
+    # backref adds sync_files to sync? test
+    sync_parts = relationship('SyncPart', order_by='SyncPart.offset') 
     
     # attributes
     _path = None
@@ -109,7 +110,6 @@ class SyncFile(RainBase):
         assert self.rel_path is not None
         if self._path is None:
             self._path = os.path.join(self.sync.path, self.rel_path)
-        print('spath: ', self.sync.path, 'rel: ', self.rel_path, '_path: ',self._path)
         return self._path
     
     @path.setter
@@ -117,7 +117,19 @@ class SyncFile(RainBase):
         assert self.sync is not None
         assert val.startswith(self.sync.path)
         self.rel_path = val[len(self.sync.path):][1:]
-        print('set: ', val, 'to: ', self.rel_path)
+
+class SyncPart(RainBase):
+    __tablename__ = 'sync_parts'
+    __table_args__ = (
+        UniqueConstraint('sync_file_id', 'offset'),
+    )
+
+    id = Column(Integer, primary_key=True)
+    offset = Column(Integer, nullable=False, index=True)
+    part_len = Column(Integer, nullable=False, index=True)
+    part_hash = Column(String(32), nullable=False)
+    rolling_hash = Column(Integer, nullable=False)
+    sync_file_id = Column(Integer, ForeignKey("sync_files.id"), nullable=False, index=True)
 
 class SyncFileVersion(RainBase):
     __tablename__ = 'sync_file_versions'
