@@ -27,7 +27,6 @@ def Files(root, count=10, size=2):
 
 def Dirs(root, count=10):
     results = []
-    print(root)
     for n in range(0, count):
         cur_path = os.path.join(root, str(random.random()) )
         fs.mkdir(cur_path)

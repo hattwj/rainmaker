@@ -9,6 +9,7 @@ from sqlalchemy import create_engine, ForeignKey, UniqueConstraint, desc, event
 from sqlalchemy import Column, Integer, Text, String, Binary, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref, validates, sessionmaker, object_mapper
+from sqlalchemy.pool import StaticPool
 
 import ujson
 
@@ -24,12 +25,26 @@ session = None
 def init_db(location=':memory:', echo=False):
     global engine
     global session
-    engine = create_engine('sqlite:///%s' % location, echo=echo)
+    engine = create_engine('sqlite:///%s' % location, 
+            #connect_args={'check_same_thread':False}, 
+            #poolclass=StaticPool,
+            echo=echo)
     Session = sessionmaker(bind=engine)
     session = Session()
     Base.metadata.bind = engine
     Base.metadata.create_all()
     return session
+'''
+    watchdog options
+        queue to manage events
+        - simple, effective, safer, manage multi events
+
+        threading lock and with statement
+        - possibly simpler code
+'''
+def with_session(func, *args, **kwargs):
+    slock.aquire()
+    slock.release()
 
 class RainBase(Base):
     '''Default class for tables '''

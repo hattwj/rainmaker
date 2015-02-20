@@ -1,4 +1,3 @@
-
 from rainmaker.db.main import init_db, Sync, SyncFile
 from rainmaker.sync_manager import scan_manager
 from rainmaker.file_system import FsActions

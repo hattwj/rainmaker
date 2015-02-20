@@ -84,6 +84,17 @@ def scan_sync(session, sync):
     _scan()
     _check_for_deleted()
 
+def refresh_sync(session, sync):
+    sync_files = session.query(SyncFile).filter(
+        SyncFile.sync_id == sync.id,                
+        SyncFile.does_exist == True,
+        SyncFile.stime_start == 0).all()
+    for sf in sync_files:
+        if sf.is_dir:
+            scan_dir(session, sf)
+        else:
+            scan_file(session, sf)
+
 def scan_dir(session, sync_file):
     if sync_file.is_dir == False and sync_file.id is not None:
         # used to be a file, now its a dir
