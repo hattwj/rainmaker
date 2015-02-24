@@ -1,6 +1,6 @@
 from random import randint
 
-from .tox_errors import ToxNoServersError
+from rainmaker.tox.tox_errors import ToxNoServersError
 
 
 '''

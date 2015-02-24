@@ -12,6 +12,7 @@ Rainmaker aims to provide a simple bidirectional file synchronization service. R
 
 ### Known Issues ###
 
+* Does not work
 * Still under heavy development
 
 

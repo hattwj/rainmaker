@@ -167,6 +167,7 @@ class ToxServer(RainBase):
     def validates_port(self, key, val):
         assert val > 0
         assert val < 65535
+        return val
 
 class Host(RainBase):
     __tablename__ = 'hosts'

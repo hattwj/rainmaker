@@ -1,3 +1,8 @@
+'''
+TODO: 
+    Add try except for file not found, mark deleted
+    try scandir plugin for better walk performance
+'''
 import os
 import hashlib
 import zlib
@@ -16,7 +21,8 @@ def hash_file(path, adler_f, md5_f, chunk_size=40000):
             data = fh.read(chunk_size)
             if not data:
                 break # End of file
-            adler = zlib.adler32(data, adler)
+            # force sign of adler to signed int
+            adler = zlib.adler32(data, adler) & 0xffffffff
             # Is this the expected adler value?
             if not adler_f(adler, offset, len(data)):
                 # nope, calculate the md5
@@ -28,6 +34,7 @@ def hash_file(path, adler_f, md5_f, chunk_size=40000):
     return adler
 
 def scan(session):
+    ''' Scan all syncs in DB '''
     for sync in session.query(Sync).all():
         scan_sync(session, sync)
 
@@ -59,6 +66,9 @@ def scan_sync(session, sync):
         session.commit()
 
     def _find_or_init(fpath):
+        '''
+            Check database or init new file
+        '''
         rel_path = sync.rel_path(fpath) 
         sync_file = session.query(SyncFile).\
             filter(SyncFile.sync_id == sync.id, 
@@ -85,6 +95,9 @@ def scan_sync(session, sync):
     _check_for_deleted()
 
 def refresh_sync(session, sync):
+    '''
+        Check database for new files to scan
+    '''
     sync_files = session.query(SyncFile).filter(
         SyncFile.sync_id == sync.id,                
         SyncFile.does_exist == True,
@@ -96,6 +109,9 @@ def refresh_sync(session, sync):
             scan_file(session, sf)
 
 def scan_dir(session, sync_file):
+    '''
+        Scan and add this dir to db
+    '''
     if sync_file.is_dir == False and sync_file.id is not None:
         # used to be a file, now its a dir
         sync_file.does_exist = False
@@ -113,10 +129,11 @@ def scan_dir(session, sync_file):
     session.commit()
 
 def scan_file(session, sync_file):
-    ''' Scan a file, update if needed 
-        - high      md5
-        - medium    adler32
-        - low       mtime, inode, ctime
+    ''' 
+        Scan and add this file to db
+            - high      md5
+            - medium    adler32
+            - low       mtime, inode, ctime
     '''    
     def _adler_f(rolling_hash, offset, data_len):
         # check to see if digest in collection

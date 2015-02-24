@@ -2,13 +2,13 @@
 #https://raw.githubusercontent.com/Jman012/Tox-DHTNodes-Updater/master/DHTNodes_updater.py
 from __future__ import print_function
 
-import urllib
+import urllib.request
 import sys
 import os
 import time
 import threading
 
-import tox_env
+from rainmaker.tox import tox_env
 
 def spin(stop=threading.Event):
     if stop is None:
@@ -31,10 +31,10 @@ def download():
     spinner.start()
 
     try:
-        request = urllib.urlopen(tox_env.NODES_URL)
+        request = urllib.request.urlopen(tox_env.NODES_URL)
         raw_page = request.read().decode("utf-8")
-    except:
-        print("Couldn't download")
+    except Exception as e:
+        print("Couldn't download", e.traceback)
         stop.set()
         return
     

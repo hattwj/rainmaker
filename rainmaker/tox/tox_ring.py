@@ -1,16 +1,16 @@
 # stdlib imports
 from __future__ import print_function
 from warnings import warn
-import json
+from threading import Thread, Timer
+from time import sleep
 
 # lib imports
-from twisted.internet import reactor, defer
-from twisted.internet.task import LoopingCall
+import ujson
 from pytox import Tox, OperationFailedError
 
 # local imports
-import tox_env
-import tox_errors
+from rainmaker.tox import tox_env
+from rainmaker.tox import tox_errors
 
 def parse(line):
     '''
@@ -18,7 +18,7 @@ def parse(line):
     '''
     print(line)
     try:
-        request = json.loads(line)
+        request = ujson.loads(line)
     except ValueError as e:
         raise tox_errors.ToxCommandError('Failed to parse request')
     if not isinstance(request, dict):
@@ -43,7 +43,7 @@ class Event(object):
         self.params = params
 
     def serialize(self):
-        return json.dumps({
+        return ujson.dumps({
             'command': self.name,
             'params': self.params
         })
@@ -87,7 +87,7 @@ class EventHandler(object):
             self.__cmds__[name] = []
         self.__cmds__[name].append(func)
 
-class Timer(object):
+class ToxTimer(object):
     '''
         Generic timer that will run after timeout elapsed
     '''
@@ -97,13 +97,14 @@ class Timer(object):
         self.loop = loop
         self._timer = None
         self.ran = False
+        self.started = False
 
     @property
     def running(self):
         '''
             Is the timer running?
         '''
-        return self._timer.active()
+        return self.started and not self.ran
 
     def reset(self):
         '''
@@ -125,14 +126,21 @@ class Timer(object):
         '''
             Turn the timer on
         '''
-        self._timer = reactor.callLater(self.timeout, self._run)
-
+        self._timer = Timer(self.timeout, self._run)
+        self._timer.daemon = True
+        self._timer.start()
+        self.ran = False
+        self.started = True
+        
     def off(self):
         '''
             Turn the timer off
         '''
-        if self._timer and self._timer.active():
-            self._timer.cancel()
+        
+        self._timer.cancel()
+
+    def is_alive(self):
+        return self._timer is not None and self._timer.is_alive()
 
 def require_auth(func):
     '''
@@ -227,10 +235,10 @@ class RunLevel(object):
         self.__init_vars__()
         self.__start()
         # start timeout timer
-        self.__timeout_timer = Timer(self.timeout, _stop_waiting)
+        self.__timeout_timer = ToxTimer(self.timeout, _stop_waiting)
         self.__timeout_timer.on()
         # start validity rate timer
-        self.__rate_timer = Timer(self.rate, self.__is_valid__, loop=True) 
+        self.__rate_timer = ToxTimer(self.rate, self.__is_valid__, loop=True) 
         self.__rate_timer.on()
         self.running = True
 
@@ -277,22 +285,29 @@ class StateMachine(object):
     def __init__(self, wait_time=0.5):
         self.run_levels = []
         self.wait_time = wait_time
-    
-    @defer.inlineCallbacks
+     
     def start(self):
         '''
             start state machine
+            - does not block
         '''
         self.stopping = False
         self.do_next = True
-        self.__start_loop = LoopingCall(self.__loop__) 
-        yield self.__start_loop.start(self.wait_time)
-
+        self.__start_loop = Thread(target=self.__loop__)
+        self.__start_loop.daemon = True
+        self.__start_loop.start()
+        return self.__start_loop
+    
     def __loop__(self):
-        if self.stopping and not self.any_running:
-            # were done
-            self.__start_loop.stop()
-            return
+        while True:
+            if self.stopping and not self.any_running:
+                # were done
+                print('Done')
+                break
+            self.__loop_once__()
+            sleep(self.wait_time)
+
+    def __loop_once__(self):
         self.do_next = not self.stopping
         for idx, run_level in enumerate(self.run_levels):
             run_level.should_run = self.do_next 
@@ -381,8 +396,11 @@ class ToxBase(Tox):
         self.events.call_event(ename)
 
     def __conn_run_level__(self):
-        from threading import Thread
-        from time import sleep
+        '''
+            Base Tox run_level
+            - threaded to constantly check tox.do
+            - check for shut down
+        '''
         def _tox_do():
             # TODO: do_interval always returns 50
             #if self.do_interval() < 60:
@@ -409,7 +427,6 @@ class ToxBase(Tox):
         _tox_thread.daemon = True
         _tox_thread.start()
         
-        #timer = LoopingCall(_tox_do) 
         name = 'tox_connection'
         run_level = RunLevel(name, _start, _stop, _valid, 30)
         return run_level
@@ -497,7 +514,6 @@ class SyncBot(ToxBase):
         
         # Periodic check to see if level is valid
         def _valid():
-
             if self.get_friend_connection_status(0):
                 self.__search_tries_left = 2
                 return True
