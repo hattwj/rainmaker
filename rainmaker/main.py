@@ -12,6 +12,7 @@ import rainmaker.file_system
 class Application(object):
     version = rainmaker.version
     fs_log = rainmaker.file_system.FsActions()
+    device_name = 'unknown'
 
     # Application paths
     root = os.path.abspath(os.path.join(os.path.dirname(__file__),'..') )

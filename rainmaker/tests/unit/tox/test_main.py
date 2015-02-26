@@ -4,4 +4,5 @@ from rainmaker.tox.main import init_tox
 
 def test_can_initialize_tox():
     session = init_db()
-    init_tox(session)
+    tox_html = test_helper.load('fixtures/tox_nodes.html')
+    init_tox(session, tox_html=tox_html)

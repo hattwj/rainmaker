@@ -16,36 +16,13 @@ This file is part of Rainmaker.
 """
 #import sys
 import os
-#import re
-#import datetime
-#import time
-#import logging
-#import yaml
-
-# threaded shell execution
-#from subprocess import PIPE, Popen
-#from threading import Thread
-#import thread
-#import shlex
-
-# Excape path info from watchdog
-#from pipes import quote
-
-# debug
-#from logging import INFO, basicConfig
+from queue import Queue, Empty  # python 3.x
 
 # Watchdog
 from watchdog.observers import Observer
-#from watchdog.events import LoggingEventHandler
 from watchdog.events import FileSystemEventHandler
-#from watchdog.events import FileSystemEvent
-#from watchdog.events import FileSystemMovedEvent
 
-# Queue imports for different python versions
-#try:
-#    from Queue import Queue, Empty
-#except ImportError:
-from queue import Queue, Empty  # python 3.x
+
 from rainmaker.db.main import SyncFile
 from rainmaker.sync_manager.scan_manager import refresh_sync, scan_dir, scan_file
 

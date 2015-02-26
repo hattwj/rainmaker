@@ -1,8 +1,10 @@
-from twisted.internet import defer
+from warnings import warn
+from queue import Queue
+
 from rainmaker_app.tox.tox_ring import PrimaryBot, SyncBot
 from rainmaker_app.db import models
 
-class ToxManager(object):
+class ToxRunner(object):
     '''
         Manage tox network communications
         - A tox interface for sync_manager
@@ -16,85 +18,70 @@ class ToxManager(object):
         self.sync = sync
         self.stopping = False
         # create bots
-        self.primary_bot = PrimaryBot(sync.tox_primary_bot_data)
-        primary_addr = self.primary_bot.get_address()
-        self.sync_bot = SyncBot(primary_addr, sync.tox_sync_bot_data)
-    
-    def store_data(self):
-        '''
-            Store tox data
-        '''
-        self.sync.tox_primary_bot_data = self.primary_bot.save()
-        self.sync.tox_sync_bot_data = self.sync_bot.save()
+        self.primary_bot = PrimaryBot(sync.tox_primary_blob)
+        self.sync_bot = SyncBot(self.primary_bot, sync.tox_sync_blob)
+        self.sync_bot.on_stop = self.__on_stop__
+        self.register = self.sync_bot.register
 
     def start(self):
         '''
             Kick off manager
         '''
-        self.stopping = False
-        def _on_primary(*args):
-            '''
-                sync_bot failed to find primary tox node
-            '''
-            self.__active_bot__ = self.primary_bot
-            if not self.stopping:
-                d = self.primary_bot.start()
-        
-        def _on_exit(*args):
-            if not self.stopping:
-                print('Premature tox exit')
-            self.store_data()
-            self.on_stop()
-                
+        self.stopping = False 
         # start searching for primary node
-        self.__active_bot__ = self.sync_bot
-        d = self.sync_bot.start()
-        d.addCallback(_on_primary)
-        d.addCallback(_on_exit)
-        return d
-        
-    @defer.inlineCallbacks
-    def __on_peer__(self, tox_pubkey, params):
-        '''
-            process on_new_peer event
-        '''
-        host = yield Host.find(tox_pubkey=tox_pubkey)
-        if host:
-            yield host.update_attributes(**params)
-        else:
-            host = Host(**params)
-        host.save().addCallback(self.on_peer)
- 
-    @defer.inlineCallbacks
-    def __fs_event__(self, friendId, params):
-        '''
-            Incoming fs event handler
-        '''
-        file_id = params['file_id']
-        host_sync = self.friend_to_host_sync(friendId)
-        host_file = yield models.HostFile.find(file_id=file_id,
-                host_sync_id = host_sync_id)
-        if not host_file:
-            host_file =  model.HostFile(**params)
-        host_file.save()
-        host_file.isValid().addCallback(self.on_fs_event)
- 
-    def send_fs_event(self, event):
-        '''
-            broadcast fs_event to chatroom
-        '''
-        self.__active_bot__.send_fs_event(event)
-
+        self.sync_bot.start()
+          
     def stop(self):
         '''
             Shut down manager
         '''
         self.stopping = True
-        self.__active_bot__.stop()
+        self.sync_bot.stop()
     
+    def __on_stop__(self, *args):
+        if not self.stopping:
+            warn('Premature tox exit')
+        # Store tox data
+        self.sync.tox_primary_blob = self.primary_bot.save()
+        self.sync.tox_sync_blob = self.sync_bot.save()
+        self.on_stop()
+
     def on_stop(self):
         '''
             Stop sequence completed
             Overridden in sync manager
         '''
-        pass    
+        pass 
+
+    def commit(self):
+        self.sync_bot.commit()
+
+def ToxManager(session, sync):
+
+    def _cmd_put_host(event):
+        params = event.get('host').require('pubkey', 'device_name').val()
+        pubkey = params['pubkey']
+        device_name = params['device_name']
+        host = session.query(Host).filter(
+                Host.sync_id == sync.id,
+                Host.pubkey==pubkey).first()
+        
+        if not host:
+            host = Host(sync_id=sync.id, pubkey=pubkey)
+        
+        host.device_name = device_name
+        session.add(host)
+        session.commit()
+
+    def __cmd_put_file(event):
+        p = event.get('file')
+        p.require('rel_path', 'rid', 'is_dir')
+        p.allow()
+
+    tr = ToxRunner(sync)
+    tr.register('put_host', _cmd_put_host)
+    tr.register('put_file', _cmd_put_file)
+    return tr
+
+
+

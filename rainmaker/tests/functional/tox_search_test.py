@@ -17,12 +17,14 @@ def test_can_find_primary_node():
     main.init_tox(session, tox_html=tox_html)
 
     pb = tox_ring.PrimaryBot()
-    sb = tox_ring.SyncBot(pb.get_address())
+    sb = tox_ring.SyncBot(pb)
+    pb.sync_bot = sb
     sb.events.register('tox_search_completed', on_tox_event)
     d = sb.start()
     dd = pb.start()
     #sleep(40)
     d.join()
     pb.stop()
+    dd.join()
     assert status['fired'] ==  True
 

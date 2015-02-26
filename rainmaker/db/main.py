@@ -34,17 +34,6 @@ def init_db(location=':memory:', echo=False):
     Base.metadata.bind = engine
     Base.metadata.create_all()
     return session
-'''
-    watchdog options
-        queue to manage events
-        - simple, effective, safer, manage multi events
-
-        threading lock and with statement
-        - possibly simpler code
-'''
-def with_session(func, *args, **kwargs):
-    slock.aquire()
-    slock.release()
 
 class RainBase(Base):
     '''Default class for tables '''
@@ -73,17 +62,10 @@ class Sync(RainBase):
     tox_primary_blob = Column(Binary)    
     tox_sync_blob = Column(Binary)    
     
-    
     def rel_path(self, val):
         assert val.startswith(self.path)
         assert len(val) > len(self.path)
         return val[len(self.path):][1:]
-
-#@event.listens_for(Sync, 'before_update')
-#def validates_sync_root(mapper, connection, target):
-#    print(mapper, connection, target)
-#    #assert os.path.isdir(val) == True
-
 
 def __inc_version__(context):
     ver = context.current_parameters['next_ver']
@@ -172,21 +154,22 @@ class ToxServer(RainBase):
 class Host(RainBase):
     __tablename__ = 'hosts'
     id = Column(Integer, primary_key=True)
-    ipv4 = Column(Text, nullable=False)
-    tox_pubkey = Column(Text, nullable=False)
-    name = Column(String)
-    pubkey = Column(Text, nullable=False)
-    tcp_port = Column(Integer, nullable=False)
-    udp_port = Column(Integer, nullable=False)
+    #ipv4 = Column(Text, nullable=False)
+    device_name = Column(String(50))
+    version = Column(String(50))
+    pubkey = Column(String(150), nullable=False)
+    #tcp_port = Column(Integer, nullable=False)
+    #udp_port = Column(Integer, nullable=False)
     
     # set by session 
     sync_id = Column(Integer, ForeignKey("syncs.id"), index=True) 
     sync = relationship("Sync", backref=backref("hosts", order_by=id )) 
 
-    @validates('tcp_port', 'udp_port')
-    def validates_port(self, key, val):
-        assert val > 0
-        assert val < 65535
+    #@validates('tcp_port', 'udp_port')
+    #def validates_port(self, key, val):
+    #    assert val > 0
+    #    assert val < 65535
+    #    return val
 
 class HostFile(RainBase):
     __tablename__ = 'host_files'
