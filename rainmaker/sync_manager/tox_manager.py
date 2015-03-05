@@ -4,6 +4,16 @@ from queue import Queue
 from rainmaker_app.tox.tox_ring import PrimaryBot, SyncBot
 from rainmaker_app.db import models
 
+'''
+    Send and recv file status
+    - mark files as:
+        - needed
+        - out of date
+        - current
+        - conflict
+    - 
+'''
+
 class ToxRunner(object):
     '''
         Manage tox network communications
@@ -56,32 +66,65 @@ class ToxRunner(object):
     def commit(self):
         self.sync_bot.commit()
 
-def ToxManager(session, sync):
-
+def HostsController(session, sync, tr):
+    '''
+        put
+    '''
     def _cmd_put_host(event):
-        params = event.get('host').require('pubkey', 'device_name').val()
-        pubkey = params['pubkey']
-        device_name = params['device_name']
+        ''' Handle put host command '''
+        p = event.get('host').require('pubkey', 'device_name').val()
+        pubkey = p['pubkey']
+        device_name = p['device_name']
         host = session.query(Host).filter(
                 Host.sync_id == sync.id,
-                Host.pubkey==pubkey).first()
-        
+                Host.pubkey == pubkey).first()
         if not host:
             host = Host(sync_id=sync.id, pubkey=pubkey)
-        
         host.device_name = device_name
         session.add(host)
         session.commit()
 
-    def __cmd_put_file(event):
-        p = event.get('file')
-        p.require('rel_path', 'rid', 'is_dir')
-        p.allow()
+    def _cmd_list_host(event):
+        hosts = session.query(Host).filter(
+                Host.sync_id == sync.id
+            ).all()
+        for h in hosts:
+            event.reply('put_host', host=h.to_dict())
 
-    tr = ToxRunner(sync)
     tr.register('put_host', _cmd_put_host)
-    tr.register('put_file', _cmd_put_file)
+    tr.register('list_host', _cmd_list_host)
     return tr
 
+def HostFilesController(session, sync, host, tr):
+    '''
+        session: Database session
+        sync: sync path
+        tr: transport
+    '''
 
+    def _cmd_put_host_file(event):
+        ''' Handle put file command '''
+        p = event.get('host_file')
+        p.require('rel_path', 'id', 'is_dir', 'does_exist')
+        p = p.allow('file_hash').val()
+        host_file = session.query(HostFile).filter(
+            HostFile.host_id == host.id,
+            HostFile.id == p['id']).first()
+        if not host_file:
+            host_file = HostFile()
+        host_file.update_attributes(**p)
+        session.add(host_file)
+        session.commit()
+
+    def _cmd_get_host_file(event):
+        ''' Handle get host file command '''
+        p = event.val('id')
+        host_file = session.query(HostFile).filter(
+            HostFile.host_id == host.id,
+            HostFile.id == p['id']).first()
+        if host_file:
+            event.reply('put_host_file', host_file.to_dict())
+
+    tr.register('put_host_file', _cmd_put_host_file)
+    tr.register('get_host_file', _cmd_put_host_file)
 

@@ -63,7 +63,7 @@ class Params(object):
             
     def val(self, key=None):
         '''get req/allow keys or key'''
-        try: 
+        try:
             if key is not None:
                 return self.kwargs[key]
             if not self.akeys and not self.rkeys:
@@ -442,6 +442,7 @@ class ToxBase(Tox):
     running = False
     was_connected = False
     ever_connected = False
+    _bootstrap = None
 
     def __init__(self, data=None):
         self.__authenticated_friends__ = set()
@@ -460,6 +461,12 @@ class ToxBase(Tox):
         self.state_machine.level_changed = self.state_level_changed
         self.router.register('ping', self.__cmd_ping__)
         self.__pong = Event('pong').serialize()
+    
+    @property
+    def bootstrap(self):
+        if not self._bootstrap: 
+            self._bootstrap = tox_env.random_server()
+        return self._bootstrap
 
     def state_level_changed(self, name, code, prev_code):
         print('%s: %s %s' % (self.__class__.__name__, StateMachine.ACTION_NAMES[code], name)) 
@@ -473,9 +480,6 @@ class ToxBase(Tox):
             - check for shut down
         '''
         def _tox_do():
-            # TODO: do_interval always returns 50
-            #if self.do_interval() < 60:
-            # rumored to be faster
             do = self.do
             while True:
                 do()
@@ -484,12 +488,11 @@ class ToxBase(Tox):
                     break
         
         def _start():
-            ip, port, pubk = tox_env.random_server()
+            ip, port, pubk = self.bootstrap 
             self.bootstrap_from_address(ip, port, pubk)
         
         def _stop():
-            pass
-            #timer.stop()
+            self._bootstrap = None
         
         def _valid():
             return self.isconnected()
@@ -501,7 +504,7 @@ class ToxBase(Tox):
         name = 'tox_connection'
         run_level = RunLevel(name, _start, _stop, _valid, 30)
         return run_level
-          
+    
     def on_read_reciept(self, fno, reciept):
         print('friend: %s recv: %s' % (fno, reciept))
 
@@ -567,7 +570,7 @@ class SyncBot(ToxBase):
         self.__host = Event('put_host', pubkey=self.get_address(), 
             device_name=Application.device_name,
             version=Application.version).serialize()
-
+        
     def __search_run_level__(self):
         
         #self.__search_tries_left = 2

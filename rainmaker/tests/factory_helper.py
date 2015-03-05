@@ -48,15 +48,37 @@ def Sync(count=1):
         return sync
     return syncs
 
-def SyncFile(sync, count=1):
+def SyncFile(sync, count, **kwargs):
     ''' create file and return sync_file '''
     sync_files = []
     for x in range(0, count):
         path = Files(sync.path, 1)
-        sync_file = db.SyncFile(sync=sync)
+        sync_file = db.SyncFile(**kwargs)
+        sync_file.sync = sync
+        sync_file.sync_id = sync.id
         sync_file.path = path
+        sync_file.does_exist=True
         sync_files.append(sync_file)
-    if count==1:
+    if count == 1:
         return sync_file
     return sync_files
+
+
+def HostFile(host, count, **kwargs):
+    ''' create file and return host_file '''
+    host_files = []
+    for x in range(0, count):
+        host_file = db.HostFile(**kwargs)
+        host_file.does_exist=True
+        host_file.rel_path = str(random.random())
+        host_file.is_dir = bool(random.getrandbits(1))
+        if not host_file.is_dir:
+            host_file.file_size = random.randint(0,100000)
+        host_file.host = host
+        host_file.host_id = host.id
+        host_file.rid = x
+        host_files.append(host_file)
+    if count == 1:
+        return host_file
+    return host_files
 
