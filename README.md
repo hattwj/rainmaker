@@ -57,5 +57,15 @@ make
 sudo make install
 cd ..
 
+```
+
+## Install pip packages ##
+```bash
+# pip install
+sudo pip3 install -r ./requirements.txt
+
+# ldconfig fix
+sudo ldconfig
 
 ```
+
