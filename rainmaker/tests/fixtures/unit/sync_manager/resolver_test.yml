@@ -1,0 +1,151 @@
+
+setup:
+    sync_rel_path:
+        - {root: 'sync1'}
+        - {root: 'sync2'}
+        - {root: 'sync3'}
+
+# test ability to find differences between sync rel_paths
+resolve_syncs:
+    #expected related file ids and states
+    expected:
+        - [ [1,2], [2],  4]
+        - [ [4,5], [5],  4]
+        - [ [8,9], [8],  2]
+        - [ [11,12],[11], 2]
+        - [ [13,14],[14], 3]
+        - [ [16],[16], 0]
+        - [ [17],[17], 0]
+        - [ [18],[18], 0]
+        - [ [19],[19], 0]
+
+    sync_comparison:
+        - { sync_file_id: 1, sync_id: 2}
+        - { sync_file_id: 3, sync_id: 1}
+
+    sync_file:
+        # deleted dir  1,2 - 4
+        - {file_hash: 0, state: 1, rel_path: a_deleted_dir, is_dir: True, sync_id: 1 } 
+        # deleted file 4,5 - 4
+        - {file_hash: 0, state: 1, rel_path: a_deleted_file, is_dir: False, sync_id: 1 } 
+        # moved dirs  8,9 - 2
+        - {file_hash: 0, state: 1, rel_path: moved_dir_old, is_dir: True, sync_id: 1, next_id: 8 } 
+        - {file_hash: 0, state: 1, rel_path: moved_dir_new, is_dir: True, sync_id: 1 } 
+        # moved files 11,12 - 2
+        - {file_hash: 0, state: 1, rel_path: moved_file_old, is_dir: False, sync_id: 1, next_id: 11 } 
+        - {file_hash: 0, state: 1, rel_path: moved_file_new, is_dir: False, sync_id: 1 } 
+        # modified files 13,14 - 3
+        - {file_hash: 8, state: 1, rel_path: modified_file, is_dir: False, sync_id: 1 } 
+        # new dirs - 16,17 - 0
+        - {file_hash: 0, state: 1, rel_path: b_new_dir, is_dir: True, sync_id: 1 } 
+        # new files - 18,19 - 0
+        - {file_hash: 0, state: 1, rel_path: b_new_file, is_dir: False, sync_id: 1 } 
+    host_file:
+        # deleted dir  1,2 - 4
+        - {file_hash: 0, does_exist: False, rel_path: a_deleted_dir, is_dir: True, sync_id: 2 }
+        - {file_hash: 0, does_exist: True, rel_path: a_deleted_dir, is_dir: True, sync_id: 2 }
+        # deleted file False,5 - 4
+        - {file_hash: 0, does_exist: False, rel_path: a_deleted_file, is_dir: False, sync_id: 2 }
+        - {file_hash: 0, does_exist: True, rel_path: a_deleted_file, is_dir: False, sync_id: 2, next_id: 5 }
+        # moved dirs  8,9 - 2
+        - {file_hash: 0, does_exist: True, rel_path: moved_dir_old, is_dir: True, sync_id: 2 }        
+        # moved files 11,12 - 2
+        - {file_hash: 0, does_exist: True, rel_path: moved_file_old, is_dir: False, sync_id: 2 }
+        # modified files 13,1False - 3
+        - {file_hash: 9, does_exist: True, rel_path: modified_file, is_dir: False, sync_id: 2 }
+        - {file_hash: 8, does_exist: True, rel_path: modified_file, is_dir: False, sync_id: 2, next_id: 14 }
+        # new dirs - 16,17 - 0
+        - {file_hash: 0, does_exist: True, rel_path: c_new_dir, is_dir: True, sync_id: 2 } 
+        # new files - 18,19 - 0
+        - {file_hash: 0, does_exist: True, rel_path: c_new_file, is_dir: False, sync_id: 2 }
+        - {file_hash: 0, does_exist: True, rel_path: c_new_file, is_dir: False, sync_id: 3 }
+
+# no conflict, but one side has deleted an empty dir
+deleted_no_conflict:
+    sync_file:
+        - {file_hash: 0, does_exist: 1, rel_path: a, is_dir: 1, sync_id: 1 } 
+        - {file_hash: 0, does_exist: 1, rel_path: b, is_dir: 1, sync_id: 1 } 
+        - {file_hash: 7, does_exist: 1, rel_path: c1, is_dir: 0, sync_id: 1 } 
+    host_file:
+        - {rid: 1, file_hash: 0, does_exist: 0, rel_path: a, is_dir: 1, host_id: 1,
+            version: 1,
+            vers: [
+                {version: 0, file_hash: 0, does_exist: 1, rel_path: a, is_dir: 1, host_id: 1, cmp_id: 1, cmp_ver: 0}
+            ]}
+        - {rid: 2, file_hash: 0, does_exist: 1, rel_path: b, is_dir: 1, host_id: 1 } 
+        - {rid: 3, file_hash: 8, does_exist: 0, rel_path: c1, is_dir: 0, host_id: 1, 
+            version: 2,
+            vers: [
+                {version: 1, file_hash: 8, does_exist: 1, rel_path: c1, is_dir: 0, host_id: 1}, 
+                {version: 0, file_hash: 7, does_exist: 1, rel_path: c1, is_dir: 0, host_id: 1, cmp_id: 3, cmp_ver: 0}
+            ]} 
+#sync_comparison:
+#    - { sync_file_id: 1, sync_id: 2}
+#    - { sync_file_id: 3, sync_id: 1}
+#    - { sync_file_id: 4, sync_id: 1}
+#    - { sync_file_id: 7, sync_id: 1}
+#    - { sync_file_id: 6, sync_id: 2}
+
+# no conflict, but updates on both sides
+modified_no_conflict:
+    sync_file:
+        - {file_hash: 0, state: 1, rel_path: a, is_dir: False, sync_id: 1 } 
+        - {file_hash: 7, state: 1, rel_path: c1, is_dir: False, sync_id: 1 } 
+    host_file:
+        - {file_hash: 8, state: 1, rel_path: a, is_dir: False, host_id: 2 }
+        - {file_hash: 0, state: 1, rel_path: a, is_dir: False, host_id: 2, next_id: 2 }
+        - {file_hash: 7, state: 1, rel_path: c1, is_dir: False, host_id: 2, next_id: 7 } 
+        - {file_hash: 8, state: 1, rel_path: c1, is_dir: False, host_id: 2, next_id: 7 } 
+        - {file_hash: 9, state: 1, rel_path: c1, is_dir: False, host_id: 2 } 
+    sync_comparison:
+        - {sync_file_id: 1, sync_id: 2}
+        - {sync_file_id: 3, sync_id: 1}
+        - {sync_file_id: 4, sync_id: 2}
+        - {sync_file_id: 5, sync_id: 1}
+        - {sync_file_id: 6, sync_id: 1}
+# no conflict, but moves on both sides
+moved_no_conflict:
+    sync_file:
+        - {file_hash: 0, state: 1, rel_path: a, is_dir: False, sync_id: 1 } 
+        - {file_hash: 7, state: 1, rel_path: c1, is_dir: False, sync_id: 1 } 
+    host_file:
+        - {file_hash: 0, state: 1, rel_path: b, is_dir: False, host_id: 2 }
+        - {file_hash: 0, state: 1, rel_path: a, is_dir: False, host_id: 2, next_id: 2 }
+        - {file_hash: 7, state: 1, rel_path: c1, is_dir: False, host_id: 2, next_id: 7 } 
+        - {file_hash: 7, state: 1, rel_path: c1, is_dir: False, host_id: 2, next_id: 7 } 
+        - {file_hash: 7, state: 1, rel_path: c2, is_dir: False, host_id: 2 } 
+    sync_comparison:
+        - { sync_file_id: 1, sync_id: 2}
+        - { sync_file_id: 3, sync_id: 1}
+        - { sync_file_id: 4, sync_id: 2}
+        - { sync_file_id: 5, sync_id: 1}
+        - { sync_file_id: 6, sync_id: 1}
+# no conflict, but new_files on both sides
+new_no_conflict:
+    sync_file:
+        - {file_hash: 0, state: 1, rel_path: a1, is_dir: False, sync_id: 1 } 
+        - {file_hash: 1, state: 1, rel_path: b1, is_dir: False, sync_id: 1 }
+        - {file_hash: 2, state: 1, rel_path: c1, is_dir: False, sync_id: 1 }
+    host_file:
+        - {file_hash: 3, state: 1, rel_path: a2, is_dir: False, sync_id: 2 } 
+        - {file_hash: 4, state: 1, rel_path: b2, is_dir: False, sync_id: 2 } 
+        - {file_hash: 5, state: 1, rel_path: c2, is_dir: False, sync_id: 2 } 
+# conflict, but simple
+simple_conflict:
+    sync_file:
+        - {file_hash: 0, state: 1, rel_path: a, is_dir: False, sync_id: 1 } 
+        - {file_hash: 0, state: 1, rel_path: b, is_dir: False, sync_id: 1 } 
+    host_file:
+        - {file_hash: 1, state: 1, rel_path: a, is_dir: False, host_id: 2 }
+        - {file_hash: 1, state: 1, rel_path: b, is_dir: False, host_id: 2 }
+# conflict renamed
+renamed_conflict:
+    sync_file:
+        - {file_hash: 0, state: 1, rel_path: d, is_dir: False, sync_id: 1 } 
+        - {file_hash: 0, state: 1, rel_path: c, is_dir: False, sync_id: 1, next_id: 1 }
+    host_file:
+        - {file_hash: 0, state: 1, rel_path: e, is_dir: False, host_id: 2 }
+        - {file_hash: 0, state: 1, rel_path: c, is_dir: False, host_id: 2, next_id: 2 }
+    sync_comparison:
+        - {sync_file_id: 4, sync_id: 1}
+        - {sync_file_id: 3, sync_id: 2}

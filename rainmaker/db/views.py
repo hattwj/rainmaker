@@ -9,11 +9,8 @@ q_sync_diff = """
         AND m1.file_hash = m2.file_hash 
         AND m1.is_dir = m2.is_dir
         AND m1.file_size = m2.file_size
-        AND m1.next_id IS NULL
         AND m2.%(t2)s_id = :t2_id
-        AND m2.next_id IS NULL
     WHERE m2.id IS NULL
-        AND m1.next_id IS NULL
         AND m1.%(t1)s_id = :t1_id
 """
 

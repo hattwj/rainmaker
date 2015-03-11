@@ -13,9 +13,8 @@ from rainmaker.tox.tox_ring import Event, Params, EventError
 # connection / state
 #
 
-
 def test_event_should_raise_on_missing_get():
-    event = Event('test', {})
+    event = Event('test')
     assert_raises(EventError, event.get, 'nosuchkey')
     assert {} == event.val()
 

@@ -9,6 +9,7 @@ from sqlalchemy import create_engine, ForeignKey, UniqueConstraint, desc, event
 from sqlalchemy import Column, Integer, Text, String, Binary, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref, validates, sessionmaker, object_mapper
+from sqlalchemy.orm.attributes import get_history
 from sqlalchemy.pool import StaticPool
 
 import ujson
@@ -55,6 +56,20 @@ class RainBase(Base):
     def to_json(self):
         return ujson.dumps(self.as_dict())
 
+    def before_changes(self):
+        ''' Get original attributes as dictionary '''
+        return {c.name: get_was(self, c.name) for c in self.__table__.columns}
+
+def get_was(record, key):
+    ''' get values from record before any changes occurred '''
+    hist = get_history(record, key)
+    if hist.unchanged:
+        return hist.unchanged[0]
+    if hist.deleted:
+        return hist.deleted[0]
+    return None
+    
+
 class Sync(RainBase):
     __tablename__ = 'syncs'
     id = Column(Integer, primary_key=True)
@@ -71,43 +86,56 @@ class Sync(RainBase):
         assert len(val) > len(self.path)
         return val[len(self.path):][1:]
 
-def __inc_version__(context):
-    ver = context.current_parameters['next_ver']
-    return 0 if ver is None else ver + 1
-
 file_params = ['id', 'rel_path', 'file_hash', 'file_size', 
-    'does_exist', 'next_ver', 'next_id', 'is_dir']
+    'does_exist', 'is_dir']
 
 class SyncFile(RainBase):
-    """"""
-    __tablename__ = 'sync_files'
-    
-    
-    id = Column(Integer, primary_key=True)
+    """ Sync File """
+    __versions__ = None
+    __table_args__= (
+        UniqueConstraint('sync_id', 'rel_path'),    
+    )
 
+    __tablename__ = 'sync_files'
+    id = Column(Integer, primary_key=True)
     sync_id = Column(Integer, ForeignKey("syncs.id"), nullable=False, index=True)
     # backref adds sync_files to sync? test
     sync = relationship("Sync", backref=backref("sync_files", order_by=id))
-    
+    # relative path
     rel_path = Column(Text, nullable=False, index=True)
-    file_hash = Column(Text, default='')
+    # 32 bit file hash
+    file_hash = Column(Integer, default=0)
+    # file size
     file_size = Column(Integer, default=0)
+    # time modified
     mtime = Column(Integer)
+    # time created
     ctime = Column(Integer)
+    # time scan completed
     stime = Column(Integer, index=True, default=0)
+    # time scan started
     stime_start = Column(Integer, index=True, default=0)
+    # json version data
+    ver_data = Column(Text)
+    # file inode
     inode = Column(Integer)
+    # is directory?
     is_dir = Column(Boolean)
-    does_exist = Column(Boolean)
-    next_ver = Column(Integer, 
-        default=0, nullable=False, onupdate=__inc_version__)
-    next_id = Column(Integer)
+    # not deleted?
+    does_exist = Column(Boolean, index=True)
+    
+    version = Column(Integer, default=0, nullable=False)
+    #next_id = Column(Integer)
 
     # backref adds sync_files to sync? test
     sync_parts = relationship('SyncPart', order_by='SyncPart.offset') 
     
-    # attributes
+    # temp val for holding full path
     _path = None
+    
+    # Empty attributes for HostFile comparison
+    cmp_ver = None
+    cmp_id = None
 
     @property
     def path(self):
@@ -124,9 +152,39 @@ class SyncFile(RainBase):
         self.rel_path = val[len(self.sync.path):][1:]
     
     def to_host_file(self):
+        ''' Export self as host file '''
         f = self.to_dict(*file_params)
         f['rid']=f.pop('id')
         return HostFile(**f)
+
+    @property
+    def vers(self):
+        ''' read only copy of past versions '''
+        if self.__versions__ is not None: 
+            return self.__versions__
+        if self.ver_data is None or len(self.ver_data) == 0:
+            return []
+        self.__versions__ = [SyncFile(**ver) for ver in ujson.loads(self.ver_data)]
+        self.__versions__.sort(key=lambda ver: ver.version)        
+        return self.__versions__
+    
+    @vers.setter
+    def vers(self, val):
+        self.ver_data = ujson.dumps(val)
+        self.__versions__ = [SyncFile(**ver) for ver in val] 
+
+# standard decorator style
+@event.listens_for(SyncFile, 'before_update')
+def receive_before_update(mapper, connection, target):
+    "listen for the 'before_update' event"
+    do_versioning(target)
+
+def do_versioning(target):
+    target.version += 1
+    data = [target.before_changes()]
+    if target.ver_data is not None:
+        data.append(ujson.dumps(target.ver_data))
+    target.ver_data = ujson.dumps(data)
 
 class SyncPart(RainBase):
     __tablename__ = 'sync_parts'
@@ -167,28 +225,25 @@ class ToxServer(RainBase):
 class Host(RainBase):
     __tablename__ = 'hosts'
     id = Column(Integer, primary_key=True)
-    #ipv4 = Column(Text, nullable=False)
     device_name = Column(String(50))
     version = Column(String(50))
     pubkey = Column(String(150), nullable=False)
-    #tcp_port = Column(Integer, nullable=False)
-    #udp_port = Column(Integer, nullable=False)
     
     # set by session 
     sync_id = Column(Integer, ForeignKey("syncs.id"), index=True) 
-    #sync = relationship(Sync, backref=backref("hosts", order_by=id )) 
 
-    #@validates('tcp_port', 'udp_port')
-    #def validates_port(self, key, val):
-    #    assert val > 0
-    #    assert val < 65535
-    #    return val
+'''
+    ver_data = string
+    versions = arr of 
+'''
 
 class HostFile(RainBase):
     __tablename__ = 'host_files'
     __table_args__= (
         UniqueConstraint('host_id', 'rid'),    
     )
+    __versions__ = None
+ 
     # local primary key ( remote from owners perspective )
     id = Column(Integer, primary_key=True)
 
@@ -205,14 +260,37 @@ class HostFile(RainBase):
     file_size = Column(Integer, default=0)
     is_dir = Column(Boolean)
     does_exist = Column(Boolean)
-    next_id = Column(Integer)
-    next_ver = Column(Integer)
+    # json version data
+    ver_data = Column(Text)
+    version = Column(Integer, default=0, nullable=False)
+    # sync_file_id of last comparison 
+    cmp_id = Column(Integer)
+    # sync_file.version of last comparison 
+    cmp_ver = Column(Integer)
     
+    # convert to sync_file
     def to_sync_file(self, sync_id):
         f = self.to_dict(*file_params)
         f.pop('id')
         f['sync_id'] = sync_id
         return SyncFile(**f)
+   
+    # some sort of setter/getter bug if we call this versions
+    @property
+    def vers(self):
+        ''' read only copy of past versions '''
+        if self.__versions__ is not None: 
+            return self.__versions__
+        if self.ver_data is None or len(self.ver_data) == 0:
+            return []
+        self.__versions__ = [HostFile(**ver) for ver in ujson.loads(self.ver_data)]
+        self.__versions__.sort(key=lambda ver: ver.version)        
+        return self.__versions__
+    
+    @vers.setter
+    def vers(self, val):
+        self.ver_data = ujson.dumps(val)
+        self.__versions__ = [HostFile(**ver) for ver in val]
 
 class HostFileVersion(RainBase):
     ''' Store remote file version Information '''
