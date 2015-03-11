@@ -18,14 +18,44 @@ Rainmaker aims to provide a simple bidirectional file synchronization service. R
 
 See [TODO](TODO.md) for other notices
 
-## References ##
+## Inspiration ##
 
+* [Tox] (https://github.com/Tox)
 * [Unison] (http://www.cis.upenn.edu/~bcpierce/unison/)
 * [OpenSSH] (http://www.openssh.org/)
 * [Watchdog] (http://packages.python.org/watchdog/)
 
+
+# Quick Start #
+
 ## Ubuntu Dependencies ##
+
 ```bash
-sudo apt-get install python python-dev python-pip python-openssl
-sudo pip install watchdog twisted twistar ishell pyyaml ipython
+# Compilation dependencies
+sudo apt-get install build-essential libtool autotools-dev automake checkinstall check git yasm
+```
+
+## Compile Tox ##
+
+```bash
+# Compile and install libsodium
+git clone git://github.com/jedisct1/libsodium.git
+cd libsodium
+git checkout tags/1.0.0
+./autogen.sh
+./configure && make check
+sudo checkinstall --install --pkgname libsodium --pkgversion 1.0.0 --nodoc
+sudo ldconfig
+cd ..
+
+# Compile and Install Tox
+git clone git://github.com/irungentoo/toxcore.git
+cd toxcore
+autoreconf -i
+./configure
+make
+sudo make install
+cd ..
+
+
 ```
