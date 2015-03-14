@@ -10,7 +10,7 @@ from sqlalchemy import Column, Integer, Text, String, Binary, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref, validates, sessionmaker, object_mapper
 from sqlalchemy.orm.attributes import get_history
-from sqlalchemy.pool import StaticPool
+#from sqlalchemy.pool import StaticPool
 
 import ujson
 
@@ -165,13 +165,18 @@ class SyncFile(RainBase):
         if self.ver_data is None or len(self.ver_data) == 0:
             return []
         self.__versions__ = [SyncFile(**ver) for ver in ujson.loads(self.ver_data)]
-        self.__versions__.sort(key=lambda ver: ver.version)        
+        self.__versions__.sort(key=lambda ver: ver.version)
         return self.__versions__
     
+    # Debug setter
     @vers.setter
     def vers(self, val):
         self.ver_data = ujson.dumps(val)
-        self.__versions__ = [SyncFile(**ver) for ver in val] 
+        versions = [SyncFile(**ver) for ver in val]
+        for v in versions:
+            assert v.version is not None 
+        self.__versions__ = versions
+         
 
 # standard decorator style
 @event.listens_for(SyncFile, 'before_update')
@@ -256,7 +261,7 @@ class HostFile(RainBase):
     # must have default values for sync_join view to work
     rid = Column(Integer, nullable=False)
     rel_path = Column(Text, nullable=False)
-    file_hash = Column(Text, default='')
+    file_hash = Column(Integer, default=0)
     file_size = Column(Integer, default=0)
     is_dir = Column(Boolean)
     does_exist = Column(Boolean)
@@ -290,7 +295,10 @@ class HostFile(RainBase):
     @vers.setter
     def vers(self, val):
         self.ver_data = ujson.dumps(val)
-        self.__versions__ = [HostFile(**ver) for ver in val]
+        versions = [HostFile(**ver) for ver in val]
+        for v in versions:
+            assert v.version is not None 
+        self.__versions__ = versions
 
 class HostFileVersion(RainBase):
     ''' Store remote file version Information '''

@@ -40,7 +40,6 @@ def test_can_transmit_large_messages():
     def do_large():
         status['fired'] = True
         status['exp'] += 0.1
-        print(status)
         msg = tox_ring.Event('large', bb='b'*int(10*status['exp']))
         pid = sb.get_friendlist()[0]
         sb.send_message(pid, msg.serialize())

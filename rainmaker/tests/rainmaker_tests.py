@@ -2,10 +2,10 @@ from nose.tools import *
 from rainmaker.tests import test_helper
 
 def setup():
-    print("SETUP!")
+    print("Base SETUP!")
 
 def teardown():
-    print("TEAR DOWN!")
+    print("Base TEAR DOWN!")
     test_helper.clean_temp_dir()
 
 def test_basic():

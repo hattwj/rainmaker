@@ -35,6 +35,5 @@ def test_can_scan_and_discover_files_deleted():
     scan_manager.scan(session)
     sync_files = session.query(SyncFile).\
         join(Sync).filter(Sync.id==sync.id, SyncFile.does_exist==True).all()
-    print(sync_files[10].sync_parts)
     assert len(sync_files) == 24
     

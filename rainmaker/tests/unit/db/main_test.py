@@ -18,8 +18,8 @@ def test_rain_base_before_changes():
 
 def test_sqlalchemy_property_assignment():
     sf = HostFile()
-    sf.vers = [{'file_size':5}]
+    sf.vers = [{'version': 0, 'file_size':5}]
     assert sf.vers[0].file_size == 5
     sf = SyncFile()
-    sf.vers = [{'file_size':5}]
+    sf.vers = [{'version': 0, 'file_size':5}]
     assert sf.vers[0].file_size == 5

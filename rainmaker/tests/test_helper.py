@@ -53,7 +53,7 @@ def load_fixture(session, test_name, data):
         elif 'host' == model_name:
             model = db.Host
         else:
-            raise ValueError('unknown model: %s' % model)
+            raise ValueError('unknown model: %s' % model_name)
         for r in records:
             record = model(**r)
             session.add(record)
