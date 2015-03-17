@@ -3,16 +3,6 @@ from nose.tools import assert_raises
 from rainmaker.tests import test_helper
 from rainmaker.tox.tox_ring import Event, Params, EventError
 
-## SyncBot
-# it should be able to send and receive 
-# - fs_events
-# - hosts
-# - transfer file parts
-# - Authorization
-#
-# connection / state
-#
-
 def test_event_should_raise_on_missing_get():
     event = Event('test')
     assert_raises(EventError, event.get, 'nosuchkey')

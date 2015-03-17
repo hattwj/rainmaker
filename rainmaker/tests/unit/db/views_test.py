@@ -1,7 +1,7 @@
 from rainmaker.tests import test_helper
 from rainmaker.tests import factory_helper
 from rainmaker.db import views
-from rainmaker.db.main import init_db, Host
+from rainmaker.db.main import init_db, Host, HostFile
 
 def test_can_diff_empty():
     session = init_db()
@@ -75,5 +75,26 @@ def test_can_diff_repeat():
     l_files, r_files = views.sync_diff(session, local.id, host.id)
     assert len(l_files) == 5
     assert len(r_files) == 0
+
+
+def test_can_sync_match(fcount=50):
+    session = init_db()
+    local= factory_helper.Sync() 
+    files = factory_helper.SyncFile(local, fcount, does_exist=True, fake=True)
+    host = Host(sync=local, pubkey='')
+    session.add(local)
+    session.add(host)
+    session.commit()
+    for f in files:
+        hf = f.to_host_file()
+        host.host_files.append(hf)
+    session.add(host)
+    session.commit()
+    views.sync_match(session, local.id, host.id)
+    host_files = session.query(HostFile).all()
+    assert len(host_files) == fcount
+    for f in host_files:
+        assert f.cmp_id is not None
+        assert f.cmp_ver is not None
 
 

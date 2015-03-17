@@ -47,14 +47,22 @@ def Sync(count=1):
     if count==1:
         return sync
     return syncs
-
+ 
 def SyncFile(sync, count, **kwargs):
     ''' create file and return sync_file '''
     sync_files = []
+    fake = kwargs.pop('fake', False)
     for x in range(0, count):
-        path = Files(sync.path, 1)
+        is_dir = bool(random.getrandbits(1))
+        if fake:
+            path = os.path.join(sync.path, str(random.random()) )
+        elif is_dir:
+            path = Files(sync.path, 1) 
+        else:
+            path = Dirs(sync.path, 1) 
         sync_file = db.SyncFile(**kwargs)
         sync_file.sync = sync
+        sync_file.is_dir = is_dir
         sync_file.sync_id = sync.id
         sync_file.path = path
         sync_file.does_exist=True

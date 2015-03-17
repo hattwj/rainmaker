@@ -87,7 +87,7 @@ class Sync(RainBase):
         return val[len(self.path):][1:]
 
 file_params = ['id', 'rel_path', 'file_hash', 'file_size', 
-    'does_exist', 'is_dir']
+    'does_exist', 'is_dir', 'version']
 
 class SyncFile(RainBase):
     """ Sync File """
@@ -120,9 +120,9 @@ class SyncFile(RainBase):
     # file inode
     inode = Column(Integer)
     # is directory?
-    is_dir = Column(Boolean)
+    is_dir = Column(Boolean, nullable=False)
     # not deleted?
-    does_exist = Column(Boolean, index=True)
+    does_exist = Column(Boolean, nullable=False, index=True)
     
     version = Column(Integer, default=0, nullable=False)
     #next_id = Column(Integer)
@@ -260,7 +260,7 @@ class HostFile(RainBase):
     sync_file = relationship("SyncFile", backref=backref("host_files", order_by=id))
     # must have default values for sync_join view to work
     rid = Column(Integer, nullable=False)
-    rel_path = Column(Text, nullable=False)
+    rel_path = Column(Text, nullable=False, index=True)
     file_hash = Column(Integer, default=0)
     file_size = Column(Integer, default=0)
     is_dir = Column(Boolean)
@@ -273,6 +273,10 @@ class HostFile(RainBase):
     # sync_file.version of last comparison 
     cmp_ver = Column(Integer)
     
+    # temp_variables
+    xcmp_id = None
+    xcmp_ver = None
+
     # convert to sync_file
     def to_sync_file(self, sync_id):
         f = self.to_dict(*file_params)
