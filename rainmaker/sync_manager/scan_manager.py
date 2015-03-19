@@ -10,9 +10,11 @@ import zlib
 from rainmaker.db.main import Sync, SyncFile, SyncPart
 from rainmaker import utils
 
-def hash_file(path, adler_f, md5_f, chunk_size=40000):
+chunk_size = 40000
+
+def hash_file(path, adler_f, md5_f):
     ''' Full hash of file, make callback on each round '''
-    offset = 0      # byte offset in file
+    part_offset = 0      # byte part_offset in file
     adler = 0       # adler32 rolling hash
     with open(path, 'rb') as fh:
         # For every chunk
@@ -24,13 +26,13 @@ def hash_file(path, adler_f, md5_f, chunk_size=40000):
             # force sign of adler to signed int
             adler = zlib.adler32(data, adler) & 0xffffffff
             # Is this the expected adler value?
-            if not adler_f(adler, offset, len(data)):
+            if not adler_f(adler, part_offset, len(data)):
                 # nope, calculate the md5
                 m = hashlib.md5()
                 m.update(data)
-                md5_f(m.hexdigest(), adler,  offset, len(data))
-            # update offset
-            offset += chunk_size
+                md5_f(m.hexdigest(), adler,  part_offset, len(data))
+            # update part_offset
+            part_offset += chunk_size
     return adler
 
 def scan(session):
@@ -135,19 +137,19 @@ def scan_file(session, sync_file):
             - medium    adler32
             - low       mtime, inode, ctime
     '''    
-    def _adler_f(rolling_hash, offset, data_len):
+    def _adler_f(rolling_hash, part_offset, data_len):
         # check to see if digest in collection
         # if is: return True
         # if not: return False
         if sync_file.file_hash is None:
             return False
-        return offset in parts and parts[offset].rolling_hash == rolling_hash
+        return part_offset in parts and parts[part_offset].rolling_hash == rolling_hash
     
-    def _md5_f(part_hash, rolling_hash, offset, part_len):
+    def _md5_f(part_hash, rolling_hash, part_offset, part_len):
         '''
             if hash:
                 set hash to none
-                wipe all parts with offset greater than offset
+                wipe all parts with part_offset greater than part_offset
             create and append new part
         '''
         if sync_file.file_hash is not None:
@@ -155,11 +157,11 @@ def scan_file(session, sync_file):
             parts.clear()
             rparts = []
             for key, part in parts.items():
-                if key >= offset:
+                if key >= part_offset:
                     parts.pop(key)
                     sync_file.sync_parts.remove(part)
         sync_part = SyncPart(part_hash=part_hash, part_len=part_len, 
-            rolling_hash=rolling_hash, offset=offset)
+            rolling_hash=rolling_hash, part_offset=part_offset)
         sync_file.sync_parts.append(sync_part)
     # Mark as deleted if is_dir
     if sync_file.is_dir and sync_file.id is not None:
@@ -195,7 +197,7 @@ def scan_file(session, sync_file):
     # load parts into dict for easy access
     parts = {}
     for part in sync_file.sync_parts:
-        parts[part.offset] = part
+        parts[part.part_offset] = part
     sync_file.file_hash = hash_file(sync_file.path, _adler_f, _md5_f)
     sync_file.stime = utils.time_now()
     session.add(sync_file)

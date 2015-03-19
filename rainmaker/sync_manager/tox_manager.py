@@ -101,27 +101,32 @@ def HostFilesController(session, sync, host, tr):
         sync: sync path
         tr: transport
     '''
-
+    host_file_params = ['rid', 'file_hash', 'file_size', 'is_dir',
+        'rel_path', 'does_exist', 'version']
+    
     def _cmd_put_host_file(event):
         ''' Handle put file command '''
-        p = event.get('host_file')
-        p.require('rel_path', 'id', 'is_dir', 'does_exist')
-        p = p.allow('file_hash').val()
+        p = event.get('host_file').require(*host_file_params).val()
         host_file = session.query(HostFile).filter(
             HostFile.host_id == host.id,
-            HostFile.id == p['id']).first()
+            HostFile.rid == p['rid']).first()
         if not host_file:
             host_file = HostFile()
         host_file.update_attributes(**p)
         session.add(host_file)
         session.commit()
 
+    def _cmd_delete_host_file(event):
+        p = event.val('rid')
+        session.query(HostFile).filter(HostFile.rid == rid).delete()
+        session.commit()
+
     def _cmd_get_host_file(event):
-        ''' Handle get host file command '''
-        p = event.val('id')
+        ''' Handle get h/ost file command '''
+        p = event.val('rid')
         host_file = session.query(HostFile).filter(
             HostFile.host_id == host.id,
-            HostFile.id == p['id']).first()
+            HostFile.id == p['rid']).first()
         if host_file:
             event.reply('put_host_file', host_file.to_dict())
 

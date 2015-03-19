@@ -69,7 +69,6 @@ def get_was(record, key):
         return hist.deleted[0]
     return None
     
-
 class Sync(RainBase):
     __tablename__ = 'syncs'
     id = Column(Integer, primary_key=True)
@@ -79,7 +78,6 @@ class Sync(RainBase):
     stime = Column(Integer, index=True, default=0)
     tox_primary_blob = Column(Binary)    
     tox_sync_blob = Column(Binary) 
-    hosts = relationship('Host', backref="sync") 
 
     def rel_path(self, val):
         assert val.startswith(self.path)
@@ -99,8 +97,6 @@ class SyncFile(RainBase):
     __tablename__ = 'sync_files'
     id = Column(Integer, primary_key=True)
     sync_id = Column(Integer, ForeignKey("syncs.id"), nullable=False, index=True)
-    # backref adds sync_files to sync? test
-    sync = relationship("Sync", backref=backref("sync_files", order_by=id))
     # relative path
     rel_path = Column(Text, nullable=False, index=True)
     # 32 bit file hash
@@ -127,9 +123,9 @@ class SyncFile(RainBase):
     version = Column(Integer, default=0, nullable=False)
     #next_id = Column(Integer)
 
-    # backref adds sync_files to sync? test
-    sync_parts = relationship('SyncPart', order_by='SyncPart.offset') 
-    
+    # Add relationships
+    sync = relationship('Sync', backref=backref('sync_files', cascade='all, delete-orphan'))
+
     # temp val for holding full path
     _path = None
     
@@ -194,24 +190,17 @@ def do_versioning(target):
 class SyncPart(RainBase):
     __tablename__ = 'sync_parts'
     __table_args__ = (
-        UniqueConstraint('sync_file_id', 'offset'),
+        UniqueConstraint('sync_file_id', 'part_offset'),
     )
 
     id = Column(Integer, primary_key=True)
-    offset = Column(Integer, nullable=False, index=True)
+    part_offset = Column(Integer, nullable=False, index=True)
     part_len = Column(Integer, nullable=False, index=True)
     part_hash = Column(String(32), nullable=False)
     rolling_hash = Column(Integer, nullable=False)
     sync_file_id = Column(Integer, ForeignKey("sync_files.id"), nullable=False, index=True)
-
-class SyncFileVersion(RainBase):
-    __tablename__ = 'sync_file_versions'
-    id = Column(Integer, primary_key=True)
-    ver = Column(Integer, nullable=False)
-    sync_file_id = Column(Integer, ForeignKey("sync_files.id"), index=True) 
-    sync_file = relationship("SyncFile", backref=backref("versions", order_by=desc(ver) ))
-    changes_json = Column(Text, nullable=False)
-    attrs_json = Column(Text, nullable=False)
+    sync_file = relationship('SyncFile',
+            backref=backref('sync_parts', cascade="all, delete-orphan"))
 
 class ToxServer(RainBase):
     __tablename__ = 'tox_servers'
@@ -234,13 +223,12 @@ class Host(RainBase):
     version = Column(String(50))
     pubkey = Column(String(150), nullable=False)
     
-    # set by session 
+    # fk 
     sync_id = Column(Integer, ForeignKey("syncs.id"), index=True) 
-
-'''
-    ver_data = string
-    versions = arr of 
-'''
+    
+    # Add relationships
+    sync = relationship('Sync', backref=backref('hosts', 
+        cascade='all, delete-orphan'))
 
 class HostFile(RainBase):
     __tablename__ = 'host_files'
@@ -253,11 +241,9 @@ class HostFile(RainBase):
     id = Column(Integer, primary_key=True)
 
     host_id = Column(Integer, ForeignKey("hosts.id"), index=True, nullable=False) 
-    host = relationship("Host", backref=backref("host_files", order_by=id ))
+    host = relationship("Host", backref=backref('host_files', 
+        cascade='all, delete-orphan'))
     
-    # mapping for after file comparison
-    sync_file_id = Column(Integer, ForeignKey("sync_files.id"), index=True) 
-    sync_file = relationship("SyncFile", backref=backref("host_files", order_by=id))
     # must have default values for sync_join view to work
     rid = Column(Integer, nullable=False)
     rel_path = Column(Text, nullable=False, index=True)
@@ -272,11 +258,7 @@ class HostFile(RainBase):
     cmp_id = Column(Integer)
     # sync_file.version of last comparison 
     cmp_ver = Column(Integer)
-    
-    # temp_variables
-    xcmp_id = None
-    xcmp_ver = None
-
+     
     # convert to sync_file
     def to_sync_file(self, sync_id):
         f = self.to_dict(*file_params)
@@ -304,14 +286,18 @@ class HostFile(RainBase):
             assert v.version is not None 
         self.__versions__ = versions
 
-class HostFileVersion(RainBase):
-    ''' Store remote file version Information '''
+class HostPart(RainBase):
+    __tablename__ = 'host_parts'
+    __table_args__ = (
+        UniqueConstraint('host_file_id', 'part_offset'),
+    )
 
-    __tablename__ = 'host_file_versions'
     id = Column(Integer, primary_key=True)
-    ver = Column(Integer, nullable=False)
-    host_file_id = Column(Integer, ForeignKey("host_files.id"), index=True) 
-    host_file = relationship("HostFile", backref=backref("versions", order_by=desc(ver) ))
-    attrs_json = Column(Text, nullable=False)
-    changes_json = Column(Text, nullable=False)
+    part_offset = Column(Integer, nullable=False, index=True)
+    part_len = Column(Integer, nullable=False, index=True)
+    part_hash = Column(String(32), nullable=False)
+    rolling_hash = Column(Integer, nullable=False)
+    host_file_id = Column(Integer, ForeignKey("host_files.id"), nullable=False, index=True)
+    host_file = relationship('HostFile', 
+        backref=backref('host_parts', cascade='all, delete-orphan'))
 
