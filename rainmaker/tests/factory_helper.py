@@ -36,12 +36,14 @@ def Dirs(root, count=10):
         return cur_path
     return results
 
-def Sync(count=1):
+def Sync(count=1, fake=False):
     ''' create dir and return sync '''
     syncs = []
+
     for x in range(0, count):
         root = os.path.join(Application.user_root, str(random.random()))
-        fs.mkdir(root)
+        if not fake:
+            fs.mkdir(root)
         sync = db.Sync()
         sync.path = root
         syncs.append(sync)
