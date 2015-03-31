@@ -1,10 +1,25 @@
 from rainmaker.db.main import SyncFile, SyncPart, Host, HostFile, HostPart
 
+def get_sync(session, event):
+    pass
+
+def get_host(session, event):
+    pass
+
+def utils_controller(session, tr):
+    def _cmd_ping(event):
+        event.reply('pong')
+
+    def _cmd_pong(event):
+        pass
+
+    tr.register('ping', _cmd_ping)
+    tr.register('pong', _cmd_pong)
+
 file_params = ['id', 'file_hash', 'file_size', 'is_dir',
     'rel_path', 'does_exist', 'version', 'ver_data']
 
-
-def sync_files_controller(session, sync, tr):
+def sync_files_controller(session, tr):
     '''
         session: Database session
         sync: sync path
@@ -56,7 +71,7 @@ def paginate(q, page, attrs=None, page_size=200):
     q=q.limit(page_size).offset(page_size*page)
     return [f.to_dict(*attrs) for f in q]
 
-def HostsController(session, sync, tr):
+def HostsController(session, tr):
     '''
         Manage Actions For Hosts
     '''
@@ -89,7 +104,7 @@ def HostsController(session, sync, tr):
     tr.register('list_hosts', _cmd_list_host)
     return tr
 
-def HostFilesController(session, sync, host, tr):
+def HostFilesController(session, tr):
     '''
         session: Database session
         sync: sync path
@@ -122,7 +137,7 @@ def HostFilesController(session, sync, host, tr):
             event.reply('not found')
 
     def _cmd_get_host_file(event):
-        ''' Handle get h/ost file command '''
+        ''' Handle get host file command '''
         p = event.val('rid')
         host_file = session.query(HostFile).filter(
             HostFile.host_id == host.id,

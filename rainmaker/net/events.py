@@ -1,8 +1,66 @@
 from queue import Queue
+import random
 from warnings import warn
+from threading import RLock, Timer
 import traceback
 
 import ujson
+
+class RTimer(object):
+    '''
+        Generic timer that will run after timeout elapsed
+    '''
+    def __init__(self, timeout, func, loop=False):
+        self.timeout = timeout
+        self.func = func
+        self.loop = loop
+        self._timer = None
+        self.ran = False
+        self.started = False
+
+    @property
+    def running(self):
+        '''
+            Is the timer running?
+        '''
+        return self.started and not self.ran
+
+    def reset(self):
+        '''
+            Reset timer, restart if off
+        '''
+        self.off()
+        self.on()
+    
+    def _run(self):
+        '''
+            Run the timer
+        '''
+        self.func()
+        self.ran = True
+        if self.loop:
+            self.on()
+
+    def on(self):
+        '''
+            Turn the timer on
+        '''
+        self._timer = Timer(self.timeout, self._run)
+        self._timer.daemon = True
+        self._timer.start()
+        self.ran = False
+        self.started = True
+        
+    def off(self):
+        '''
+            Turn the timer off
+        '''
+        
+        self._timer.cancel()
+
+    def is_alive(self):
+        return self._timer is not None and self._timer.is_alive()
+
 
 class EventError(Exception):
     pass
@@ -88,15 +146,61 @@ class Event(Params):
         e.status = status
         self.reply_with(e)
 
+class FuncBuffer(object):
+    '''
+        key/val Function store with timeout
+    '''
+    int_max = 10**10 
+
+    def __init__(self):
+        self.lock = RLock()
+        self._buffer = {}
+
+    def rand_key(self):
+        '''Generate random unused key'''
+        v = None
+        while v != True:
+            key = random.randint(0, self.int_max)
+            v = self._buffer.get(key, True) 
+        return key
+
+    def append(self, key, func):
+        '''Append Function to dict of arrays'''
+        with self.lock:
+            if key not in self._buffer:
+                self._buffer[key] = []
+            self._buffer[key].append(func)            
+
+    def add(self, func, name=None, timeout=0):
+        ''' Add function to dict'''
+        with self.lock:
+            if name is None:
+                name = self.rand_key()
+            self.append(name,  func)
+        if timeout:
+            t = Timer(timeout, self.pop, [name])
+            t.daemon = True
+            t.start()
+        return name
+
+    def get(self, key):
+        with self.lock:
+            return self._buffer[key]
+
+    def pop(self, key):
+        with self.lock:
+            func = self._buffer.pop(key, None)
+        return func
+
 class EventHandler(object):
     '''
         Listen for events and call registered functions
     '''
     def __init__(self, parent, queue=False):
         self.parent = parent
-        self.__cmds__ = {}
+        self.__cmds__ = FuncBuffer()
         self.queue = Queue() if queue else None
-    
+
     def call_event(self, name, reply=None, error=None, params=None):
         '''
             Call all functions for event name
@@ -106,23 +210,33 @@ class EventHandler(object):
         event.reply_with = reply
         event.error_with = error
         event.source = self.parent
+        
+        try:
+            funcs = self.__cmds__.get(event.name)
+        except KeyError as e: 
+            self.handler_missing(event)
+            return False 
+
         if self.queue:
-            self.queue.put(event)
+            self.queue.put((funcs, event))
         else:
-            self.dispatch(event)
+            self.dispatch(funcs, event)
+        
+        return True
 
     def commit(self):
         while True:
             try:
-                self.dispatch(self.queue.get_nowait())
+                funcs, event = self.queue.get_nowait()
+                self.dispatch(funcs, event)
             except Empty as e:
                 break
 
-    def dispatch(self, event):
-        funcs = self.__cmds__.get(event.name, None)
-        if funcs is None:
-            self.handler_missing(event)
-            return False 
+    def dispatch(self, funcs, event):
+        
+        if event.reply_with:
+            self.__cmds__.add(event.reply_with, timeout=30)
+
         try:
             for f in funcs:
                 if f(event) == False:
@@ -139,14 +253,11 @@ class EventHandler(object):
             Method called when no registered handlers
         '''
         warn('Handler missing: %s' % event.name)
-        #print('no handlers for %s' % event.name)
 
-    def register(self, name, func):
+    def register(self, name, func, timeout=0):
         '''
             Register func as function to be called when 
             event name is called
         '''
-        if name not in self.__cmds__:
-            self.__cmds__[name] = []
-        self.__cmds__[name].append(func)
+        return self.__cmds__.add(func, name, timeout)
 

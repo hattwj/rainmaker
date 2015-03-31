@@ -7,8 +7,7 @@ def fail(e):
     assert False
 
 def test_sync_files_controller_lists_files():
-    def got_sync_files(event):        
-        print(len(event.val()))
+    def got_sync_files(event):
         assert event.status == 'ok'
         assert len(event.val()) == 200
 
