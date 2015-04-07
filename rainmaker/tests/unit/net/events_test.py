@@ -2,7 +2,7 @@ from time import sleep
 
 from nose.tools import assert_raises
 
-from rainmaker.net.events import FuncBuffer, Event, EventHandler, EventError, \
+from rainmaker.net.events import Event, EventHandler, EventError, \
     Params
 
 def test_event_should_raise_on_missing_get():
@@ -16,16 +16,8 @@ def test_fun_with_params():
     assert {'id':5, 'grr':44} == p.get('host').require('id').allow('grr').val()
     assert_raises(EventError, p.get, 'nosuchkey')
 
-
-def test_func_buffer():
-    fb = FuncBuffer()
-    key = fb.add(5)
-    assert fb.get(key) == [5]
-    key = fb.add(5, timeout=0.2)
-    sleep(0.25)
-    assert_raises(KeyError, fb.get, key)
-
 def test_event_handler():
+    
     def cmd_hi(event):
         cmd_hi.called = True
         event.reply('Hello')

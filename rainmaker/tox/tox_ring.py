@@ -1,5 +1,6 @@
 # stdlib imports
 from __future__ import print_function
+#from abc import ABCMeta, abstractmethod
 from warnings import warn
 from threading import Thread
 from time import sleep
@@ -14,69 +15,82 @@ from rainmaker.tox import tox_errors
 
 from rainmaker.net.state import StateMachine, RunLevel
 from rainmaker.net.events import EventHandler, EventError
-from rainmaker.net.msg_buffer import recv_buffer, send_buffer
+from rainmaker.net.msg_buffer import MsgBuffer
 
-def require_auth(func):
-    '''
-        Event responder decorator to require auth
-    '''
-    def wrapper(self, event):
-        friend_id = event.params.get('friend_id', None)
-        if friend_id is None:
-            raise tox_errors.ToxAuthorizationError()
-        if friend_id not in self.__authenticated_friends__:
-            raise tox_errors.ToxAuthorizationError()
-        func(self, event)
-    return wrapper
- 
-class ToxBase(Tox):
 
+'''
+    - Ring func, pass in sync
+    - Dont subclass Tox, proxy it instead
+    - Proxy receives tox, mock tox param for testing 
+'''
+class ToxBase(object):
     '''
         Base class with overrides/defaults for Tox
+        - mixin class
     '''
-
     running = False
     was_connected = False
     ever_connected = False
     _bootstrap = None
+    primary = None
+    base_group_id = None
 
     def __init__(self, data=None):
-        self.__authenticated_friends__ = set()
-        Tox.__init__(self)
+        super().__init__()
         if data:
             self.load(data)
-        # events received from tox client
         self.router = EventHandler(self)
-        # events handler
         self.events = EventHandler(self)
-        # connection state manager
         self.state_machine = StateMachine()
-        self.state_machine.add(self.__conn_run_level__())
-        self.start = self.state_machine.start
-        self.stop = self.state_machine.stop
-        self.state_machine.level_changed = self.state_level_changed
-        self.router.register('ping', self.__cmd_ping__)
-        self.router.register('pong', self.__cmd_pong__)
+        self.msg_buffer = MsgBuffer()
+        self.register = self.router.register
+
+    def start(self):
+        self.state_machine.start()
+
+    def stop(self):
+        self.state_machine.stop()
+
+    def gsend(self, cmd, data=None):
+        raise NotImplementedError()
     
-    @property
-    def bootstrap(self):
-        if not self._bootstrap: 
-            self._bootstrap = tox_env.random_server()
-        return self._bootstrap
+    def fsend(self, fid, cmd, data=None):
+        raise NotImplementedError()
 
-    def state_level_changed(self, name, code, prev_code):
-        print('%s: %s %s' % (self.__class__.__name__, StateMachine.ACTION_NAMES[code], name)) 
+    def group_message_send(self, gid, data):
+        raise NotImplementedError()
+
+    def send_message(self, fid, msg):
+        raise NotImplementedError()
+
+class ToxBot(Tox, ToxBase):
+    
+    def __init__(self, data=None):
+        super().__init__()
+
+def acts_as_connect_bot(tox):
+    '''
+        Manage tox connection state
+    '''
+ 
+    def bootstrap():
+        if not tox._bootstrap: 
+            tox._bootstrap = tox_env.random_server()
+        return tox._bootstrap
+
+    def state_level_changed(name, code, prev_code):
+        print('%s: %s %s' % (tox.__class__.__name__, StateMachine.ACTION_NAMES[code], name)) 
         ename = '%s_%s' % (name, StateMachine.ACTION_NAMES[code])
-        self.events.call_event(ename)
+        tox.events.call_event(ename)
 
-    def __conn_run_level__(self):
+    def __conn_run_level__():
         '''
             Base Tox run_level
             - threaded to constantly check tox.do
             - check for shut down
         '''
         def _tox_do():
-            do = self.do
+            do = tox.tox.do
             while True:
                 do()
                 sleep(0.04)
@@ -84,14 +98,14 @@ class ToxBase(Tox):
                     break
         
         def _start():
-            ip, port, pubk = self.bootstrap 
-            self.bootstrap_from_address(ip, port, pubk)
+            ip, port, pubk = tox.bootstrap 
+            tox.bootstrap_from_address(ip, port, pubk)
         
         def _stop():
-            self._bootstrap = None
+            tox._bootstrap = None
         
         def _valid():
-            return self.isconnected()
+            return tox.isconnected()
         
         _tox_thread = Thread(target=_tox_do)
         _tox_thread.daemon = True
@@ -100,104 +114,103 @@ class ToxBase(Tox):
         name = 'tox_connection'
         run_level = RunLevel(name, _start, _stop, _valid, 30)
         return run_level
+
+    # connection state manager
+    tox.state_machine.add(tox.__conn_run_level__())
+    tox.state_machine.level_changed = tox.state_level_changed
+
+def acts_as_message_bot(tox):
+    '''
+        compose Bots to manage individual tasks
+        - connection
+        - text
+        - file transfer
+    ''' 
+    router = tox.router
+    send_buffer = tox.msg_buffer.send
+    recv_buffer = tox.msg_buffer.recv
+     
+    def gsend(event):
+        '''
+            Broadcast event
+        '''
+        cmd, status, data = event.cmd, event.status, event.data
+        rcode = router.temp(event.reply_with)
+        for msg in send_buffer(rcode, cmd, status, data):
+            tox.group_message_send(tox.base_group_id, msg) 
+
+    def fsend(fid, event):
+        '''
+            Send event to friend
+        '''
+        cmd, status, data = event.cmd, event.status, event.data
+        rcode = router.temp(rcode, event.reply, timeout=30)
+        for msg in send_buffer(cmd, data, chunk=1300):
+            tox.send_message(fid, msg)
     
-    def on_read_reciept(self, fno, reciept):
-        print('friend: %s recv: %s' % (fno, reciept))
-
-    def on_dht_connected(self):
-        print('dht-connnected-event')
-
-    def on_dht_disconnected(self):
-        print('dht-disconnected-event')
-
-    def on_friend_request(self, pk, msg):
+    def on_friend_request(pk, msg):
         '''
             Pass to authenticate
         '''
-        key = 'tox-fr-%s-%s' % (id(self), pk)
+        key = 'tox-fr-%s-%s' % (id(tox), pk)
         for cmd, params in recv_buffer(key, msg):
             params = {
                 'friend_pk': pk,
                 'params': params
             }
-            self.router.call_event('authenticate', params=params)
+            tox.router.call_event('authenticate', params=params)
 
-    def on_friend_message(self, fid, msg):
+    def on_friend_message(fid, msg):
         '''
             A friend has sent a message
         '''
         # manage reply from handler
         def freply(event):
-            self.fsend(fid, event.name, event.val())
+            # send reply to caller
+            tox.fsend(fid, event.name, event.val())
         
-        # Generate a unique key for this request
-        key = 'tox-fm-%s-%s' % (id(self), fid)
+        # Generate a unique key for this request stream
+        key = 'tox-fm-%s-%s' % (id(tox), fid)
         # Only yield when msg is complete
         for cmd, params in recv_buffer(key, msg):
             params = {
                 'friend_id': fid,
                 'params': params
             }
-            self.router.call_event(cmd, params=params, reply=freply)
+            tox.router.call_event(cmd, params=params, reply=freply)
 
-    def on_group_message(self, gno, fid, msg):
+    def on_group_message(gno, fid, msg):
         '''
             A group member sent a message
         '''
         def greply(event):
-            self.gsend(event.name, event.val())
+            tox.gsend(event.name, event.val())
 
-        key = 'tox-gm-%s-%s-%s' % (id(self), gno, fid)
+        key = 'tox-gm-%s-%s-%s' % (id(tox), gno, fid)
         for cmd, params in recv_buffer(key, msg):
             params = {
                 'friend_id': fid,
                 'group_number': gno,
                 'params': params
             }
-            self.router.call_event(cmd, params=params, reply=greply)
+            tox.router.call_event(cmd, params=params, reply=greply)
 
-    def gsend(self, cmd, data=None):
-        '''
-            Broadcast event
-        '''
-        for count, msg in send_buffer(cmd, data, chunk=1300):
-            self.group_message_send(self.base_group_id, msg) 
+    # events received from tox client
+    tox.on_group_message = on_group_message
+    tox.on_friend_message = on_friend_message
+    tox.on_friend_request = on_friend_request
+    tox.gsend = gsend
+    tox.fsend = fsend
 
-    def fsend(self, fid, cmd, data=None):
-        '''
-
-        '''
-        for count, msg in send_buffer(cmd, data, chunk=1300):
-            self.send_message(fid, msg)
-
-    def __cmd_pong__(self, event):
-        pass
-
-    def __cmd_ping__(self, event):
-        event.reply('pong')
-
-class SyncBot(ToxBase):
-    '''
-        Find primary bot and relay information or bail
-        if timeout reached
-    '''
-    def __init__(self, primary_bot, data=None):
-        ToxBase.__init__(self, data)
-        self.primary = False
-        self.primary_bot = primary_bot
-        self.state_machine.add(self.__search_run_level__())
-        self.__host = Event('put_host', pubkey=self.get_address(), 
-            device_name=Application.device_name,
-            version=Application.version).serialize()
+def acts_as_search_bot(tox, primary_bot_address):
         
-    def __search_run_level__(self): 
-        
+    def __search_run_level__():  
         # ran when level starts
         def _start():
             '''Start tox search'''
             #self.__search_tries_left -= 1
-            if len(self.get_friendlist()) == 0:
-                self.add_friend(self.primary_bot.get_address(), auth_msg)
+            if len(tox.get_friendlist()) == 0:
+                tox.add_friend(primary_bot_address, auth_msg)
         
         # ran when level stops
         def _stop():
@@ -207,59 +220,38 @@ class SyncBot(ToxBase):
 
         # Periodic check to see if level is valid
         def _valid():
-            if self.get_friend_connection_status(0):
+            if tox.get_friend_connection_status(0):
                 #self.__search_tries_left = 2
                 return True
             else:
                 try:
                     # try to reach friends
-                    for fid in self.get_friendlist():
-                        self.fsend(fid, 'ping')
+                    for fid in tox.get_friendlist():
+                        tox.fsend(fid, 'ping')
                 except OperationFailedError as e:
                     pass
                 return False
         
         return RunLevel('tox_search', _start, _stop, _valid, 40)
 
-    def on_group_invite(self, friend_num, gtype, grp_pubkey):
+    def on_group_invite(friend_num, gtype, grp_pubkey):
         print('Joining group: %s' % gtype)
-        group_id = self.join_groupchat(friend_num, grp_pubkey)
-             
-class PrimaryBot(ToxBase):
+        group_id = tox.join_groupchat(friend_num, grp_pubkey)
+    
+    assert tox.primary is None
+    tox.primary = False
+    tox.state_machine.add(__search_run_level__())
+    tox.on_group_invite = on_group_invite
+
+def acts_as_primary_bot(tox):
     '''
         Primary tox node:
         - create group chat
         - hand off on shutdown
         - Inherited base functions
     '''
-    
-    def __init__(self, data=None):
-        self.primary = True
-        super(PrimaryBot, self).__init__(data)
-        self.sync_bot = None
-
-        # event handlers 
-        self.router.register('join_chat', self.__cmd_join_chat__)
-        
-        # group chat room
-        self.base_group_id = self.add_groupchat()
+    assert tox.primary is None
+    tox.primary = True
+    # group chat room
+    tox.base_group_id = tox.add_groupchat()
  
-    def stop(self):
-        super(PrimaryBot, self).stop()
-    
-    def start(self):
-        assert self.sync_bot is not None
-        if self.state_machine.running:
-            print('Already running')
-            return
-        super(PrimaryBot, self).start()
-     
-    @require_auth
-    def __cmd_join_chat__(self, event):
-        '''
-            Someone requested access to chat room
-            - TODO: Verify that they haven't already joined
-        '''
-        fid = event.val('friend_id')
-        self.invite_friend(fid, self.base_group_id)
-    

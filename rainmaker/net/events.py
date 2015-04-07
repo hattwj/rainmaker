@@ -6,61 +6,7 @@ import traceback
 
 import ujson
 
-class RTimer(object):
-    '''
-        Generic timer that will run after timeout elapsed
-    '''
-    def __init__(self, timeout, func, loop=False):
-        self.timeout = timeout
-        self.func = func
-        self.loop = loop
-        self._timer = None
-        self.ran = False
-        self.started = False
-
-    @property
-    def running(self):
-        '''
-            Is the timer running?
-        '''
-        return self.started and not self.ran
-
-    def reset(self):
-        '''
-            Reset timer, restart if off
-        '''
-        self.off()
-        self.on()
-    
-    def _run(self):
-        '''
-            Run the timer
-        '''
-        self.func()
-        self.ran = True
-        if self.loop:
-            self.on()
-
-    def on(self):
-        '''
-            Turn the timer on
-        '''
-        self._timer = Timer(self.timeout, self._run)
-        self._timer.daemon = True
-        self._timer.start()
-        self.ran = False
-        self.started = True
-        
-    def off(self):
-        '''
-            Turn the timer off
-        '''
-        
-        self._timer.cancel()
-
-    def is_alive(self):
-        return self._timer is not None and self._timer.is_alive()
-
+from rainmaker.net.utils import RTimer, LStore
 
 class EventError(Exception):
     pass
@@ -132,12 +78,6 @@ class Event(Params):
         self.reply_with = None
         self.error_with = None
 
-    def serialize(self):
-        return ujson.dumps({
-            'command': self.name,
-            'params': self.val()
-        })
-
     def reply(self, status, data=None):
         if not self.reply_with:
             warn('No "reply_with" specified for: %s' % self.name)
@@ -146,59 +86,13 @@ class Event(Params):
         e.status = status
         self.reply_with(e)
 
-class FuncBuffer(object):
-    '''
-        key/val Function store with timeout
-    '''
-    int_max = 10**10 
-
-    def __init__(self):
-        self.lock = RLock()
-        self._buffer = {}
-
-    def rand_key(self):
-        '''Generate random unused key'''
-        v = None
-        while v != True:
-            key = random.randint(0, self.int_max)
-            v = self._buffer.get(key, True) 
-        return key
-
-    def append(self, key, func):
-        '''Append Function to dict of arrays'''
-        with self.lock:
-            if key not in self._buffer:
-                self._buffer[key] = []
-            self._buffer[key].append(func)            
-
-    def add(self, func, name=None, timeout=0):
-        ''' Add function to dict'''
-        with self.lock:
-            if name is None:
-                name = self.rand_key()
-            self.append(name,  func)
-        if timeout:
-            t = Timer(timeout, self.pop, [name])
-            t.daemon = True
-            t.start()
-        return name
-
-    def get(self, key):
-        with self.lock:
-            return self._buffer[key]
-
-    def pop(self, key):
-        with self.lock:
-            func = self._buffer.pop(key, None)
-        return func
-
 class EventHandler(object):
     '''
         Listen for events and call registered functions
     '''
-    def __init__(self, parent, queue=False):
+    def __init__(self, parent=None, queue=False):
         self.parent = parent
-        self.__cmds__ = FuncBuffer()
+        self.__cmds__ = LStore()
         self.queue = Queue() if queue else None
 
     def call_event(self, name, reply=None, error=None, params=None):
@@ -212,7 +106,7 @@ class EventHandler(object):
         event.source = self.parent
         
         try:
-            funcs = self.__cmds__.get(event.name)
+            funcs = self.__cmds__[event.name]
         except KeyError as e: 
             self.handler_missing(event)
             return False 
@@ -232,11 +126,10 @@ class EventHandler(object):
             except Empty as e:
                 break
 
-    def dispatch(self, funcs, event):
-        
+    def dispatch(self, funcs, event): 
+        # Register Temporary Event Handler
         if event.reply_with:
-            self.__cmds__.add(event.reply_with, timeout=30)
-
+            self.__cmds__.append(event.reply_with, timeout=30)
         try:
             for f in funcs:
                 if f(event) == False:
@@ -250,14 +143,19 @@ class EventHandler(object):
 
     def handler_missing(self, event):
         '''
-            Method called when no registered handlers
+            Method called when there are no registered handlers
         '''
         warn('Handler missing: %s' % event.name)
+
+    def temp(self, func, timeout=30):
+        return self.__cmds__.append(func, timeout=timeout)
 
     def register(self, name, func, timeout=0):
         '''
             Register func as function to be called when 
             event name is called
         '''
-        return self.__cmds__.add(func, name, timeout)
+        arr = self.__cmds__.get(name, [])
+        arr.append(func)
+        return self.__cmds__.put(name, arr, timeout=timeout)
 

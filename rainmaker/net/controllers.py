@@ -1,4 +1,18 @@
 from rainmaker.db.main import SyncFile, SyncPart, Host, HostFile, HostPart
+from rainmaker.net.errors import AuthError
+
+def require_auth(func):
+    '''
+        Event responder decorator to require auth
+    '''
+    def wrapper(self, event):
+        friend_id = event.params.get('friend_id', None)
+        if friend_id is None:
+            raise AuthError()
+        if friend_id not in self.__authenticated_friends__:
+            raise AuthError()
+        func(self, event)
+    return wrapper
 
 def get_sync(session, event):
     pass
@@ -62,7 +76,6 @@ def sync_files_controller(session, tr):
     tr.register('get_sync_file', _cmd_get_sync_file)
     tr.register('list_sync_files', _cmd_list_sync_files)
     tr.register('list_sync_parts', _cmd_list_sync_parts)
-
 
 def paginate(q, page, attrs=None, page_size=200):
     '''Paginate results of query'''

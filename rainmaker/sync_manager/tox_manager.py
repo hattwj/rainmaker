@@ -4,16 +4,6 @@ from queue import Queue
 from rainmaker_app.tox.tox_ring import PrimaryBot, SyncBot
 from rainmaker_app.db import models
 
-'''
-    Send and recv file status
-    - mark files as:
-        - needed
-        - out of date
-        - current
-        - conflict
-    - 
-'''
-
 class ToxRunner(object):
     '''
         Manage tox network communications
@@ -65,5 +55,4 @@ class ToxRunner(object):
 
     def commit(self):
         self.sync_bot.commit()
-
 
