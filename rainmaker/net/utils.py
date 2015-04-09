@@ -8,7 +8,7 @@ def new_key(adict):
     ''' Generate a random key for dictionary '''
     success = False
     while success != True:
-        key = randint(0, MAX_INT)
+        key = str(randint(0, MAX_INT))
         success = adict.get(key, True)
     return key
 
@@ -41,14 +41,17 @@ class LStore(object):
         timeout = timeout if timeout else self.timeout
         with self.lock: 
             if timeout:
-                timer = RTimer(self.timeout, self.pop, params=[key])
+                timer = RTimer(timeout, self.pop, params=[key, True])
                 timer.on()
             self._buffer[key] = (timer, val)
     
-    def pop(self, key):
+    def pop(self, key, from_timer=False):
         ''' Pop a key from dictionary '''
         with self.lock:
-            return self._buffer.pop(key, None)
+            timer, val =  self._buffer.pop(key, (None, None))
+            if timer and not from_timer:
+                timer.off()
+                del(timer)
 
     def append(self, obj, timeout=0):
         ''' Add an item to storage '''

@@ -60,24 +60,6 @@ def yield_parts(msg, chunk):
 class MessageBufferError(Exception):
     pass
 
-'''
-    rlen+mnlen+mtlen+3
-    mb:
-        serializer:
-            json for now
-            format:
-                rcode:mno:mto\n
-                cmd:status\n
-                data
-        send(event)
-            - encode
-            - add response key
-            - yields data
-        recv(data)
-            - decode
-            - remember response key
-            - yields event when complete
-'''
 class MsgBuffer(object):
 
     def __init__(self, timeout=30, chunk=1300):
@@ -91,10 +73,15 @@ class MsgBuffer(object):
         ''' yield messages to send event '''
         for mno, mto, msg in self.encoder(rcode, cmd, status, data, chunk=self.chunk):
             # yield msg to send
-            yield (mno, mto, msg)
+            yield msg
 
-    def recv(self, line):
+    def recv(self, line, rcode=None):
+        '''yield event parameters '''
+        _rcode = rcode
         rcode, mno, mto, data = self.line_parser(line)
+        # Overwrite rcode if rcode not trusted
+        rcode = _rcode if _rcode else rcode
+
         del(line)
         buff = self._rbuff.get(rcode, None)
         if buff is None:
@@ -102,8 +89,10 @@ class MsgBuffer(object):
             self._rbuff.put(rcode, buff) 
         for _data in buff.insert(mno, data): 
             # yield complete message
+            self._rbuff.pop(rcode)
             cmd, status, params = self.decoder(_data)
             yield (rcode, cmd, status, params)
+            
                 
 class ArrBuffer(object):
     ''' Generic string/byte_arr buffer '''

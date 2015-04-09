@@ -50,11 +50,8 @@ class ToxBase(object):
 
     def stop(self):
         self.state_machine.stop()
-
-    def gsend(self, cmd, data=None):
-        raise NotImplementedError()
-    
-    def fsend(self, fid, cmd, data=None):
+ 
+    def send(self, cmd, data=None, fid=None, status=None, reply=None):
         raise NotImplementedError()
 
     def group_message_send(self, gid, data):
@@ -130,77 +127,52 @@ def acts_as_message_bot(tox):
     send_buffer = tox.msg_buffer.send
     recv_buffer = tox.msg_buffer.recv
      
-    def gsend(event):
+    def send(cmd, data=None, fid=None, \
+            gid=None, status=None, reply=None):
         '''
             Broadcast event
         '''
-        cmd, status, data = event.cmd, event.status, event.data
-        rcode = router.temp(event.reply_with)
+        rcode = router.temp(reply, 30) if reply else 0
         for msg in send_buffer(rcode, cmd, status, data):
-            tox.group_message_send(tox.base_group_id, msg) 
-
-    def fsend(fid, event):
-        '''
-            Send event to friend
-        '''
-        cmd, status, data = event.cmd, event.status, event.data
-        rcode = router.temp(rcode, event.reply, timeout=30)
-        for msg in send_buffer(cmd, data, chunk=1300):
-            tox.send_message(fid, msg)
+            if fid is None:
+                gid = tox.base_group_id if gid is None else gid
+                tox.group_message_send(gid, msg) 
+            else:
+                tox.send_message(fid, msg)
     
     def on_friend_request(pk, msg):
         '''
             Pass to authenticate
         '''
-        key = 'tox-fr-%s-%s' % (id(tox), pk)
-        for cmd, params in recv_buffer(key, msg):
-            params = {
-                'friend_pk': pk,
-                'params': params
-            }
+        for rcode, cmd, status, params in recv_buffer(msg, rcode=pk):
+            params['pk'] = pk
             tox.router.call_event('authenticate', params=params)
 
     def on_friend_message(fid, msg):
         '''
             A friend has sent a message
         '''
-        # manage reply from handler
-        def freply(event):
-            # send reply to caller
-            tox.fsend(fid, event.name, event.val())
-        
-        # Generate a unique key for this request stream
-        key = 'tox-fm-%s-%s' % (id(tox), fid)
-        # Only yield when msg is complete
-        for cmd, params in recv_buffer(key, msg):
-            params = {
-                'friend_id': fid,
-                'params': params
-            }
-            tox.router.call_event(cmd, params=params, reply=freply)
+        on_message(None, fid, msg)
 
-    def on_group_message(gno, fid, msg):
+    def on_message(gid, fid, msg):
         '''
             A group member sent a message
         '''
-        def greply(event):
-            tox.gsend(event.name, event.val())
-
-        key = 'tox-gm-%s-%s-%s' % (id(tox), gno, fid)
-        for cmd, params in recv_buffer(key, msg):
-            params = {
-                'friend_id': fid,
-                'group_number': gno,
-                'params': params
-            }
-            tox.router.call_event(cmd, params=params, reply=greply)
+        def do_reply(event):
+            tox.send(rcode, event.val(), status=event.status, gid=gid, fid=fid)
+        rcode = -1
+        for rcode, cmd, status, params in recv_buffer(msg):
+            params['fid'] = fid
+            params['gid'] = gid 
+            _reply = do_reply if rcode else None            
+            tox.router.call_event(cmd, params=params, reply=_reply, \
+                    rcode=rcode, status=status)
 
     # events received from tox client
-    tox.on_group_message = on_group_message
+    tox.on_group_message = on_message
     tox.on_friend_message = on_friend_message
     tox.on_friend_request = on_friend_request
-    tox.gsend = gsend
-    tox.fsend = fsend
+    tox.send = send
 
 def acts_as_search_bot(tox, primary_bot_address):
         
