@@ -6,3 +6,5 @@ watchdog==0.8.3
 PyTox==0.0.23
 ujson==1.33
 sqlalchemy==0.9.9
+passlib==1.6.2
+bcrypt==1.1.1
