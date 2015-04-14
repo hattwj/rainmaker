@@ -28,7 +28,22 @@ class LStore(object):
             if timer:
                 timer.reset()
         return val
-    
+
+    def yget(self, key, _func=None):
+        ''' yielding get with optional generator '''
+        with self.lock:
+            # check for key
+            timer, val = self._buffer.get(key, [None, None])
+            if timer:
+                timer.reset()
+            # generate val
+            if val is None and _func:
+                val = _func()
+                self[key] = val
+            # only yield if val
+            if val:
+                yield val
+
     def get(self, key, default=None):
         with self.lock:
             timer, val = self._buffer.get(key, [None, default])
@@ -114,4 +129,5 @@ class RTimer(object):
 
     def is_alive(self):
         return self._timer is not None and self._timer.is_alive()
+
 

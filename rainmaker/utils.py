@@ -1,4 +1,10 @@
 
+import os, binascii
+
+def rand_str(length):
+    return binascii.b2a_base64(os.urandom(length)).decode(encoding='UTF-8')
+
+
 from time import time
 
 def time_now():

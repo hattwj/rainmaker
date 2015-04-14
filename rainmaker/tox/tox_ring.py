@@ -13,6 +13,7 @@ from rainmaker.main import Application
 from rainmaker.tox import tox_env
 from rainmaker.tox import tox_errors
 
+from rainmaker.net.sessions import ToxSessions 
 from rainmaker.net.state import StateMachine, RunLevel
 from rainmaker.net.events import EventHandler, EventError
 from rainmaker.net.msg_buffer import MsgBuffer
@@ -32,18 +33,27 @@ class ToxBase(object):
     was_connected = False
     ever_connected = False
     _bootstrap = None
-    primary = None
+    _sync = None
     base_group_id = None
 
-    def __init__(self, data=None):
+    def __init__(self, sync, data=None, primary=None):
         super().__init__()
         if data:
             self.load(data)
+        self._sync = sync
+        self._primary = primary
+        self.sessions = ToxSessions(self)
         self.router = EventHandler(self)
         self.events = EventHandler(self)
         self.state_machine = StateMachine()
         self.msg_buffer = MsgBuffer()
         self.register = self.router.register
+    
+    @property
+    def sync(self):
+        if self._sync is None:
+            raise NotImplementedError()
+        return self._sync
 
     def start(self):
         self.state_machine.start()
@@ -59,11 +69,21 @@ class ToxBase(object):
 
     def send_message(self, fid, msg):
         raise NotImplementedError()
+    
+    @property
+    def primary(self):
+        return self._primary if self._primary else self
+
+    @primary.setter
+    def primary(self, val):
+        self._primary = val
+
 
 class ToxBot(Tox, ToxBase):
     
-    def __init__(self, data=None):
-        super().__init__()
+    def __init__(self, sync, data=None, primary=None):
+        Tox.__init__(self)
+        ToxBase.__init__(self, sync, data=data, primary=primary)
 
 def acts_as_connect_bot(tox):
     '''
@@ -146,7 +166,8 @@ def acts_as_message_bot(tox):
         '''
         for rcode, cmd, status, params in recv_buffer(msg, rcode=pk):
             params['pk'] = pk
-            tox.router.call_event('authenticate', params=params)
+            session = tox.sessions.new(pk)
+            tox.router.call_event('authenticate', params=params, session=session)
 
     def on_friend_message(fid, msg):
         '''
@@ -163,10 +184,11 @@ def acts_as_message_bot(tox):
         rcode = -1
         for rcode, cmd, status, params in recv_buffer(msg):
             params['fid'] = fid
-            params['gid'] = gid 
+            params['gid'] = gid
+            session = tox.sessions.get(fid)
             _reply = do_reply if rcode else None            
             tox.router.call_event(cmd, params=params, reply=_reply, \
-                    rcode=rcode, status=status)
+                    rcode=rcode, status=status, session=session)
 
     # events received from tox client
     tox.on_group_message = on_message
@@ -174,15 +196,17 @@ def acts_as_message_bot(tox):
     tox.on_friend_request = on_friend_request
     tox.send = send
 
-def acts_as_search_bot(tox, primary_bot_address):
-        
+def acts_as_search_bot(tox, primary):
+    tox.primary = primary
+    paddr = primary.get_address()
+
     def __search_run_level__():  
         # ran when level starts
         def _start():
             '''Start tox search'''
             #self.__search_tries_left -= 1
             if len(tox.get_friendlist()) == 0:
-                tox.add_friend(primary_bot_address, auth_msg)
+                tox.add_friend(paddr, auth_msg)
         
         # ran when level stops
         def _stop():

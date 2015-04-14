@@ -83,3 +83,4 @@ def test_event_messages_and_replies_should_pass_through_transport():
     t1.send('hello_world', {'kibble':'wibble'}, fid=1, reply=cmd_rtest)
     assert cmd_test.ran
     assert cmd_rtest.ran
+

@@ -48,3 +48,14 @@ def test_missing_handler_should_warn():
     eh.register('na', cmd_na)
     assert eh.call_event('na') == True
 
+def test_register_with_responds_to_decorator():
+    eh = EventHandler() 
+    @eh.responds_to('hi')
+    def cmd_hi(event):
+        event.reply('hello')
+    def cmd_rhi(event):
+        cmd_rhi.ran = True
+    cmd_rhi.ran = False
+    eh.call_event('hi', reply=cmd_rhi)
+    assert cmd_rhi.ran == True
+
