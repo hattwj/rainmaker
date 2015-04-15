@@ -21,47 +21,29 @@ def get_sync(db, event):
 def get_host(db, event):
     pass
 
-def tox_auth_controller(dbs, router, tox):
+def tox_auth_controller(db, tox):
     '''
         Manage authentication of tox friends
-        - controllers can:
-            - approve auth
-            - require auth
-            - handle requests
-        - controllers don't:
-            - get db, its given
-            - get tox, its given
-        pass separate params
-        object relationships
-        - tox
-            - sess --\
-            - eh --|      |
-                        controllers
-                - e ------ func
     '''
-     
+    sessions = tox.sessions
+    router = tox.router
+
     @router.responds_to('new_session')
     def _cmd_new_session(event):
-        pk = event.get('pk')
-        event.new_session(pk)
-        args = event.session.args()
-        event.reply('ok', args)
+        nonce = sessions.get_nonce(event.val('pk')) 
+        event.reply('ok', {'nonce': nonce})
 
     @router.responds_to('create_session')
     def _cmd_create_session(event):
-        phash = event.get('phash')
-        did_auth = event.session.auth(phash)        
-        args = session.args()
+        phash = event.val('passwd_hash')
+        pk = event.val('pk')
+        did_auth = sessions.authenticate(pk, phash)
         if not did_auth:
-            event.reply('auth fail', args)
+            event.reply('auth fail')
             return 
-        xfid = tox.add_friend(pk)
-        print('xfid:', xfid)
-        fid = tox.get_friend_id(pk)
-        print('fid:',fid)
-        event.reply('ok', args)
+        event.reply('ok')
         
-def utils_controller(db, router, sync):
+def utils_controller(db, tox):
     
     @router.responds_to('ping')
     def _cmd_ping(event):
@@ -72,7 +54,7 @@ file_params = ['id', 'file_hash', 'file_size', 'is_dir',
 
 
 @require_auth
-def sync_files_controller(db, router, sync):
+def sync_files_controller(db, tox):
     '''
         db: Database session
         sync: sync path
@@ -115,10 +97,12 @@ def sync_files_controller(db, router, sync):
         event.reply('ok', sync_parts)
 
 @require_auth
-def hosts_controller(db, tr, sync):
+def hosts_controller(db, tox):
     '''
         Manage Actions For Hosts
     '''
+
+    @router.responds_to('put_host')
     def _cmd_put_host(event):
         ''' Handle put host command '''
         p = event.get('host').require('pubkey', 'device_name').val()
@@ -133,8 +117,9 @@ def hosts_controller(db, tr, sync):
         db.add(host)
         db.commit()
         event.reply('ok')
-
-    def _cmd_list_host(event):
+    
+    @router.responds_to('list_hosts')
+    def _cmd_list_hosts(event):
         params = event.allow('page', 'since').val()
         since = int(params.get('since', 0))
         page = int(params.get('page', 0))
@@ -144,12 +129,8 @@ def hosts_controller(db, tr, sync):
         hosts = paginate(q, page)
         event.reply('put_hosts', hosts)
 
-    tr.register('put_host', _cmd_put_host)
-    tr.register('list_hosts', _cmd_list_host)
-    return tr
-
 @require_auth
-def host_files_controller(db, tr, sync):
+def host_files_controller(db, tox):
     '''
         db: Database session
         sync: sync path

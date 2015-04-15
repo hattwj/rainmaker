@@ -34,21 +34,22 @@ class ToxBase(object):
     ever_connected = False
     _bootstrap = None
     _sync = None
+    sessions = None
     base_group_id = None
 
-    def __init__(self, sync, data=None, primary=None):
-        super().__init__()
+    def __init__(self, sync=None, data=None, primary=None):
+        super(ToxBase, self).__init__()
         if data:
             self.load(data)
         self._sync = sync
         self._primary = primary
-        self.sessions = ToxSessions(self)
         self.router = EventHandler(self)
         self.events = EventHandler(self)
         self.state_machine = StateMachine()
         self.msg_buffer = MsgBuffer()
         self.register = self.router.register
-    
+        self.trigger = self.router.trigger
+
     @property
     def sync(self):
         if self._sync is None:
@@ -69,7 +70,7 @@ class ToxBase(object):
 
     def send_message(self, fid, msg):
         raise NotImplementedError()
-    
+     
     @property
     def primary(self):
         return self._primary if self._primary else self
@@ -81,9 +82,10 @@ class ToxBase(object):
 
 class ToxBot(Tox, ToxBase):
     
-    def __init__(self, sync, data=None, primary=None):
+    def __init__(self, sync=None, data=None, primary=None):
         Tox.__init__(self)
         ToxBase.__init__(self, sync, data=data, primary=primary)
+        self.sessions = ToxSessions(self)
 
 def acts_as_connect_bot(tox):
     '''
@@ -98,7 +100,7 @@ def acts_as_connect_bot(tox):
     def state_level_changed(name, code, prev_code):
         print('%s: %s %s' % (tox.__class__.__name__, StateMachine.ACTION_NAMES[code], name)) 
         ename = '%s_%s' % (name, StateMachine.ACTION_NAMES[code])
-        tox.events.call_event(ename)
+        tox.events.trigger(ename)
 
     def __conn_run_level__():
         '''
@@ -167,7 +169,7 @@ def acts_as_message_bot(tox):
         for rcode, cmd, status, params in recv_buffer(msg, rcode=pk):
             params['pk'] = pk
             session = tox.sessions.new(pk)
-            tox.router.call_event('authenticate', params=params, session=session)
+            tox.trigger('authenticate', params=params, session=session)
 
     def on_friend_message(fid, msg):
         '''
@@ -185,9 +187,9 @@ def acts_as_message_bot(tox):
         for rcode, cmd, status, params in recv_buffer(msg):
             params['fid'] = fid
             params['gid'] = gid
-            session = tox.sessions.get(fid)
+            session = tox.sessions
             _reply = do_reply if rcode else None            
-            tox.router.call_event(cmd, params=params, reply=_reply, \
+            tox.trigger(cmd, params=params, reply=_reply, \
                     rcode=rcode, status=status, session=session)
 
     # events received from tox client

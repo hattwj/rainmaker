@@ -34,7 +34,7 @@ def test_events_from_handler_should_reply():
     cmd_hi.called = False
     eh = EventHandler(None)
     eh.register('Hi', cmd_hi)
-    eh.call_event('Hi', reply=cmd_hi_reply)
+    eh.trigger('Hi', reply=cmd_hi_reply)
     assert cmd_hi_reply.called == True
     assert cmd_hi.called == True
 
@@ -44,9 +44,9 @@ def test_missing_handler_should_warn():
     eh = EventHandler(None)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        assert eh.call_event('na') == False
+        assert eh.trigger('na') == False
     eh.register('na', cmd_na)
-    assert eh.call_event('na') == True
+    assert eh.trigger('na') == True
 
 def test_register_with_responds_to_decorator():
     eh = EventHandler() 
@@ -56,6 +56,6 @@ def test_register_with_responds_to_decorator():
     def cmd_rhi(event):
         cmd_rhi.ran = True
     cmd_rhi.ran = False
-    eh.call_event('hi', reply=cmd_rhi)
+    eh.trigger('hi', reply=cmd_rhi)
     assert cmd_rhi.ran == True
 

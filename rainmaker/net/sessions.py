@@ -50,13 +50,17 @@ class ToxSessions(object):
         def new_hash():
             passwd = '%s%s%s' % (self.secret, self.pk, nonce)
             return bcrypt_sha256.encrypt(passwd)
-        for chash in self._sess.yget(key, new_hash):
-            return chash
+        for hashed_pass in self._sess.yget(key, new_hash):
+            return hashed_pass
 
     def authenticate(self, pk, _hash):
         nonce = self.get_nonce(pk)
         passwd = self.secret + pk + nonce
         valid = bcrypt_sha256.verify(passwd, _hash)
+        if valid and pk not in self.valid_pks: 
+            xfid = self.tox.add_friend_norequest(pk)
+            self.valid_fids.add(xfid)
+            self.valid_pks.add(pk)
         return valid
 
     def valid_fid(self, fid):
@@ -64,4 +68,4 @@ class ToxSessions(object):
     
     def valid_pk(self, pk):
         return fid in self.valid_pks
-    
+   

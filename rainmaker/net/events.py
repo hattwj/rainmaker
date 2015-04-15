@@ -17,7 +17,7 @@ class Params(object):
         super(Params, self).__init__()
         self.data = {} if data is None else data
         if not type(self.data) is dict:
-            raise EventError('Not a dictionary')
+            raise EventError('Not a dictionary: %s' % repr(self.data))
         self.akeys = set()
         self.rkeys = set()
     
@@ -53,7 +53,7 @@ class Params(object):
                     result[k] = self.data[k]
             return result
         except KeyError as e:
-            raise EventError
+            raise EventError('key: %s not in %s' % (key, repr(self.data)))
         except TypeError as e:
             raise EventError
 
@@ -100,7 +100,7 @@ class EventHandler(object):
         self.__cmds__ = LStore()
         self.queue = Queue() if queue else None
 
-    def call_event(self, name, **kwargs):
+    def trigger(self, name, **kwargs):
         '''
             Call all functions for event name
         '''

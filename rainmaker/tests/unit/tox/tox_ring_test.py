@@ -5,7 +5,7 @@ from rainmaker.tox.tox_ring import ToxBase, ToxBot, acts_as_message_bot, \
         acts_as_connect_bot, acts_as_search_bot
 
 def test_toxbot_multiple_inheritance_is_good():
-    tox = ToxBot()
+    tox = ToxBot(None)
     assert_raises(OperationFailedError, tox.send_message, 1, 'hi')
     gg = tox.group_message_send(1, 'hi')
     # weird, why must we print the result?
@@ -21,8 +21,8 @@ def test_base_tox_interface_has_blank_methods():
 
 class MockTox(ToxBase):
     ''' Mock '''
-    def __init__(self, data=None):
-        super().__init__(data)
+    def __init__(self, sync=None, data=None):
+        super().__init__(sync, data=data)
         self._g_msgs = []
         self._f_msgs = []
         self._links = {}
@@ -43,7 +43,12 @@ class MockTox(ToxBase):
         dict_append(self._links, 'fid%s' % fid, [gid, fid, tox])
         if recurse:
             tox._mock_link(self, gid, fid, recurse=False)
+    
+    def get_keys(self):
+        return ('123456789','987654321')
 
+    def get_address(self):
+        return '123456789'
 def dict_append(adict, key, val):
     arr = adict.get(key, [])
     arr.append(val)
