@@ -12,10 +12,20 @@ def controller_requires_auth(func):
         transport.router.auth_strategy_off()
     return _wrapper
 
-def tox_auth_strategy(self, func):
+def require_auth(strategy='tox'):
+    strategy = tox_auth_strategy
+    def _wrapper(_func):
+        print(_func)
+        def _swrap(tox, event):
+            func = strategy(tox, _func)
+            func(tox, event)
+        return _swrap
+    return _wrapper
+
+def tox_auth_strategy(tox, func):
     '''
         Event responder decorator to require auth
-        - Passed to EventHandler from tox.router
+        - Passed to EventHandler from tox.router init
         - Authentication and Authorization all in one
     '''
     def _wrapper(event):
@@ -23,9 +33,9 @@ def tox_auth_strategy(self, func):
             fid = event.val('fid')
         except EventError as e:
             raise AuthError('No fid')
-        if not self.sessions.valid_fid(fid):
+        if not tox.sessions.valid_fid(fid):
             raise AuthError('Not Authenticated')
-        tox_permission_strategy(self, event, fid)
+        tox_permission_strategy(tox, event, fid)
         return func(event)
     return _wrapper
 
@@ -91,7 +101,7 @@ class ToxSessions(object):
     
     def valid_pk(self, pk):
         return fid in self.valid_pks
-
+        
 class Ability(object):
     
     def __init__(self):
