@@ -12,8 +12,7 @@ from pytox import Tox, OperationFailedError
 from rainmaker.main import Application
 from rainmaker.tox import tox_env
 from rainmaker.tox import tox_errors
-
-from rainmaker.net.sessions import ToxSessions 
+from rainmaker.net.sessions import ToxSessions, tox_auth_strategy 
 from rainmaker.net.state import StateMachine, RunLevel
 from rainmaker.net.events import EventHandler, EventError
 from rainmaker.net.msg_buffer import MsgBuffer
@@ -37,24 +36,18 @@ class ToxBase(object):
     sessions = None
     base_group_id = None
 
-    def __init__(self, sync=None, data=None, primary=None):
+    def __init__(self, sync, data=None, primary=None):
         super(ToxBase, self).__init__()
         if data:
             self.load(data)
-        self._sync = sync
+        self.sync = sync
         self._primary = primary
-        self.router = EventHandler(self)
+        self.router = EventHandler(self, auth_strategy=tox_auth_strategy)
         self.events = EventHandler(self)
         self.state_machine = StateMachine()
         self.msg_buffer = MsgBuffer()
         self.register = self.router.register
         self.trigger = self.router.trigger
-
-    @property
-    def sync(self):
-        if self._sync is None:
-            raise NotImplementedError()
-        return self._sync
 
     def start(self):
         self.state_machine.start()

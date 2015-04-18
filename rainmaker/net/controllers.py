@@ -1,4 +1,4 @@
-from rainmaker.net.sessions import require_auth
+from rainmaker.net.sessions import controller_requires_auth
 from rainmaker.db.main import SyncFile, SyncPart, Host, HostFile, HostPart
 
 def register_controllers(session, router, sync):
@@ -27,6 +27,7 @@ def tox_auth_controller(db, tox):
     '''
     sessions = tox.sessions
     router = tox.router
+    sync = tox.sync
 
     @router.responds_to('new_session')
     def _cmd_new_session(event):
@@ -40,11 +41,19 @@ def tox_auth_controller(db, tox):
         did_auth = sessions.authenticate(pk, phash)
         if not did_auth:
             event.reply('auth fail')
-            return 
+            return
+        host = db.query(Host).filter(
+            Host.pubkey==pk, 
+            Host.sync_id==sync.id).first() 
+        if not host:
+            host = Host(pubkey=pk, sync_id=sync.id)
+            db.add(host)
+            db.commit()
         event.reply('ok')
         
-def utils_controller(db, tox):
-    
+def utils_controller(db, transport):
+    router = transport.router
+
     @router.responds_to('ping')
     def _cmd_ping(event):
         event.reply('pong')
@@ -52,18 +61,30 @@ def utils_controller(db, tox):
 file_params = ['id', 'file_hash', 'file_size', 'is_dir',
     'rel_path', 'does_exist', 'version', 'ver_data']
 
+@controller_requires_auth
+def sync_files_controller(db, transport):
+    '''
+        limit access:
+        - transport has sync
+        - session has sync_ids set
+            - add resources to session
+            - check if id in resource set
+            - fast
+            - flexible
+            - not super flexible?
+        - cancan style authorization
+            - fun to write
+            - slower
+            - flexible
+    '''
+    router = transport.router
+    sessions = transport.sessions
+    sync = transport.sync
 
-@require_auth
-def sync_files_controller(db, tox):
-    '''
-        db: Database session
-        sync: sync path
-        tr: transport
-    '''
     @router.responds_to('get_sync_file')
     def _cmd_get_sync_file(event):
         ''' Handle get sync file command '''
-        sync_file_id = int(event.val('id'))
+        sync_file_id = int(event.val('sync_file_id'))
         sync_file = db.query(SyncFile).filter(
             SyncFile.sync_id == sync.id,
             SyncFile.id == sync_file_id).first()
@@ -82,7 +103,7 @@ def sync_files_controller(db, tox):
             SyncFile.sync_id == sync.id,
             SyncFile.updated_at >= since)
         sync_files = paginate(q, page)
-        event.reply('ok', sync_files)
+        event.reply('ok', {'sync_files':sync_files})
     
     @router.responds_to('list_sync_parts')
     def _cmd_list_sync_parts(event):
@@ -96,11 +117,12 @@ def sync_files_controller(db, tox):
         sync_parts = paginate(q, page)
         event.reply('ok', sync_parts)
 
-@require_auth
-def hosts_controller(db, tox):
+@controller_requires_auth
+def hosts_controller(db, transport):
     '''
         Manage Actions For Hosts
     '''
+    router = transport.router
 
     @router.responds_to('put_host')
     def _cmd_put_host(event):
@@ -129,13 +151,15 @@ def hosts_controller(db, tox):
         hosts = paginate(q, page)
         event.reply('put_hosts', hosts)
 
-@require_auth
-def host_files_controller(db, tox):
+@controller_requires_auth
+def host_files_controller(db, transport):
     '''
         db: Database session
         sync: sync path
         tr: transport
     '''
+    router = transport.router
+
     host_file_params = ['rid', 'file_hash', 'file_size', 'is_dir',
         'rel_path', 'does_exist', 'version', 'ver_data']
     

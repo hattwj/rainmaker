@@ -7,7 +7,7 @@ import traceback
 import ujson
 
 from rainmaker.net.utils import RTimer, LStore
-from rainmaker.net.errors import EventError
+from rainmaker.net.errors import EventError, AuthConfigError
 
 class Params(object):
     '''
@@ -95,10 +95,12 @@ class EventHandler(object):
     '''
         Listen for events and call registered functions
     '''
-    def __init__(self, parent=None, queue=False):
+    def __init__(self, parent=None, queue=False, auth_strategy=None):
         self.parent = parent
         self.__cmds__ = LStore()
         self.queue = Queue() if queue else None
+        self.__auth_strategy_on = False
+        self.__auth_strategy = auth_strategy
 
     def trigger(self, name, **kwargs):
         '''
@@ -154,6 +156,11 @@ class EventHandler(object):
             Register func as function to be called when 
             event name is called
         '''
+        if self.__auth_strategy_on:
+            if self.__auth_strategy:
+                func = self.__auth_strategy(self.parent, func)
+            else:
+                raise AuthConfigError('No auth strategy specified for: %s' % name) 
         arr = self.__cmds__.get(name, [])
         arr.append(func)
         return self.__cmds__.put(name, arr, timeout=timeout)
@@ -165,3 +172,10 @@ class EventHandler(object):
         def wrap(f):
             self.register(name, f, timeout)
         return wrap
+
+    def auth_strategy_on(self):
+        self.__auth_strategy_on = True
+    
+    def auth_strategy_off(self):
+        self.__auth_strategy_on = False
+
