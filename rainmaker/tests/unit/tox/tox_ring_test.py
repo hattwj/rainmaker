@@ -15,7 +15,7 @@ def test_toxbot_multiple_inheritance_is_good():
     assert_raises(NotImplementedError, tox.send, 1, 'hi', fid=1)
 
 def test_base_tox_interface_has_blank_methods():
-    tox = ToxBase()
+    tox = ToxBase(None)
     assert_raises(NotImplementedError, tox.send, 'hi')
     assert_raises(NotImplementedError, tox.send, 1, 'hi', fid=1)
 

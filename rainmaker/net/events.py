@@ -24,7 +24,7 @@ class Params(object):
     def __repr__(self):
         ''' Fancy lookin repr '''
         try:
-            return '<%s %s>' % (self.__class__.__name__, ', '.join(['%s:%s' % (k, v) for k, v in self.data.items()]))
+            return '<%s data={%s}>' % (self.__class__.__name__, ', '.join(['%s:%s' % (k, v) for k, v in self.data.items()]))
         except TypeError as e:
             return super(Params, self).__repr__()
 
@@ -39,7 +39,7 @@ class Params(object):
         return self
             
     def val(self, key=None):
-        '''get req/allow keys or key'''
+        '''get req/allow keys or key and return them'''
         try:
             if key is not None:
                 return self.data[key]
@@ -58,7 +58,7 @@ class Params(object):
             raise EventError
 
     def get(self, key):
-        ''' Instantiate new from data '''
+        ''' Instantiate new class from key and data '''
         try:
             val = self.data[key]
         except KeyError as e:
@@ -85,6 +85,9 @@ class Event(Params):
         self.rcode = rcode 
 
     def reply(self, status, params=None):
+        '''
+            Run reply for this event (if one was specified)
+        '''
         if not self.reply_with:
             warn('No "reply_with" specified for: %s' % self.name)
             return
@@ -100,7 +103,7 @@ class EventHandler(object):
         self.__cmds__ = LStore()
         self.queue = Queue() if queue else None
         self.__auth_strategy_on = False
-        self.__auth_strategy = auth_strategy
+        self.auth_strategy = auth_strategy
 
     def trigger(self, name, **kwargs):
         '''
@@ -157,8 +160,8 @@ class EventHandler(object):
             event name is called
         '''
         if self.__auth_strategy_on:
-            if self.__auth_strategy:
-                func = self.__auth_strategy(self.parent, func)
+            if self.auth_strategy:
+                func = self.auth_strategy(self.parent, func)
             else:
                 raise AuthConfigError('No auth strategy specified for: %s' % name) 
         arr = self.__cmds__.get(name, [])
@@ -174,8 +177,10 @@ class EventHandler(object):
         return wrap
 
     def auth_strategy_on(self):
+        ''' Temporarily require all routes that are added to require authentication '''
         self.__auth_strategy_on = True
     
     def auth_strategy_off(self):
+        ''' No longer require routes to have authentication '''
         self.__auth_strategy_on = False
 

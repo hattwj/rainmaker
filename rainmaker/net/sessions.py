@@ -6,21 +6,22 @@ def controller_requires_auth(func):
         Controller decorator
         - All route responders added from func will require authentication
     '''
-    def _wrapper(db, transport):
+    def _controller_requires_auth(db, transport):
         transport.router.auth_strategy_on()
         func(db, transport)
         transport.router.auth_strategy_off()
-    return _wrapper
+    return _controller_requires_auth
 
-def require_auth(strategy='tox'):
-    strategy = tox_auth_strategy
-    def _wrapper(_func):
-        print(_func)
-        def _swrap(tox, event):
-            func = strategy(tox, _func)
-            func(tox, event)
-        return _swrap
-    return _wrapper
+def require_auth(func):
+    '''
+        Authorization decorator for event responders
+    '''
+    def _require_auth(transport, event):
+        if not transport.router.auth_strategy:
+            raise AuthConfigError('No Strategy defined')
+        _func = transport.router.auth_strategy(transport, func)
+        return _func(event)
+    return _require_auth
 
 def tox_auth_strategy(tox, func):
     '''
@@ -28,7 +29,7 @@ def tox_auth_strategy(tox, func):
         - Passed to EventHandler from tox.router init
         - Authentication and Authorization all in one
     '''
-    def _wrapper(event):
+    def _tox_auth_strategy(event):
         try:
             fid = event.val('fid')
         except EventError as e:
@@ -37,11 +38,14 @@ def tox_auth_strategy(tox, func):
             raise AuthError('Not Authenticated')
         tox_permission_strategy(tox, event, fid)
         return func(event)
-    return _wrapper
+    return _tox_auth_strategy
 
 def tox_permission_strategy(tox, event, fid):
+    '''
+        Permission strategy for tox
+        - Monitor incoming requests for sync_id references
+    '''
     sync_id = event.data.get('sync_id')
-    host_id = event.data.get('host_id')
     if sync_id: 
         if sync_id != tox.sync.id:
             raise AuthError('Not Permitted')
@@ -101,18 +105,5 @@ class ToxSessions(object):
     
     def valid_pk(self, pk):
         return fid in self.valid_pks
-        
-class Ability(object):
-    
-    def __init__(self):
-        self.sync_ids = set()
-        self.host_ids = set()
-
-    def can(self, event, action, sync_id=None, host_id=None):
-        if sync_id:
-            return sync_id in self.sync_ids 
-        if host_id:
-            return host_id in self.host_ids 
-        return None
         
         
