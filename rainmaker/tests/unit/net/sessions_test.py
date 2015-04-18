@@ -27,6 +27,7 @@ def test_session_will_authenticate_and_enforce_auth():
     assert_raises(AuthError, func_requiring_auth, tmox1, e)
     nonce = tsess1.get_nonce(pk2)
     chash = tsess2.get_hash(pk1, nonce)
+    assert tsess1.authenticate(pk2, 'bad_hash') == False
     assert tsess1.authenticate(pk2, chash) == True
     tsess1.valid_fids.add(1)
     assert func_requiring_auth(tmox1, e) == True

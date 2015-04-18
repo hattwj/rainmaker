@@ -93,7 +93,10 @@ class ToxSessions(object):
         '''
         nonce = self.get_nonce(pk)
         passwd = self.secret + pk + nonce
-        valid = bcrypt_sha256.verify(passwd, _hash)
+        try:
+            valid = bcrypt_sha256.verify(passwd, _hash)
+        except ValueError as e:
+            valid = False
         if valid and pk not in self.valid_pks: 
             xfid = self.tox.add_friend_norequest(pk)
             self.valid_fids.add(xfid)
