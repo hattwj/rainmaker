@@ -7,6 +7,7 @@ from rainmaker.main import Application
 from rainmaker.sync_manager import scan_manager
 
 fs = FsActions()
+msize = 10**random.randint(0,10)
 
 def Files(root, count=10, size=2):
     '''
@@ -15,12 +16,11 @@ def Files(root, count=10, size=2):
     '''
     results = []
     fs.mkdir(root)
-    msize = 10**random.randint(0,100)
     for n in range(0, count):
         cur_path = os.path.join(root, str(random.random()) )
         with open(cur_path, 'w') as f:
             for x in range(0, size):
-                f.write(str(random.randint(0,msize))*1000)
+                f.write(str(random.randint(0,msize)))
         results.append(cur_path)
     if count==1:
         return cur_path
@@ -64,6 +64,11 @@ def SyncFile(sync, count, **kwargs):
         else:
             path = Files(sync.path, 1)
         sync_file = db.SyncFile(**kwargs)
+        if fake:
+            if is_dir:
+                sync_file.file_size = 0
+            else:
+                sync_file.file_size = random.randint(0, msize) 
         sync.sync_files.append(sync_file)
         sync_file.is_dir = is_dir
         sync_file.sync_id = sync.id
@@ -125,11 +130,10 @@ def HostFile(host, count, **kwargs):
         return host_file
     return host_files
 
-def HostPart(host_file, **kwargs):
+def HostPart(host_file):
     ''' create file and return host_file '''
-    host_parts = []
     for x in range(0, host_file.file_size, scan_manager.chunk_size):
-        host_part = db.HostPart(**kwargs)
+        host_part = db.HostPart()
         host_part.part_offset = x
         host_part.part_len = scan_manager.chunk_size
         if host_part.part_len + x > host_file.file_size:
@@ -137,6 +141,16 @@ def HostPart(host_file, **kwargs):
         host_part.part_hash = str(random.randint(0,100000))
         host_part.rolling_hash = random.randint(0,100000)
         host_file.host_parts.append(host_part)
-        host_parts.append(host_part)
-    return host_parts
+    return host_file.host_parts
+
+def SyncRand(count=10):
+    sync = Sync(1, fake=True)
+    host = Host(sync, 1)
+    sync_files = SyncFile(sync, count, is_dir=False, fake=True)
+    host_files = HostFile(host, count, is_dir=False)
+    for sf in sync_files:
+        SyncPart(sf)
+    for hf in host_files:
+        HostPart(hf)
+    return sync
 

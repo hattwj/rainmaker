@@ -73,6 +73,7 @@ class Event(Params):
         - NullSession: localhost
         - ToxSession: tox
     '''
+    _attrs = ['name', 'status', 'rcode']
     def __init__(self, name, params=None, status=None, reply=None, error=None, \
             source=None, rcode=0, session=None):
         super(Event, self).__init__(params)
@@ -83,6 +84,17 @@ class Event(Params):
         self.reply_with = reply
         self.error_with = error
         self.rcode = rcode 
+    
+    def __repr__(self):
+        ''' Fancy lookin repr '''
+        try:
+            return '<%s %s data={%s}>' % (
+                    self.__class__.__name__, 
+                    ', '.join(['%s:%s' % (k, repr(getattr(self, k))) for k in self._attrs]),
+                    ', '.join(['%s:%s' % (k, v) for k, v in self.data.items()])
+                )
+        except TypeError as e:
+            return super(Params, self).__repr__()
 
     def reply(self, status, params=None):
         '''

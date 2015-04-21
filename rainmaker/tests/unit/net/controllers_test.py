@@ -1,11 +1,11 @@
 from nose.tools import assert_raises
 
 from rainmaker.db.main import init_db
-from rainmaker.tests.factory_helper import Sync, SyncFile
+from rainmaker.tests.factory_helper import Sync, SyncFile, SyncPart
 from rainmaker.tox.tox_ring import ToxBot
 from rainmaker.net.errors import AuthError
 from rainmaker.net.controllers import tox_auth_controller, utils_controller, \
-        sync_files_controller
+        sync_files_controller, sync_parts_controller
 
 
 class MockTox(ToxBot):
@@ -85,13 +85,16 @@ def test_sync_files_controller_can_list_and_get():
             sim_send(tox1, tox2, 'list_sync_files', params, _recv_list)
 
     def _recv_get(event):
-        print(event.data) 
+        assert event.val('id') == fsfid
+    
     _recv_list.page = 1 
     db, primary, tox1, tox2 = do_prep()
     sync = Sync(1, fake=True)
-    sync_files = SyncFile(sync, 1000, fake=True)
+    sync_files = SyncFile(sync, 1000, fake=True, is_dir=False) 
     db.add(sync)
     db.commit()
+    fsfid = sync_files[0].id
+    print(fsfid)
     tox1.sync = sync
     tox2.sync = sync
     sync_files_controller(db, tox1)
@@ -99,4 +102,36 @@ def test_sync_files_controller_can_list_and_get():
     assert_raises(AuthError, sim_send, tox1, tox2, 'get_sync_file', {}, _recv_get)
     auto_auth(db, tox1, tox2)
     sim_send(tox1, tox2, 'list_sync_files', {}, _recv_list)
+    sim_send(tox1, tox2, 'get_sync_file', {"sync_file_id": fsfid}, _recv_get)
     assert _recv_list.page == 5
+
+
+def test_sync_parts_controller_can_list():
+    def _recv_list(event):
+        sync_parts = event.val('sync_parts')
+        print(sync_parts)
+        if len(sync_parts) > 0 and _recv_list.page < 10:
+            params = {'since': 0, 
+                    'sync_file_id': fsfid,
+                    'page': _recv_list.page + 1}
+            _recv_list.page += 1
+            sim_send(tox1, tox2, 'list_sync_parts', params, _recv_list)
+ 
+    _recv_list.page = 1 
+    db, primary, tox1, tox2 = do_prep()
+    sync = Sync(1, fake=True)
+    sync_files = SyncFile(sync, 10, fake=True, is_dir=False)
+    for sf in sync_files:
+        print(sf)
+        SyncPart(sf)
+    db.add(sync)
+    db.commit()
+    fsfid = sync_files[0].id
+    print(fsfid)
+    tox1.sync = sync
+    tox2.sync = sync
+    sync_parts_controller(db, tox1)
+    assert_raises(AuthError, sim_send, tox1, tox2, 'list_sync_parts', {}, _recv_list)
+    auto_auth(db, tox1, tox2)
+    sim_send(tox1, tox2, 'list_sync_parts', {'sync_file_id': fsfid}, _recv_list)
+    assert _recv_list.page > 1

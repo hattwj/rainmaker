@@ -184,3 +184,12 @@ send_changes:
 recv_changes:
 - c: notify peers that changes have occurred
 - r: reply with send changes since x
+
+
+bots / run_levels:
+    - sync_manager
+    - transport behaviors
+    - tries to connect with all hosts
+    - db listen for new hosts
+    - db listen for new sync
+    -  

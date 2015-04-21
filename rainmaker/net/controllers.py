@@ -1,5 +1,6 @@
+from sqlalchemy.orm import subqueryload, joinedload
 from rainmaker.net.sessions import controller_requires_auth
-from rainmaker.db.main import SyncFile, SyncPart, Host, HostFile, HostPart
+from rainmaker.db.main import Sync, SyncFile, SyncPart, Host, HostFile, HostPart
 
 def register_controllers(session, router, sync):
     auth_controller(session, router, sync.id)
@@ -14,12 +15,6 @@ def paginate(q, page, attrs=None, page_size=200):
         attrs = []
     q=q.limit(page_size).offset(page_size*page)
     return [f.to_dict(*attrs) for f in q]
-
-def get_sync(db, event):
-    pass
-
-def get_host(db, event):
-    pass
 
 def tox_auth_controller(db, tox):
     '''
@@ -36,8 +31,10 @@ def tox_auth_controller(db, tox):
 
     @router.responds_to('create_session')
     def _cmd_create_session(event):
-        phash = event.val('passwd_hash')
-        pk = event.val('pk')
+        params = event.require('pk', 'passwd_hash').allow('device_name').val()
+        phash = params['passwd_hash']
+        pk = params['pk']
+        dname = params.get('device_name', 'unknown')
         did_auth = sessions.authenticate(pk, phash)
         if not did_auth:
             event.reply('auth fail')
@@ -46,10 +43,11 @@ def tox_auth_controller(db, tox):
             Host.pubkey==pk, 
             Host.sync_id==sync.id).first() 
         if not host:
-            host = Host(pubkey=pk, sync_id=sync.id)
+            host = Host(pubkey=pk, sync_id=sync.id, device_name=dname)
             db.add(host)
             db.commit()
-        event.reply('ok')
+        sessions.put(pk, 'host', host)
+        event.reply('ok', host.to_dict())
         
 def utils_controller(db, transport):
     router = transport.router
@@ -66,16 +64,7 @@ def sync_files_controller(db, transport):
     '''
         limit access:
         - transport has sync
-        - session has sync_ids set
-            - add resources to session
-            - check if id in resource set
-            - fast
-            - flexible
-            - not super flexible?
-        - cancan style authorization
-            - fun to write
-            - slower
-            - flexible
+        - session can store
     '''
     router = transport.router
     sessions = transport.sessions
@@ -85,7 +74,9 @@ def sync_files_controller(db, transport):
     def _cmd_get_sync_file(event):
         ''' Handle get sync file command '''
         sync_file_id = int(event.val('sync_file_id'))
-        sync_file = db.query(SyncFile).filter(
+        sync_file = db.query(SyncFile).options(
+                subqueryload('sync_parts')
+                ).filter(
             SyncFile.sync_id == sync.id,
             SyncFile.id == sync_file_id).first()
         if sync_file:
@@ -104,7 +95,15 @@ def sync_files_controller(db, transport):
             SyncFile.updated_at >= since)
         sync_files = paginate(q, page)
         event.reply('ok', {'sync_files':sync_files})
-    
+ 
+@controller_requires_auth
+def sync_parts_controller(db, transport):
+    '''
+    '''
+    router = transport.router
+    sessions = transport.sessions
+    sync = transport.sync
+
     @router.responds_to('list_sync_parts')
     def _cmd_list_sync_parts(event):
         params = event.require('sync_file_id').allow('page', 'since').val()
@@ -113,9 +112,10 @@ def sync_files_controller(db, transport):
         id = int(params['sync_file_id'])
         q = db.query(SyncPart).filter(
             SyncPart.sync_file_id == id,
-            SyncPart.updated_at >= since)
+            SyncPart.updated_at >= since).filter(
+            SyncFile.id == id).filter(Sync.id == sync.id)
         sync_parts = paginate(q, page)
-        event.reply('ok', sync_parts)
+        event.reply('ok', {'sync_parts':sync_parts})
 
 @controller_requires_auth
 def hosts_controller(db, transport):
@@ -123,9 +123,11 @@ def hosts_controller(db, transport):
         Manage Actions For Hosts
     '''
     router = transport.router
+    sessions = transport.sessions
+    sync = transport.sync
 
-    @router.responds_to('put_host')
-    def _cmd_put_host(event):
+    @router.responds_to('update_host')
+    def _cmd_update_host(event):
         ''' Handle put host command '''
         p = event.get('host').require('pubkey', 'device_name').val()
         pubkey = p['pubkey']
@@ -149,7 +151,7 @@ def hosts_controller(db, transport):
             Host.sync_id == sync.id,
             Host.updated_at >= since)
         hosts = paginate(q, page)
-        event.reply('put_hosts', hosts)
+        event.reply('ok', {'hosts': hosts})
 
 @controller_requires_auth
 def host_files_controller(db, transport):
@@ -159,14 +161,28 @@ def host_files_controller(db, transport):
         tr: transport
     '''
     router = transport.router
+    sessions = transport.sessions
+    sync = transport.sync
 
     host_file_params = ['rid', 'file_hash', 'file_size', 'is_dir',
         'rel_path', 'does_exist', 'version', 'ver_data']
     
+    @router.responds_to('list_host_files')
+    def _cmd_list_host_files(event):
+        hfi = event.get('host_file_id')
+        q = db.query(HostPart).filter(
+            HostPart.sync_file_id == id,
+            HostPart.updated_at >= since).filter(
+            Sync.id == sync.id)
+        sync_parts = paginate(q, page)
+
+
     @router.responds_to('put_host_file')
     def _cmd_put_host_file(event):
         ''' Handle put file command '''
+        pk = event.val('pk')
         p = event.get('host_file').require(*host_file_params).val()
+        host = sessions.get(pk, 'host')
         host_file = db.query(HostFile).filter(
             HostFile.host_id == host.id,
             HostFile.rid == p['rid']).first()
@@ -196,7 +212,7 @@ def host_files_controller(db, transport):
             HostFile.host_id == host.id,
             HostFile.id == p['rid']).first()
         if host_file:
-            event.reply('host_file', host_file.to_dict())
+            event.reply('ok', host_file.to_dict())
         else:
             event.reply('not found')
 

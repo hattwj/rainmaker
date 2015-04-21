@@ -32,3 +32,37 @@ class SyncManager(object):
         self.sync_managers.remove(spm)
 
 
+'''
+    
+    When to sync with peers: db.observers
+        - On host update event:
+            - After auth
+            - After recv fs_event
+            - Host must set *sync ready* flag
+            - mark host as resolving
+            - trigger action
+    Sync process: sync_manager.actions
+        - db, host_transport
+        - get sync files since
+        - get parts since latest clock from host
+        - get latest clock on both sides and run resolver
+            - mark host files and parts as *needed*
+            - needed marker gets wiped on sync_file bump (already happens)
+            - resolver should be able to abort
+                - local fs event
+                - host down
+        - get latest clock on both sides, restart if changed
+        - trigger file transfer get requests
+
+    Not Clock Based: sync_manager.utils
+        - time based on fs event count
+
+    Separate thread:
+        - check db for needed parts
+        - x threads parts at a time
+            - possibly multiple parts from mult files from mult peers
+            - broadcast request for parts
+        - 
+
+
+'''

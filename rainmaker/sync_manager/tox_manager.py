@@ -18,8 +18,8 @@ class ToxRunner(object):
         self.sync = sync
         self.stopping = False
         # create bots
-        self.primary_bot = PrimaryBot(sync.tox_primary_blob)
-        self.sync_bot = SyncBot(self.primary_bot, sync.tox_sync_blob)
+        self.primary_bot = PrimaryBot(sync, data=sync.tox_primary_blob)
+        self.sync_bot = SyncBot(sync, primary=self.primary_bot, data=sync.tox_sync_blob)
         self.sync_bot.on_stop = self.__on_stop__
         self.register = self.sync_bot.register
 

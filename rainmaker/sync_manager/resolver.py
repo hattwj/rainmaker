@@ -21,9 +21,9 @@ NO_CHANGE       = -1 # Nothing changed
 
 Resolution = namedtuple("Resolution", "direction state sync_file host_file")
 
-def resolve_syncs(sync, host):
+def resolve_syncs(sync_id, host_id):
     """ compare sync paths and find conflicts/updates"""        
-    sync_files, host_files = sync_diff(sync.id, host.id)
+    sync_files, host_files = sync_diff(sync_id, host_id)
     resolutions = []
     while len(sync_files) > 0 or len(host_files) > 0:
         # resolve differences

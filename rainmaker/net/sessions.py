@@ -63,7 +63,8 @@ class ToxSessions(object):
     def __init__(self, tox):
         self.valid_fids = set()
         self.valid_pks = set()
-        self._sess = LStore(30)
+        self._store = LStore()
+        self._temp_store = LStore(30)
         _, self.secret = tox.primary.get_keys()
         self.pk = tox.get_address()
         self.tox = tox
@@ -75,7 +76,7 @@ class ToxSessions(object):
         def _new_nonce():
             return rand_str(40)
 
-        for nonce in self._sess.yget(key, _new_nonce):
+        for nonce in self._temp_store.yget(key, _new_nonce):
             return nonce
 
     def get_hash(self, pk, nonce):
@@ -84,7 +85,7 @@ class ToxSessions(object):
         def _new_hash():
             passwd = '%s%s%s' % (self.secret, self.pk, nonce)
             return bcrypt_sha256.encrypt(passwd)
-        for hashed_pass in self._sess.yget(key, _new_hash):
+        for hashed_pass in self._temp_store.yget(key, _new_hash):
             return hashed_pass
 
     def authenticate(self, pk, _hash):
@@ -98,6 +99,7 @@ class ToxSessions(object):
         except ValueError as e:
             valid = False
         if valid and pk not in self.valid_pks: 
+            self._store.put(pk, LStore())
             xfid = self.tox.add_friend_norequest(pk)
             self.valid_fids.add(xfid)
             self.valid_pks.add(pk)
@@ -109,4 +111,8 @@ class ToxSessions(object):
     def valid_pk(self, pk):
         return fid in self.valid_pks
         
-        
+    def put(self, pk, key, obj):
+        self._store.get(pk).put(key, obj)
+
+    def get(self, pk, key):
+        return self._store.get(pk).get(key)

@@ -10,7 +10,7 @@ import zlib
 from rainmaker.db.main import Sync, SyncFile, SyncPart
 from rainmaker import utils
 
-chunk_size = 40000
+chunk_size = 200000
 
 def hash_file(path, adler_f, md5_f):
     ''' Full hash of file, make callback on each round '''

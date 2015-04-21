@@ -1,5 +1,6 @@
+from sqlalchemy import func
 from sqlalchemy.sql import text, update
-from rainmaker.db.main import SyncFile, HostFile
+from rainmaker.db.main import SyncFile, HostFile, SyncPart, HostPart
 
 q_sync_diff = """
     SELECT t1.*
@@ -55,3 +56,18 @@ def sync_match(session, sync_id, host_id):
             conn.execute(u)
 
 
+def find_last_changed(session, sync_id, host_id):
+    sp = session.query(func.max(SyncPart.updated_at)).filter(
+        SyncFile.sync_id == sync_id).scalar()
+    sp = sp if sp else 0
+    sf = session.query(func.max(SyncFile.updated_at)).filter(
+        SyncFile.sync_id == sync_id).scalar()
+    sp = sf if sf and sf > sp else sp
+
+    hp = session.query(func.max(HostPart.updated_at)).filter(
+            HostFile.host_id == host_id).scalar()
+    hp = hp if hp else 0
+    hf = session.query(func.max(HostFile.updated_at)).filter(
+            HostFile.host_id == host_id).scalar()
+    hp = hf if hf and hf > hp else hp
+    return (sp, hp)
