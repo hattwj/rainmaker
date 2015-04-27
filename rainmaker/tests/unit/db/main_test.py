@@ -1,7 +1,7 @@
 from rainmaker.tests import test_helper, factory_helper
 from rainmaker.main import Application
-from rainmaker.db.main import init_db, HostFile, SyncFile, Sync, SyncPart, \
-        Host, HostPart
+from rainmaker.db.main import init_db, HostFile, SyncFile, Sync, \
+        Host
 from rainmaker.db import main
 
 def test_db_init():
@@ -30,24 +30,18 @@ def test_sync_delete_cascades():
     sync = factory_helper.Sync(1)
     sync_file = factory_helper.SyncFile(sync, 1, fake=True, 
             file_size=98765 ,is_dir=False)
-    sync_parts = factory_helper.SyncPart(sync_file)
     host = factory_helper.Host(sync, 1)
     host_file = factory_helper.HostFile(host, 1, is_dir=False)
-    host_parts = factory_helper.HostPart(host_file)
     session.add(sync)
     session.commit()
     sync = session.query(Sync).first()
     assert len(sync.hosts) > 0
     assert len(session.query(Host).all()) > 0
     assert len(session.query(SyncFile).all()) > 0
-    assert len(session.query(SyncPart).all()) > 0
     assert len(session.query(HostFile).all()) > 0
-    assert len(session.query(HostPart).all()) > 0
     session.delete(sync)
     assert len(session.query(Sync).all()) == 0
     assert len(session.query(Host).all()) == 0
     assert len(session.query(SyncFile).all()) == 0
-    assert len(session.query(SyncPart).all()) == 0
     assert len(session.query(HostFile).all()) == 0
-    assert len(session.query(HostPart).all()) == 0
 

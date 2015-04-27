@@ -7,7 +7,7 @@ from rainmaker.main import Application
 from rainmaker.sync_manager import scan_manager
 
 fs = FsActions()
-msize = 10**random.randint(0,10)
+msize = 2*10**7
 
 def Files(root, count=10, size=2):
     '''
@@ -20,7 +20,7 @@ def Files(root, count=10, size=2):
         cur_path = os.path.join(root, str(random.random()) )
         with open(cur_path, 'w') as f:
             for x in range(0, size):
-                f.write(str(random.randint(0,msize)))
+                f.write(str(random.randint(0, msize)))
         results.append(cur_path)
     if count==1:
         return cur_path
@@ -79,22 +79,6 @@ def SyncFile(sync, count, **kwargs):
         return sync_file
     return sync_files
 
-def SyncPart(sync_file, **kwargs):
-    ''' create file and return host_file '''
-    sync_parts = []
-    for x in range(0, sync_file.file_size, scan_manager.chunk_size):
-        sync_part = db.SyncPart(**kwargs)
-        sync_part.part_offset = x
-        sync_part.part_len = scan_manager.chunk_size
-        if sync_part.part_len + x > sync_file.file_size:
-            sync_part.part_len = sync_file.file_size - x
-        sync_part.part_hash = str(random.randint(0,100000))
-        sync_part.rolling_hash = random.randint(0,100000)
-        sync_file.sync_parts.append(sync_part)
-        sync_parts.append(sync_part)
-    return sync_parts
-
-
 def Host(sync, count, **kwargs):
     ''' create file and return host_file '''
     hosts = []
@@ -130,27 +114,13 @@ def HostFile(host, count, **kwargs):
         return host_file
     return host_files
 
-def HostPart(host_file):
-    ''' create file and return host_file '''
-    for x in range(0, host_file.file_size, scan_manager.chunk_size):
-        host_part = db.HostPart()
-        host_part.part_offset = x
-        host_part.part_len = scan_manager.chunk_size
-        if host_part.part_len + x > host_file.file_size:
-            host_part.part_len = host_file.file_size - x
-        host_part.part_hash = str(random.randint(0,100000))
-        host_part.rolling_hash = random.randint(0,100000)
-        host_file.host_parts.append(host_part)
-    return host_file.host_parts
+def HostRand(sync, count=10):
+    host = Host(sync, 1)
+    host_files = HostFile(host, count, is_dir=False)
+    return host
 
 def SyncRand(count=10):
     sync = Sync(1, fake=True)
-    host = Host(sync, 1)
     sync_files = SyncFile(sync, count, is_dir=False, fake=True)
-    host_files = HostFile(host, count, is_dir=False)
-    for sf in sync_files:
-        SyncPart(sf)
-    for hf in host_files:
-        HostPart(hf)
     return sync
 

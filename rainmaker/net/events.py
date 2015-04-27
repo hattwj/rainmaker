@@ -1,5 +1,7 @@
 from queue import Queue
 import random
+import traceback
+
 from warnings import warn
 from threading import RLock, Timer
 import traceback
@@ -9,18 +11,17 @@ import ujson
 from rainmaker.net.utils import RTimer, LStore
 from rainmaker.net.errors import EventError, AuthConfigError
 
-class Params(object):
-    '''
-        Useful class for managing parameters
-    '''
+class ParamsBase(object):
+    _type = dict
+
     def __init__(self, data=None):
-        super(Params, self).__init__()
-        self.data = {} if data is None else data
-        if not type(self.data) is dict:
-            raise EventError('Not a dictionary: %s' % repr(self.data))
+        super(ParamsBase, self).__init__()
+        self.data = self._type() if data is None else data
+        if not type(self.data) is self._type:
+            raise EventError('Not a %s: %s' % (self._type, repr(self.data)))
         self.akeys = set()
         self.rkeys = set()
-    
+
     def __repr__(self):
         ''' Fancy lookin repr '''
         try:
@@ -37,35 +38,75 @@ class Params(object):
         '''Allow these keys'''
         self.akeys.update(keys)
         return self
-            
-    def val(self, key=None):
+
+    def val(self, key=None, cls=None):
         '''get req/allow keys or key and return them'''
         try:
-            if key is not None:
-                return self.data[key]
-            if not self.akeys and not self.rkeys:
-                return self.data
-            result = {}
-            for k in self.rkeys:
-                result[k] = self.data[k]
-            for k in self.akeys:
-                if k in self.data:
-                    result[k] = self.data[k]
-            return result
+            return self._val(key, cls)
         except KeyError as e:
-            raise EventError('key: %s not in %s' % (key, repr(self.data)))
+            raise EventError('Required key missing: %s' % key) from e
         except TypeError as e:
-            raise EventError
+            raise EventError('Bad type on val: %s' % type(self.data)) from e
 
-    def get(self, key):
+    def _val(self, key=None, cls=None):
+        if key is not None:
+            return self.data[key]
+        if not self.akeys and not self.rkeys:
+            return self.data
+        return self._filter_dict(self.data)
+
+    def _filter_dict(self, adict):
+        result = {}
+        for k in self.rkeys:
+            try:
+                result[k] = adict[k]
+            except KeyError as e:
+                raise EventError('Required key missing: %s' % k) from e
+        for k in self.akeys:
+            if k in adict:
+                result[k] = adict[k]
+        return result
+
+
+class Params(ParamsBase):
+    '''
+        Useful class for managing parameters
+    '''
+    def __init__(self, data=None):
+        super(Params, self).__init__(data)
+
+    def aget(self, key):
+        return self.get(key, ArrayParams)
+
+    def get(self, key, cls=None):
         ''' Instantiate new class from key and data '''
+        cls = cls if cls else Params
         try:
             val = self.data[key]
         except KeyError as e:
-            raise EventError
+            raise EventError('Required key missing: %s' % key) from e
         except TypeError as e:
-            raise EventError
-        return Params(val)
+            raise EventError('Bad type on get: %s' % type(self.data)) from e
+        return cls(val)
+
+class ArrayParams(ParamsBase):
+    _type = list
+    
+    def __init__(self, data=None):
+        super(ArrayParams, self).__init__(data)
+
+    def _val(self, key=None, cls=None):
+        if key:
+            raise TypeError('Invalid option: key')
+        result = []
+        for k in self.data:
+            v = self._filter_dict(k) if self.akeys or self.rkeys else k
+            v = cls(v) if cls else v
+            result.append(v)
+        return result
+
+    def get(self):
+        return self.val(cls=Params)
 
 class Event(Params):
     '''
@@ -117,12 +158,14 @@ class EventHandler(object):
         self.__auth_strategy_on = False
         self.auth_strategy = auth_strategy
 
-    def trigger(self, name, **kwargs):
+    def trigger(self, name, params=None, status=None, reply=None, \
+            error=None, source=None, rcode=0, session=None):
         '''
             Call all functions for event name
         '''
-        kwargs['source'] = self.parent
-        event = Event(name, **kwargs)
+        source = source if source else self.parent
+        event = Event(name, params=params, status=status, reply=reply, \
+            error=error, source=source, rcode=rcode, session=session)
         try:
             funcs = self.__cmds__[event.name]
         except KeyError as e: 

@@ -102,6 +102,7 @@ def test_find_last_changed():
     result = views.find_last_changed(db, 1, 1)
     assert result == (0, 0)
     sync = factory_helper.SyncRand()
+    host = factory_helper.HostRand(sync)
     db.add(sync)
     db.commit()
     result = views.find_last_changed(db, 1, 1)

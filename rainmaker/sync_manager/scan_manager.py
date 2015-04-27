@@ -7,33 +7,41 @@ import os
 import hashlib
 import zlib
 
-from rainmaker.db.main import Sync, SyncFile, SyncPart
+from rainmaker.db.main import Sync, SyncFile
 from rainmaker import utils
 
 chunk_size = 200000
 
-def hash_file(path, adler_f, md5_f):
+def hash_file(sync_file, offset=0, n=0):
     ''' Full hash of file, make callback on each round '''
-    part_offset = 0      # byte part_offset in file
-    adler = 0       # adler32 rolling hash
-    with open(path, 'rb') as fh:
+    parts = sync_file.file_parts
+    chunk_size = parts.chunk_size
+    adler = parts.get_adler(offset)
+    with open(sync_file.path, 'rb') as fh:
+        if offset:
+            fh.seek(offset*chunk_size)
         # For every chunk
         while True:
             # Get a chunk of file data
-            data = fh.read(chunk_size)
+            data = fh.read(offset*chunk_size)
             if not data:
                 break # End of file
             # force sign of adler to signed int
             adler = zlib.adler32(data, adler) & 0xffffffff
             # Is this the expected adler value?
-            if not adler_f(adler, part_offset, len(data)):
+            if parts.get_adler(offset) != adler:
                 # nope, calculate the md5
                 m = hashlib.md5()
                 m.update(data)
-                md5_f(m.hexdigest(), adler,  part_offset, len(data))
+                parts.put(offset, adler, m.hexdigest())
             # update part_offset
-            part_offset += chunk_size
-    return adler
+            offset += 1
+            # break if we've reached zero
+            n += 1
+            if n == offset:
+                break
+    scan_len = chunk_size*offset + len(data)
+    return (adler, scan_len)
 
 def scan(session):
     ''' Scan all syncs in DB '''
@@ -133,45 +141,17 @@ def scan_dir(session, sync_file):
 def scan_file(session, sync_file):
     ''' 
         Scan and add this file to db
-            - high      md5
-            - medium    adler32
-            - low       mtime, inode, ctime
-    '''    
-    def _adler_f(rolling_hash, part_offset, data_len):
-        # check to see if digest in collection
-        # if is: return True
-        # if not: return False
-        if sync_file.file_hash is None:
-            return False
-        return part_offset in parts and parts[part_offset].rolling_hash == rolling_hash
-    
-    def _md5_f(part_hash, rolling_hash, part_offset, part_len):
-        '''
-            if hash:
-                set hash to none
-                wipe all parts with part_offset greater than part_offset
-            create and append new part
-        '''
-        if sync_file.file_hash is not None:
-            sync_file.file_hash = None
-            parts.clear()
-            rparts = []
-            for key, part in parts.items():
-                if key >= part_offset:
-                    parts.pop(key)
-                    sync_file.sync_parts.remove(part)
-        sync_part = SyncPart(part_hash=part_hash, part_len=part_len, 
-            rolling_hash=rolling_hash, part_offset=part_offset)
-        sync_file.sync_parts.append(sync_part)
-    # Mark as deleted if is_dir
+            - slowest   md5
+            - slow      adler32
+            - fast      mtime, inode, ctime
+    '''
+    # Mark old directory as deleted if is_dir
     if sync_file.is_dir and sync_file.id is not None:
         sync_file.stime_start = utils.time_now()
         sync_file.stime = utils.time_now()
         sync_file.does_exist = False
         session.add(sync_file)
-        sync_file = SyncFile(
-            sync_id = sync_file.sync_id, 
-            rel_path = sync_file.rel_path)
+        session.commit()
     # start scan
     sync_file.stime_start = utils.time_now()
     sync_file.stime = 0
@@ -179,27 +159,35 @@ def scan_file(session, sync_file):
     sync_file.does_exist = True
     # Check file state
     with open(sync_file.path, 'rb' ) as f:
-        finfo = os.fstat(f.fileno()) 
+        finfo = os.fstat(f.fileno())
+    # Marking file_hash as None signals that a scan should be done 
+    # file size changed?
     if sync_file.file_size != finfo.st_size:
         sync_file.file_size = finfo.st_size
         sync_file.file_hash = None
+    # mtime changed?
     if sync_file.mtime != finfo.st_mtime:
         sync_file.mtime = finfo.st_mtime
         sync_file.file_hash = None
-    if sync_file.ctime != finfo.st_ctime:
-        sync_file.ctime = finfo.st_ctime
-        sync_file.file_hash = None
-    if sync_file.inode != finfo.st_ino:
-        sync_file.inode = finfo.st_ino
-        sync_file.file_hash = None
+    # ctime changed?                        # maybe not needed?
+    if sync_file.ctime != finfo.st_ctime:   #
+        sync_file.ctime = finfo.st_ctime    #
+        sync_file.file_hash = None          #
+    # Inode changed?                        #
+    if sync_file.inode != finfo.st_ino:     #
+        sync_file.inode = finfo.st_ino      #
+        sync_file.file_hash = None          #
+    # Save progress
     session.add(sync_file)
     session.commit()
-    # load parts into dict for easy access
-    parts = {}
-    for part in sync_file.sync_parts:
-        parts[part.part_offset] = part
-    sync_file.file_hash = hash_file(sync_file.path, _adler_f, _md5_f)
+    # check if hashing needed 
+    if sync_file.file_hash is None:
+        # run hasher
+        hash_file(sync_file)
+    # record scan completion time
     sync_file.stime = utils.time_now()
+    # save 
     session.add(sync_file)
     session.commit()
+
 

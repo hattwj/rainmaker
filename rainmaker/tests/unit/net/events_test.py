@@ -20,6 +20,14 @@ def test_fun_with_params_get_and_require():
     assert {'id':5, 'grr':44} == p.get('host').require('id').allow('grr').val()
     assert_raises(EventError, p.get, 'nosuchkey')
 
+def test_params_array_get():
+    p = Params({'an_arr':[1, 2, 3]})
+    assert p.aget('an_arr').val() == [1, 2, 3]
+    p = Params({'an_arr':[{1: 2}, {1:9, 3: 4}]})
+    assert p.aget('an_arr').require(1).val() == [{1:2}, {1: 9}]
+    parr = p.aget('an_arr').require(3)
+    assert_raises(EventError, parr.val)
+
 def test_events_from_handler_should_reply():
     
     def cmd_hi(event):

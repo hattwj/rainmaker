@@ -1,6 +1,6 @@
 from sqlalchemy.orm import subqueryload, joinedload
 from rainmaker.net.sessions import controller_requires_auth
-from rainmaker.db.main import Sync, SyncFile, SyncPart, Host, HostFile, HostPart
+from rainmaker.db.main import Sync, SyncFile, Host, HostFile
 
 def register_controllers(session, router, sync):
     auth_controller(session, router, sync.id)
@@ -57,7 +57,7 @@ def utils_controller(db, transport):
         event.reply('pong')
 
 file_params = ['id', 'file_hash', 'file_size', 'is_dir',
-    'rel_path', 'does_exist', 'version', 'ver_data']
+    'rel_path', 'does_exist', 'version', 'ver_data', 'updated_at']
 
 @controller_requires_auth
 def sync_files_controller(db, transport):
@@ -74,9 +74,7 @@ def sync_files_controller(db, transport):
     def _cmd_get_sync_file(event):
         ''' Handle get sync file command '''
         sync_file_id = int(event.val('sync_file_id'))
-        sync_file = db.query(SyncFile).options(
-                subqueryload('sync_parts')
-                ).filter(
+        sync_file = db.query(SyncFile).filter(
             SyncFile.sync_id == sync.id,
             SyncFile.id == sync_file_id).first()
         if sync_file:
@@ -93,29 +91,37 @@ def sync_files_controller(db, transport):
         q = db.query(SyncFile).filter(
             SyncFile.sync_id == sync.id,
             SyncFile.updated_at >= since)
-        sync_files = paginate(q, page)
+        sync_files = paginate(q, page, attrs=file_params)
         event.reply('ok', {'sync_files':sync_files})
  
 @controller_requires_auth
-def sync_parts_controller(db, transport):
+def file_parts_controller(db, transport):
     '''
     '''
     router = transport.router
     sessions = transport.sessions
     sync = transport.sync
 
-    @router.responds_to('list_sync_parts')
-    def _cmd_list_sync_parts(event):
-        params = event.require('sync_file_id').allow('page', 'since').val()
+    @router.responds_to('last_changed')
+    def _cmd_last_changed(event):
+        fid = event.val('fid')
+        host = sessions.get(fid, 'host') 
+        stime, htime = views.last_changed(sync.id, host.id)
+
+    @router.responds_to('list_file_parts')
+    def _cmd_list_file_parts(event):
+        params = event.allow('sync_file_id', 'page', 'since').val()
         since = int(params.get('since', 0))
         page = int(params.get('page', 0))
-        id = int(params['sync_file_id'])
+        id = int(params.get('sync_file_id', 0))
         q = db.query(SyncPart).filter(
-            SyncPart.sync_file_id == id,
-            SyncPart.updated_at >= since).filter(
-            SyncFile.id == id).filter(Sync.id == sync.id)
-        sync_parts = paginate(q, page)
-        event.reply('ok', {'sync_parts':sync_parts})
+            SyncPart.updated_at >= since,
+            Sync.id == sync.id)
+        if id:
+            q.filter(SyncPart.sync_file_id == id)
+
+        file_parts = paginate(q, page)
+        event.reply('ok', {'file_parts':file_parts})
 
 @controller_requires_auth
 def hosts_controller(db, transport):
@@ -174,7 +180,7 @@ def host_files_controller(db, transport):
             HostPart.sync_file_id == id,
             HostPart.updated_at >= since).filter(
             Sync.id == sync.id)
-        sync_parts = paginate(q, page)
+        file_parts = paginate(q, page)
 
 
     @router.responds_to('put_host_file')

@@ -15,7 +15,7 @@ from sqlalchemy.orm.attributes import get_history
 import ujson
 
 from rainmaker import utils
-
+from rainmaker.db.serializers import FileParts
  
 Base = declarative_base()
 engine = None
@@ -103,6 +103,8 @@ class SyncFile(RainBase):
     file_hash = Column(Integer, default=0)
     # file size
     file_size = Column(Integer, default=0)
+    # file part hashes
+    fparts = Column(Text)
     # time modified
     mtime = Column(Integer)
     # time created
@@ -172,35 +174,15 @@ class SyncFile(RainBase):
         for v in versions:
             assert v.version is not None 
         self.__versions__ = versions
+    
+    __file_parts__ = None
+    
+    @property
+    def file_parts(self):
+        if self.__file_parts__ is None:
+            self.__file_parts__ = FileParts(self.fparts)
+        return self.__file_parts__
          
-
-# standard decorator style
-@event.listens_for(SyncFile, 'before_update')
-def receive_before_update(mapper, connection, target):
-    "listen for the 'before_update' event"
-    do_versioning(target)
-
-def do_versioning(target):
-    target.version += 1
-    data = [target.before_changes()]
-    if target.ver_data is not None:
-        data.append(ujson.dumps(target.ver_data))
-    target.ver_data = ujson.dumps(data)
-
-class SyncPart(RainBase):
-    __tablename__ = 'sync_parts'
-    __table_args__ = (
-        UniqueConstraint('sync_file_id', 'part_offset'),
-    )
-
-    id = Column(Integer, primary_key=True)
-    part_offset = Column(Integer, nullable=False, index=True)
-    part_len = Column(Integer, nullable=False, index=True)
-    part_hash = Column(String(32), nullable=False)
-    rolling_hash = Column(Integer, nullable=False)
-    sync_file_id = Column(Integer, ForeignKey("sync_files.id"), nullable=False, index=True)
-    sync_file = relationship('SyncFile',
-            backref=backref('sync_parts', cascade="all, delete-orphan"))
 
 class ToxServer(RainBase):
     __tablename__ = 'tox_servers'
@@ -247,6 +229,7 @@ class HostFile(RainBase):
     # must have default values for sync_join view to work
     rid = Column(Integer, nullable=False)
     rel_path = Column(Text, nullable=False, index=True)
+    fparts = Column(Text)
     file_hash = Column(Integer, default=0)
     file_size = Column(Integer, default=0)
     is_dir = Column(Boolean)
@@ -261,6 +244,7 @@ class HostFile(RainBase):
      
     # convert to sync_file
     def to_sync_file(self, sync_id):
+        ''' Used for testing '''
         f = self.to_dict(*file_params)
         f.pop('id')
         f['sync_id'] = sync_id
@@ -280,24 +264,19 @@ class HostFile(RainBase):
     
     @vers.setter
     def vers(self, val):
+        ''' Used for testing '''
         self.ver_data = ujson.dumps(val)
         versions = [HostFile(**ver) for ver in val]
         for v in versions:
             assert v.version is not None 
         self.__versions__ = versions
 
-class HostPart(RainBase):
-    __tablename__ = 'host_parts'
-    __table_args__ = (
-        UniqueConstraint('host_file_id', 'part_offset'),
-    )
+    __file_parts__ = None
+    
+    @property
+    def file_parts(self):
+        if self.__file_parts__ is None:
+            self.__file_parts__ = FileParts(self.fparts)
+        return self.__file_parts__
 
-    id = Column(Integer, primary_key=True)
-    part_offset = Column(Integer, nullable=False, index=True)
-    part_len = Column(Integer, nullable=False, index=True)
-    part_hash = Column(String(32), nullable=False)
-    rolling_hash = Column(Integer, nullable=False)
-    host_file_id = Column(Integer, ForeignKey("host_files.id"), nullable=False, index=True)
-    host_file = relationship('HostFile', 
-        backref=backref('host_parts', cascade='all, delete-orphan'))
 
