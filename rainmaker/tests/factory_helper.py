@@ -2,12 +2,25 @@ import random
 import os
 
 import rainmaker.db.main as db
+from rainmaker.db import serializers
+
 from rainmaker.file_system import FsActions
 from rainmaker.main import Application
 from rainmaker.sync_manager import scan_manager
 
 fs = FsActions()
 msize = 2*10**7
+
+def FileParts(a_file):
+    fsize = a_file.file_size
+    fp = serializers.FileParts()
+    pos = 0
+    
+    while pos*fp.chunk_size < fsize:
+        fp.put(pos, 12345, '34567890')
+        pos += 1
+    a_file.fparts = fp.dump()
+    
 
 def Files(root, count=10, size=2):
     '''
@@ -68,7 +81,8 @@ def SyncFile(sync, count, **kwargs):
             if is_dir:
                 sync_file.file_size = 0
             else:
-                sync_file.file_size = random.randint(0, msize) 
+                sync_file.file_size = random.randint(0, msize)
+                FileParts(sync_file)
         sync.sync_files.append(sync_file)
         sync_file.is_dir = is_dir
         sync_file.sync_id = sync.id
@@ -106,6 +120,7 @@ def HostFile(host, count, **kwargs):
             host_file.file_size = 0
         else:
             host_file.file_size = random.randint(0,100000)
+            FileParts(host_file)
         host_file.host = host
         host_file.host_id = host.id
         host_file.rid = x

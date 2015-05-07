@@ -56,11 +56,15 @@ def sync_match(session, sync_id, host_id):
             conn.execute(u)
 
 
-def find_last_changed(session, sync_id, host_id):
+def sync_last_changed(session, sync_id):
     sf = session.query(func.max(SyncFile.updated_at)).filter(
         SyncFile.sync_id == sync_id).scalar()
-    hf = session.query(func.max(HostFile.updated_at)).filter(
-            HostFile.host_id == host_id).scalar()
     sf = sf if sf else 0
+    return sf
+
+def host_last_changed(session, host_id):
+    hf = session.query(func.max(HostFile.updated_at)).filter(
+        HostFile.host_id == host_id).scalar()
     hf = hf if hf else 0
-    return (sf, hf)
+    return hf
+

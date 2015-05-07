@@ -128,13 +128,13 @@ class SyncFile(RainBase):
     # Add relationships
     sync = relationship('Sync', backref=backref('sync_files', cascade='all, delete-orphan'))
 
-    # temp val for holding full path
-    _path = None
-    
     # Empty attributes for HostFile comparison
     cmp_ver = None
     cmp_id = None
-
+    
+    # temp val for holding full path
+    _path = None
+    
     @property
     def path(self):
         assert self.sync is not None
@@ -279,4 +279,78 @@ class HostFile(RainBase):
             self.__file_parts__ = FileParts(self.fparts)
         return self.__file_parts__
 
+class Download(RainBase):
+    __tablename__ = 'downloads'
+    __table_args__= (
+        UniqueConstraint('sync_id', 'rel_path'),    
+    )
+    id = Column(Integer, primary_key=True)
+    # path
+    rel_path = Column(Text, nullable=False, index=True)    
+    # fk 
+    sync_id = Column(Integer, ForeignKey("syncs.id"), index=True) 
+    # 32 bit file hash
+    file_hash = Column(Integer, default=0)
+    # file size
+    file_size = Column(Integer, default=0)
+    # file part hashes
+    fparts = Column(Text)
+    nparts = Column(Text)
+ 
+    def from_host_file(self, host_file):
+        self.file_parts = host_file.file_parts
+        self.needed_parts.from_host_file(host_file)
+        self.file_size = host_file.file_size
+        self.is_dir = host_file.is_dir
+        self.file_hash = host_file.file_hash
+        self.sync_id = host_file.host.sync_id
+        
+    @property
+    def incoming_path(self):
+        return self.path + '.part'
 
+    __needed_parts__ = None
+    @property
+    def needed_parts(self):
+        if self.__needed_parts__ is None:
+            self.__needed_parts__ = NeededParts(self.nparts)
+        return self.__needed_parts__
+    
+    __file_parts__ = None
+    @property
+    def file_parts(self):
+        if self.__file_parts__ is None:
+            self.__file_parts__ = FileParts(self.fparts)
+        return self.__file_parts__
+
+    # temp val for holding full path
+    _path = None
+    
+    @property
+    def path(self):
+        assert self.sync is not None
+        assert self.rel_path is not None
+        if self._path is None:
+            self._path = os.path.join(self.sync.path, self.rel_path)
+        return self._path
+
+    @property
+    def complete(self):
+        return self.needed_parts.complete
+
+'''
+    sync:
+    - tox_connect (id singleton)
+    - scanner (id singleton)
+
+    sync_file:
+    - scanner (id singleton)
+
+    host:
+    - resolver (id singleton)
+    
+    download:
+    - download_manager (id singleton)
+
+singletons receive observer messages and act on them
+'''

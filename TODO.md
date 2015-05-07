@@ -1,8 +1,8 @@
 # Todo Items:
 
 * Application is in pre-alpha status
-
-
+* from types import MethodType
+    - tox and controllers
 
 # Ideas:
 

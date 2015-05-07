@@ -99,13 +99,12 @@ def test_can_sync_match(fcount=50):
 
 def test_find_last_changed():
     db = init_db()
-    result = views.find_last_changed(db, 1, 1)
-    assert result == (0, 0)
+    result = views.sync_last_changed(db, 1)
+    assert result == 0
     sync = factory_helper.SyncRand()
     host = factory_helper.HostRand(sync)
     db.add(sync)
     db.commit()
-    result = views.find_last_changed(db, 1, 1)
-    assert result[0] > 0
-    assert result[1] > 0
+    result = views.host_last_changed(db, 1)
+    assert result > 0
 
