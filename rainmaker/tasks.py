@@ -20,7 +20,7 @@ def setup_install(app):
         if not os.path.isdir( ipath ):
             app.fs_log.mkdir(ipath)
     if not os.path.exists(app.user_conf_path):
-        app.fs_log.copy(app.root_conf_path, app.user_config_path)
+        app.fs_log.copy(app.root_conf_path, app.user_conf_path)
     return did_install
 
 def init_db(app):

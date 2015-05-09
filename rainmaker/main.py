@@ -18,16 +18,19 @@ class Application(object):
     root = os.path.abspath(os.path.join(os.path.dirname(__file__),'..') )
     conf_root = os.path.abspath(os.path.join(root,'conf'))
     
+    # User config paths
     user_root = os.path.expanduser('~')
     user_dir = '.rainmaker'
     db_name = 'rainmaker.sqlite'
     conf_name = 'config.yml'
-
+    
+    # search paths
     paths = [user_dir, conf_root]
     
+    # runtime flags
     start_console = False
-    start_tcp = True
-    start_udp = True
+    # start_tcp = True
+    # start_udp = True
     start_tox = True
 
     stopping = False
@@ -47,4 +50,4 @@ class Application(object):
     
     @property
     def root_conf_path(self):
-        return os.path.join(self.root, self.conf_name)
+        return os.path.join(self.root, 'conf', self.conf_name)

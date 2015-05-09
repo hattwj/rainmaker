@@ -15,7 +15,7 @@ from sqlalchemy.orm.attributes import get_history
 import ujson
 
 from rainmaker import utils
-from rainmaker.db.serializers import FileParts
+from rainmaker.db.serializers import FileParts, Versions
  
 Base = declarative_base()
 engine = None
@@ -89,11 +89,11 @@ file_params = ['id', 'rel_path', 'file_hash', 'file_size',
 
 class SyncFile(RainBase):
     """ Sync File """
-    __versions__ = None
     __table_args__= (
         UniqueConstraint('sync_id', 'rel_path'),    
     )
-
+    ver_params = ['rel_path', 'file_hash', 'file_size', 'does_exist', 'is_dir',
+            'version']
     __tablename__ = 'sync_files'
     id = Column(Integer, primary_key=True)
     sync_id = Column(Integer, ForeignKey("syncs.id"), nullable=False, index=True)
@@ -154,35 +154,35 @@ class SyncFile(RainBase):
         f = self.to_dict(*file_params)
         f['rid']=f.pop('id')
         return HostFile(**f)
+    
+    __versions__ = None
 
     @property
     def vers(self):
         ''' read only copy of past versions '''
-        if self.__versions__ is not None: 
-            return self.__versions__
-        if self.ver_data is None or len(self.ver_data) == 0:
-            return []
-        self.__versions__ = [SyncFile(**ver) for ver in ujson.loads(self.ver_data)]
-        self.__versions__.sort(key=lambda ver: ver.version)
+        if self.__versions__ is None:
+            versions = Versions(SyncFile, self.ver_data,
+                            sort=lambda ver: ver.version,
+                            on_change=lambda: setattr(self, 'ver_data',  None))
+            versions.keys = self.ver_params    
+            self.__versions__ = versions
         return self.__versions__
     
     # Debug setter
     @vers.setter
     def vers(self, val):
-        self.ver_data = ujson.dumps(val)
-        versions = [SyncFile(**ver) for ver in val]
-        for v in versions:
-            assert v.version is not None 
-        self.__versions__ = versions
+        self.__versions__ = None
+        self.ver_data = val
     
     __file_parts__ = None
-    
+
     @property
     def file_parts(self):
+        def _on_change():
+            self.fparts = None
         if self.__file_parts__ is None:
-            self.__file_parts__ = FileParts(self.fparts)
+            self.__file_parts__ = FileParts(data=self.fparts, on_change=_on_change)
         return self.__file_parts__
-         
 
 class ToxServer(RainBase):
     __tablename__ = 'tox_servers'

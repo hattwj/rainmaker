@@ -3,9 +3,10 @@ import ujson
 
 class Serializer(object):
     data = None
-    changed = False
+    _changed = False
     
-    def __init__(self, data=None):
+    def __init__(self, data=None, on_change=None):
+        self._on_change = on_change
         self.load(data)
 
     def load(self, data):
@@ -18,20 +19,74 @@ class Serializer(object):
     def dump(self):
         self.changed = False
         return ujson.dumps(self.data)
+    
+    def get(self, pos):
+        if len(self.data) > pos:
+            return self.data[pos]
+        return None
 
     @property
     def parts_count(self):
+        return len(self)
+    
+    def __len__(self):
         return len(self.data)
+
+    @property
+    def changed(self):
+        return self._changed
+
+    @changed.setter
+    def changed(self, val):
+        if self._changed == False and val and self._on_change:
+            self._on_change()
+        self._changed = val 
+
+class Versions(Serializer):
+    
+    def __init__(self, cls, data, sort, on_change):
+        self.keys = []
+        self._objects = []
+        self.cls = cls
+        self.sort_f = sort
+        self.on_change = on_change
+        super(Versions, self).__init__(data)
+
+    def load_objects(self, data):
+        '''
+            Load Array of objects
+        '''
+        self._objects = [self.cls(**kwargs) for kwargs in ujson.loads(data)] if data else [] 
+        self.sort()
+
+    def sort(self):
+        self._objects = sorted(self._objects, key=self.sort_f)
+
+    def dump(self):
+        '''
+            Dump state to string
+        '''
+        result = [rec.to_dict(*self.keys) for rec in self.data]
+        self.changed = False
+        return result
+
+    def add(self, args):
+        '''
+            Add version to array
+        '''
+        self.changed = True
+        self._objects.insert(0, self.cls(**args)) 
 
 class FileParts(Serializer):
     chunk_size = 2*10**5
-    def __init__(self, data=None):
-        super(FileParts, self).__init__(data)
+    def __init__(self, **kwargs):
+        super(FileParts, self).__init__(**kwargs)
  
     def put(self, pos, adler_v, md5_v):
         '''
             Put data for next part
         '''
+        self.changed = True
         if len(self.data) > pos:
             self.data = self.data[:pos]
         elif len(self.data) < pos:
@@ -48,8 +103,8 @@ class NeededParts(Serializer):
         An Array of parts needed for download
     '''
  
-    def __init__(self, data=None):
-        super(NeededParts, self).__init__(data)
+    def __init__(self, **kwargs):
+        super(NeededParts, self).__init__(**kwargs)
         self._complete = None
 
     def from_host_file(self, host_file):
