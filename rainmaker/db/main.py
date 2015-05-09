@@ -161,7 +161,7 @@ class SyncFile(RainBase):
     def vers(self):
         ''' read only copy of past versions '''
         if self.__versions__ is None:
-            versions = Versions(SyncFile, self.ver_data,
+            versions = Versions(SyncFile, data=self.ver_data,
                             sort=lambda ver: ver.version,
                             on_change=lambda: setattr(self, 'ver_data',  None))
             versions.keys = self.ver_params    
@@ -171,8 +171,8 @@ class SyncFile(RainBase):
     # Debug setter
     @vers.setter
     def vers(self, val):
-        self.__versions__ = None
-        self.ver_data = val
+        print('WERE IN THE SETTER!!')
+        self.vers
     
     __file_parts__ = None
 
@@ -249,8 +249,10 @@ class HostFile(RainBase):
         f.pop('id')
         f['sync_id'] = sync_id
         return SyncFile(**f)
-   
-    # some sort of setter/getter bug if we call this versions
+  
+    ## 
+    # Must be called "vers"
+    # some sort of setter/getter bug if we call this "versions"
     @property
     def vers(self):
         ''' read only copy of past versions '''
@@ -276,7 +278,7 @@ class HostFile(RainBase):
     @property
     def file_parts(self):
         if self.__file_parts__ is None:
-            self.__file_parts__ = FileParts(self.fparts)
+            self.__file_parts__ = FileParts(data=self.fparts, on_change=lambda: setattr(self, 'fparts', None))
         return self.__file_parts__
 
 class Download(RainBase):

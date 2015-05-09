@@ -11,33 +11,58 @@ class Serializer(object):
 
     def load(self, data):
         '''
-            Populate fron json string
+            Populate from json string
         '''
         self.changed = False if data else True
+        print('data=>',data)
         self.data = ujson.loads(data) if data else []
     
     def dump(self):
+        '''
+            Dump changes and mark not changed
+        '''
         self.changed = False
         return ujson.dumps(self.data)
     
     def get(self, pos):
+        '''
+            Get value
+        '''
         if len(self.data) > pos:
             return self.data[pos]
         return None
 
     @property
     def parts_count(self):
+        '''
+            Count parts
+        '''
         return len(self)
     
     def __len__(self):
+        '''
+            Count parts
+        '''
         return len(self.data)
+
+    def __getitem__(self, i):
+        '''
+            We can be accessed like an array
+        '''
+        return self.data[i]
 
     @property
     def changed(self):
+        '''
+            Have we changed?
+        '''
         return self._changed
 
     @changed.setter
     def changed(self, val):
+        '''
+            Mark change t/f
+        '''
         if self._changed == False and val and self._on_change:
             self._on_change()
         self._changed = val 
@@ -45,37 +70,30 @@ class Serializer(object):
 class Versions(Serializer):
     
     def __init__(self, cls, data, sort, on_change):
-        self.keys = []
-        self._objects = []
+        self.keys = []          # Array of keys to dump from object
+        self._objects = None
         self.cls = cls
         self.sort_f = sort
         self.on_change = on_change
         super(Versions, self).__init__(data)
-
-    def load_objects(self, data):
+    
+    @property
+    def objects(self):
         '''
             Load Array of objects
         '''
-        self._objects = [self.cls(**kwargs) for kwargs in ujson.loads(data)] if data else [] 
-        self.sort()
+        if self._objects is None:
+            self._objects = [self.cls(**kwargs) for kwargs in self.data] if self.data else [] 
+            self._objects = sorted(self._objects, key=self.sort_f)
+        return self._objects
 
-    def sort(self):
-        self._objects = sorted(self._objects, key=self.sort_f)
-
-    def dump(self):
-        '''
-            Dump state to string
-        '''
-        result = [rec.to_dict(*self.keys) for rec in self.data]
-        self.changed = False
-        return result
-
-    def add(self, args):
+    def add(self, kwargs):
         '''
             Add version to array
         '''
         self.changed = True
-        self._objects.insert(0, self.cls(**args)) 
+        self.objects.insert(0, self.cls(**kwargs))
+        self.data.insert(0, kwargs)
 
 class FileParts(Serializer):
     chunk_size = 2*10**5

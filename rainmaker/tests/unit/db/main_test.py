@@ -22,7 +22,9 @@ def test_sqlalchemy_property_assignment():
     sf.vers = [{'version': 0, 'file_size':5}]
     assert sf.vers[0].file_size == 5
     sf = SyncFile()
+    print('Doing Set')
     sf.vers = [{'version': 0, 'file_size':5}]
+    print('Did Set')
     assert sf.vers[0].file_size == 5
 
 def test_sync_delete_cascades():

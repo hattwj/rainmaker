@@ -16,7 +16,7 @@ def test_file_parts_can_put_get_dump_load():
     fp.put(0, 12345, 67890)
     assert fp.get_adler(2) == None
     assert_raises(IndexError, fp.put, 2, 12345, 456)
-    assert fp.data == FileParts(fp.dump()).data
+    assert fp.data == FileParts(data=fp.dump()).data
     assert len(fp.data) == 1
 
 def test_needed_parts_can_dump_load():
@@ -31,7 +31,7 @@ def test_needed_parts_can_dump_load():
     assert np.parts_count > 0
     assert np.parts_count == host_file.file_parts.parts_count
     # Assert can dump/load
-    assert np.data == NeededParts(np.dump()).data
+    assert np.data == NeededParts(data=np.dump()).data
     
 def test_needed_parts_can_copy_host_file():
     # Setup

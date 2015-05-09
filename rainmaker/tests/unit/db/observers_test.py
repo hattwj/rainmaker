@@ -46,12 +46,12 @@ def test_sync_file_update_observer():
     # Create version by altering attribute of record
     sync_file.file_hash = 'defgh'
     db.add(sync_file)
-    print('Firing 2nd ver commit')
+    #print('Firing 2nd ver commit')
     db.commit()
-    print('Did 2nd ver commit')
+    #print('Did 2nd ver commit')
     # Assert two versions
     sync_file = db.query(SyncFile).first()
     #print('Version:', sync_file.version)
     assert sync_file.version == 2
-    print('vlen', len(sync_file.vers))
+    #print('vlen', len(sync_file.vers))
     assert len(sync_file.vers) == 2
