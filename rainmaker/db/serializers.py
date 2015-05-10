@@ -14,16 +14,19 @@ class Serializer(object):
             Populate from json string
         '''
         self.changed = False if data else True
-        print('data=>',data)
         self.data = ujson.loads(data) if data else []
     
     def dump(self):
         '''
-            Dump changes and mark not changed
+            Dump changes and mark self as not changed
         '''
         self.changed = False
         return ujson.dumps(self.data)
     
+    def clear(self):
+        self.changed = True
+        self.data = []
+
     def get(self, pos):
         '''
             Get value
@@ -86,6 +89,12 @@ class Versions(Serializer):
             self._objects = [self.cls(**kwargs) for kwargs in self.data] if self.data else [] 
             self._objects = sorted(self._objects, key=self.sort_f)
         return self._objects
+    
+    def __getitem__(self, i):
+        '''
+            We can be accessed like an array
+        '''
+        return self.objects[i]
 
     def add(self, kwargs):
         '''
@@ -94,6 +103,11 @@ class Versions(Serializer):
         self.changed = True
         self.objects.insert(0, self.cls(**kwargs))
         self.data.insert(0, kwargs)
+
+    def clear(self):
+        self.changed = True
+        self._objects = None
+        self.data = []
 
 class FileParts(Serializer):
     chunk_size = 2*10**5

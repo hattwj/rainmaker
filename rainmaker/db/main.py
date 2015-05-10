@@ -171,9 +171,13 @@ class SyncFile(RainBase):
     # Debug setter
     @vers.setter
     def vers(self, val):
-        print('WERE IN THE SETTER!!')
-        self.vers
+        self.ver_data = None
+        self.vers.clear()
+        for ver in val:
+            self.vers.add(ver)
+        self.ver_data = self.vers.dump()
     
+
     __file_parts__ = None
 
     @property
