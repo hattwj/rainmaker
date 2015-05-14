@@ -1,7 +1,7 @@
 from rainmaker.tests import test_helper, factory_helper
 from rainmaker.main import Application
 from rainmaker.db.main import init_db, HostFile, SyncFile, Sync, \
-        Host, Resolution
+        Host, Resolution, Download
 from rainmaker.db import main
 fh = factory_helper
 
@@ -23,9 +23,9 @@ def test_sqlalchemy_property_assignment():
     sf.vers = [{'version': 0, 'file_size':5}]
     assert sf.vers[0].file_size == 5
     sf = SyncFile()
-    print('Doing Set')
+    #print('Doing Set')
     sf.vers = [{'version': 0, 'file_size':5}]
-    print('Did Set')
+    #print('Did Set')
     assert sf.vers[0].file_size == 5
 
 def test_sync_delete_cascades():
@@ -57,7 +57,19 @@ def test_resolution():
     r.sync = sync
     r.host = host
     r.host_file = host.host_files[0]
-    r.sync_file = sync.sync_files[0]
-    
+    r.sync_file = sync.sync_files[0] 
     db.add(r)
     db.commit()
+    return db
+
+def test_lazy_loading():
+    db = test_resolution()
+    r = db.query(Resolution).first()
+    d = Download(rel_path="test", sync_id=r.sync_id)
+    r.download = d
+    db.add(r)
+    db.commit()
+    r = db.query(Resolution).first()
+    assert r.download is not None
+
+

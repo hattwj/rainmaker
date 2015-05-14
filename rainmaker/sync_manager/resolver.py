@@ -1,24 +1,23 @@
 from collections import namedtuple
 from rainmaker.db.views import sync_diff
-from rainmaker.db.main import Download
-
-# Decision Constants
-CONFLICT_MINE   = 7 # Decided to keep mine
-CONFLICT_THEIRS = 6 # Decided to keep theirs
+from rainmaker.db.main import Download, Resolution
 
 # Resolution State Constants
-RES_ERROR       = 9 # Error during resolution
-CONFLICT        = 5 # Undecided conflict
-THEIRS_CHANGED  = 3 # Change to host_file
-MINE_CHANGED    = 2 # Change to sync_file
-#NEW             = 0 # New file
+RES_ERROR       = Resolution.RES_ERROR      # Error during resolution
+CONFLICT_MINE   = Resolution.CONFLICT_MINE   # Decided to keep mine
+CONFLICT_THEIRS = Resolution.CONFLICT_THEIRS # Decided to keep theirs
+CONFLICT        = Resolution.CONFLICT       # Undecided conflict
+THEIRS_CHANGED  = Resolution.THEIRS_CHANGED # Change to host_file
+MINE_CHANGED    = Resolution.MINE_CHANGED   # Change to sync_file
+NEW             = Resolution.NEW # New file - Used in resolver_test:32
 
 # File Status Constants
-DELETED         = 3 
-MOVED           = 2
-MODIFIED        = 1
-CREATED         = 0
-NO_CHANGE       = -1 # Nothing changed
+DELETED       = Resolution.DELETED      
+MOVED         = Resolution.MOVED        
+MODIFIED      = Resolution.MODIFIED     
+CREATED       = Resolution.CREATED      
+NO_CHANGE     = Resolution.NO_CHANGE
+
 
 def get_downloads(db, resolutions):
     '''

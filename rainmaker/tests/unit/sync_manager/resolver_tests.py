@@ -92,7 +92,7 @@ class Run(object):
         while len(sync_files) > 0 or len(host_files) > 0:    
             r = resolver.resolve_files(sync_files, host_files)
             #pp(r)
-            result = [r.direction, r.state]
+            result = [r.status, r.state]
             result.append(r.sync_file.id if r.sync_file else None)
             result.append(r.host_file.id if r.host_file else None)
             #pp(expected)

@@ -291,10 +291,10 @@ class Download(RainBase):
         UniqueConstraint('sync_id', 'rel_path'),    
     )
     id = Column(Integer, primary_key=True)
+    sync_id = Column(Integer, ForeignKey("syncs.id"), nullable=False, index=True)
+
     # fk 
     resolution_id = Column(Integer, ForeignKey("resolutions.id"), index=True)
-    resolution = relationship("Resolution", backref=backref('download', 
-        cascade='all, delete-orphan'))
     
     # path
     rel_path = Column(Text, nullable=False, index=True)
@@ -346,8 +346,29 @@ class Download(RainBase):
         return self.needed_parts.complete
 
 class Resolution(RainBase):
+        
+    # Resolution State Constants
+    RES_ERROR       = 9 # Error during resolution
+    CONFLICT_MINE   = 7 # Decided to keep mine
+    CONFLICT_THEIRS = 6 # Decided to keep theirs
+    CONFLICT        = 5 # Undecided conflict
+    THEIRS_CHANGED  = 3 # Change to host_file
+    MINE_CHANGED    = 2 # Change to sync_file
+    NEW             = 0 # New file
+    
+    # File Status Constants
+    DELETED         = 3 
+    MOVED           = 2
+    MODIFIED        = 1
+    CREATED         = 0
+    NO_CHANGE       = -1 # Nothing changed
+
+
+    __tablename__ = 'resolutions'
     id = Column(Integer, primary_key=True) 
     # Add relationships
+    download = relationship('Download', uselist=False, backref='resolution')
+
     sync_id = Column(Integer, ForeignKey("syncs.id"), nullable=False, index=True)
     sync = relationship('Sync', backref=backref('resolutions', cascade='all, delete-orphan'))
     
