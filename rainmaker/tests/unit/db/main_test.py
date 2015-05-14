@@ -1,8 +1,9 @@
 from rainmaker.tests import test_helper, factory_helper
 from rainmaker.main import Application
 from rainmaker.db.main import init_db, HostFile, SyncFile, Sync, \
-        Host
+        Host, Resolution
 from rainmaker.db import main
+fh = factory_helper
 
 def test_db_init():
     init_db()
@@ -47,3 +48,16 @@ def test_sync_delete_cascades():
     assert len(session.query(SyncFile).all()) == 0
     assert len(session.query(HostFile).all()) == 0
 
+
+def test_resolution():
+    db = init_db()
+    r = Resolution()
+    sync = fh.SyncRand(1)
+    host = fh.HostRand(sync, 1)
+    r.sync = sync
+    r.host = host
+    r.host_file = host.host_files[0]
+    r.sync_file = sync.sync_files[0]
+    
+    db.add(r)
+    db.commit()

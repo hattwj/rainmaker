@@ -96,7 +96,6 @@ class SyncFile(RainBase):
             'version']
     __tablename__ = 'sync_files'
     id = Column(Integer, primary_key=True)
-    sync_id = Column(Integer, ForeignKey("syncs.id"), nullable=False, index=True)
     # relative path
     rel_path = Column(Text, nullable=False, index=True)
     # 32 bit file hash
@@ -126,6 +125,7 @@ class SyncFile(RainBase):
     #next_id = Column(Integer)
 
     # Add relationships
+    sync_id = Column(Integer, ForeignKey("syncs.id"), nullable=False, index=True)
     sync = relationship('Sync', backref=backref('sync_files', cascade='all, delete-orphan'))
 
     # Empty attributes for HostFile comparison
@@ -245,7 +245,7 @@ class HostFile(RainBase):
     cmp_id = Column(Integer)
     # sync_file.version of last comparison 
     cmp_ver = Column(Integer)
-     
+
     # convert to sync_file
     def to_sync_file(self, sync_id):
         ''' Used for testing '''
@@ -291,26 +291,27 @@ class Download(RainBase):
         UniqueConstraint('sync_id', 'rel_path'),    
     )
     id = Column(Integer, primary_key=True)
-    # path
-    rel_path = Column(Text, nullable=False, index=True)    
     # fk 
-    sync_id = Column(Integer, ForeignKey("syncs.id"), index=True) 
+    resolution_id = Column(Integer, ForeignKey("resolutions.id"), index=True)
+    resolution = relationship("Resolution", backref=backref('download', 
+        cascade='all, delete-orphan'))
+    
+    # path
+    rel_path = Column(Text, nullable=False, index=True)
     # 32 bit file hash
     file_hash = Column(Integer, default=0)
     # file size
     file_size = Column(Integer, default=0)
+    # is_dir
+    is_dir = Column(Boolean)
+    
+    # download complete
+    complete = Column(Boolean, default=False)
+
     # file part hashes
     fparts = Column(Text)
     nparts = Column(Text)
- 
-    def from_host_file(self, host_file):
-        self.file_parts = host_file.file_parts
-        self.needed_parts.from_host_file(host_file)
-        self.file_size = host_file.file_size
-        self.is_dir = host_file.is_dir
-        self.file_hash = host_file.file_hash
-        self.sync_id = host_file.host.sync_id
-        
+
     @property
     def incoming_path(self):
         return self.path + '.part'
@@ -341,22 +342,25 @@ class Download(RainBase):
         return self._path
 
     @property
-    def complete(self):
+    def is_complete(self):
         return self.needed_parts.complete
 
-'''
-    sync:
-    - tox_connect (id singleton)
-    - scanner (id singleton)
-
-    sync_file:
-    - scanner (id singleton)
-
-    host:
-    - resolver (id singleton)
+class Resolution(RainBase):
+    id = Column(Integer, primary_key=True) 
+    # Add relationships
+    sync_id = Column(Integer, ForeignKey("syncs.id"), nullable=False, index=True)
+    sync = relationship('Sync', backref=backref('resolutions', cascade='all, delete-orphan'))
     
-    download:
-    - download_manager (id singleton)
+    host_id = Column(Integer, ForeignKey("hosts.id"), index=True, nullable=False) 
+    host = relationship("Host", backref=backref('resolutions', 
+        cascade='all, delete-orphan'))
 
-singletons receive observer messages and act on them
-'''
+    sync_file_id = Column(Integer, ForeignKey("sync_files.id"), index=True)
+    sync_file_ver = Column(Integer)
+    
+    host_file_id = Column(Integer, ForeignKey("host_files.id"), index=True)
+    host_file_ver = Column(Integer)
+    
+    res_state = Column(Integer)
+    res_status = Column(Integer)
+

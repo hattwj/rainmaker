@@ -1,8 +1,14 @@
 import rainmaker.tests.factory_helper as fh
-from rainmaker.db.main import init_db, SyncFile
+from rainmaker.db.main import init_db, SyncFile, Download
 
 from rainmaker.db import observers
 
+
+def test_download_update_observer():
+    host = fh.Host(fh.Sync(1, fake=True), 1)
+    hf = fh.HostFile(host, 1, is_dir=False)
+    dl = Download()
+    dl.from_host_file(hf)
 
 def test_sync_file_update_observer():
     # prep test

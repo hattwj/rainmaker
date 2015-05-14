@@ -1,5 +1,6 @@
 from collections import namedtuple
 from rainmaker.db.views import sync_diff
+from rainmaker.db.main import Download
 
 # Decision Constants
 CONFLICT_MINE   = 7 # Decided to keep mine
@@ -10,7 +11,7 @@ RES_ERROR       = 9 # Error during resolution
 CONFLICT        = 5 # Undecided conflict
 THEIRS_CHANGED  = 3 # Change to host_file
 MINE_CHANGED    = 2 # Change to sync_file
-NEW             = 0 # New file
+#NEW             = 0 # New file
 
 # File Status Constants
 DELETED         = 3 
@@ -19,10 +20,35 @@ MODIFIED        = 1
 CREATED         = 0
 NO_CHANGE       = -1 # Nothing changed
 
-Resolution = namedtuple("Resolution", "direction state sync_file host_file")
+def get_downloads(db, resolutions):
+    '''
+        Store results from resolve syncs
+        - Create Download record
+        - update host_file to point at sync_file
+    '''
+    # Create download record
+    def _add_download(r):
+        dlo = db.query(Download).filter(
+            Download.sync_id == r.host_file.host.sync.id,
+            Download.rel_path == r.host_filr.rel_path
+        ).first()
+        if dlo is None:
+            dlo = Download(sync_id = r.host_file.host.sync.id,
+                rel_path=r.host_file.rel_path)
+        dlo.from_host_file(r.host_file)
+        db.add(dlo)
 
-def resolve_syncs(db, sync_id, host_id):
-    """ compare sync paths and find conflicts/updates"""        
+    for r in resolutions:
+        # Add to download pool
+        if r.state == THEIRS_CHANGED:
+            _add_download(r)
+    db.commit()
+            
+Resolution = namedtuple("Resolution", "status state sync_file host_file")
+
+def get_resolutions(db, host):
+    """ compare sync paths and find conflicts/updates"""
+    sync_id, host_id = host.sync_id, host.id
     sync_files, host_files = sync_diff(db, sync_id, host_id)
     resolutions = []
     while len(sync_files) > 0 or len(host_files) > 0:
@@ -37,7 +63,7 @@ def resolve_files(sync_files, host_files):
     s_query, h_query = query_targets(sync_files, host_files)
     direction = resolution_direction(s_query, h_query)
     state = file_state(s_query.head, h_query.head) 
-    return Resolution(direction, state, s_query.head, h_query.head)
+    return Resolution(status=direction, state=state, sync_file=s_query.head, host_file=h_query.head)
 
 def file_state(sync_file, host_file):
     '''Check file state'''
