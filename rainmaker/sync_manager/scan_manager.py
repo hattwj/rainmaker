@@ -10,6 +10,9 @@ import zlib
 from rainmaker.db.main import Sync, SyncFile
 from rainmaker import utils
 
+import rainmaker.logger
+log = rainmaker.logger.create_log(__name__)
+
 chunk_size = 200000
 
 def hash_file(sync_file, offset=0, n=0):

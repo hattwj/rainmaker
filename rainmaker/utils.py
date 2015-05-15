@@ -1,9 +1,7 @@
-
 import os, binascii
 
 def rand_str(length):
     return binascii.b2a_base64(os.urandom(length)).decode(encoding='UTF-8')
-
 
 from time import time
 
@@ -13,7 +11,6 @@ def time_now():
     '''
     return int( round( time() * 1000 ) )
 
-
 def assign_attrs(obj, **kwargs):
     ''' Assign Attributes to self '''
     for k, v in kwargs.iteritems():
@@ -21,6 +18,7 @@ def assign_attrs(obj, **kwargs):
             setattr(obj, k, v)
         else:
             raise AttributeError('Unknown attribute: %s' % k)
+
 import re
 first_cap_re = re.compile('(.)([A-Z][a-z]+)')
 all_cap_re = re.compile('([a-z0-9])([A-Z])')
@@ -33,7 +31,6 @@ class Object:
     def __init__(self, **kwargs):
         for k, v in kwargs.items():
             setattr(self, k, v)
-
 
 import json
 class ExportArray(list):

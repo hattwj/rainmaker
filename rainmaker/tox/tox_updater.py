@@ -16,7 +16,7 @@ def spin(stop=threading.Event):
     if stop is None:
         return
 
-    log.info("|", end="")
+    print("|", end="")
     while True:
         for c in "/-\\|":
             if stop.is_set():

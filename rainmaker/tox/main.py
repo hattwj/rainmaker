@@ -7,7 +7,7 @@ from twisted.internet import defer
 
 # Local imports
 from rainmaker.tox import tox_updater, tox_env
-from rainmaker.main import Application
+#from rainmaker.main import Application
 from rainmaker.db.main import ToxServer
 import rainmaker.logger
 log = rainmaker.logger.create_log(__name__)
@@ -15,12 +15,12 @@ log = rainmaker.logger.create_log(__name__)
 def init_tox(session, **opts):
     # check db
     tox_servers = session.query(ToxServer).all()
-    
+     
     # load server data
     if not tox_servers:
         log.info('Attempting to download tox server contacts...')
         # attempt to load
-        nodes = tox_updater.fetch(opts.get('tox_html', None))
+        nodes = tox_updater.fetch(opts.get('tox_html'))
         if not nodes:
             log.error('Unable to find any nodes')
             exit()
@@ -30,12 +30,15 @@ def init_tox(session, **opts):
             tox_servers.append(server)
             session.add(server)
         session.commit()
+        log.info('Downloaded %s tox servers' % len(tox_servers))
+    else:
+        log.info('%s tox servers loaded' % len(tox_servers))
     
     tox_servers = session.query(ToxServer).all()   
     if not tox_servers:
-        log.error('Unable to find any nodes')
+        log.error('Unable to find any valid nodes')
         exit()
     for ts in tox_servers:
         tox_env.add_server(ts.ipv4, ts.port, ts.pubkey)
-    log.info('Found %s tox servers' % len(tox_servers))
+
 

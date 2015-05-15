@@ -21,29 +21,16 @@ styles = [
 
 # Log verbosity
 verbosity = {
-    'Rainmaker': 0,
-    'rainmaker.tasks': 0,
     'rainmaker.console': 0,
+    'rainmaker.db.main': 0,
     'rainmaker.debug_node': 0,
-    'rainmaker.db.config': 0,
-    'rainmaker.lib.net.start_tls': 0,
-    'rainmaker.lib.net.clients': 0,
-    'rainmaker.lib.net.udp_multicast': 0,
-    'Tests': 4,
-    'rainmaker_app.lib.fs_actions': 0,
-    'AppLoop': 1,
-    'AppProfiles': 1,
-    'AppParser': 1,
-    'Profile': 2,
-    'LogMonitor': 2,
-    'FsMonitor': 2,
-    'ProfileManager': 2,
-    'Handler': 3,
-    'RecordScript': 3,
-    'RecordHooks': 4,
-    'AttrsBag': 4,
-    'Callbacks': 4,
-    'RegexDict': 4,
+    'rainmaker.file_system': 0,
+    'rainmaker.main': 0,
+    'rainmaker.sync_manager.main': 0,
+    'rainmaker.sync_manager.scan_manager': 0,
+    'rainmaker.tasks': 0,
+    'rainmaker.tox.main': 0,
+    'rainmaker.tox.tox_updater': 0,
 }
 
 config = Object(
@@ -69,17 +56,14 @@ def create_log(name='',style=None,level=None):
         level = config.level
     # Get log level and style orvdefaults
     level = levels[level] if level else levels[config.level]
-    style = style if style else styles[config.verbosity]
-    
+    style = style if style else styles[config.verbosity] 
     log = logging.getLogger(name)
-    log.v=verbosity
-
+    #log.v=verbosity
     if log.handlers:
         handler = log.handlers[0] 
     else:
         handler = logging.StreamHandler()
         log.addHandler(handler)
-
     handler.setLevel(level)
     log.setLevel(level)
     # Allow log.msg to act like log.info

@@ -3,7 +3,9 @@ from __future__ import print_function
 import os
 
 from rainmaker.db.main import init_db
-from rainmaker import tox
+from rainmaker.tox.main import init_tox
+from rainmaker.sync_manager.main import init_sync
+
 import rainmaker.logger
 log = rainmaker.logger.create_log(__name__)
 
@@ -17,26 +19,10 @@ def autorun(app):
         app.fs_log.touch(app.db_path)
 
     log.info('Initializing db...') 
-    db = init_db(app.db_path)
+    app.db = init_db(app.db_path)
 
     log.info('Configuring Tox...')
-    # check db
-    tox_servers = ToxServer.all()
-    # load server data
-    if not tox_servers:
-        nodes = tox.tox_updater.fetch(opts.get('tox_html', None))
-        if not nodes:
-            log.error('Unable to find any nodes')
-            exit()
-        for ipv4, port, pubkey in nodes:
-            server = yield ToxServer.findOrCreate(ipv4=ipv4, 
-                port=port, pubkey=pubkey)
-            tox_servers.append(server)
-    if not tox_servers:
-        log.error('Unable to find any nodes')
-        exit()
-    for ts in tox_servers:
-        tox.tox_env.add_server(ts.ipv4, ts.port, ts.pubkey)
-    log.info('Found %s tox servers' % len(tox_servers))
+    init_tox(app.db)
 
-
+    log.info('Initializing Sync Managers...')
+    init_sync(app)
