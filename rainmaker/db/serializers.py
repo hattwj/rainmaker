@@ -111,8 +111,8 @@ class Versions(Serializer):
 
 class FileParts(Serializer):
     chunk_size = 2*10**5
-    def __init__(self, **kwargs):
-        super(FileParts, self).__init__(**kwargs)
+    def __init__(self, *args, **kwargs):
+        super(FileParts, self).__init__(*args, **kwargs)
  
     def put(self, pos, adler_v, md5_v):
         '''
@@ -129,14 +129,23 @@ class FileParts(Serializer):
         if len(self.data) > pos:
             return self.data[pos][0]
         return None
-    
+   
+    def from_host_file(self, host_file):
+        '''
+            Import settings from host_file
+        '''
+        self.data = host_file.file_parts.data
+        self.changed = True
+        self._complete = None
+
+
 class NeededParts(Serializer):
     '''
         An Array of parts needed for download
     '''
  
-    def __init__(self, **kwargs):
-        super(NeededParts, self).__init__(**kwargs)
+    def __init__(self, *args, **kwargs):
+        super(NeededParts, self).__init__(*args, **kwargs)
         self._complete = None
 
     def from_host_file(self, host_file):

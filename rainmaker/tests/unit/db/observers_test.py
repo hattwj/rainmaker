@@ -1,16 +1,25 @@
 import rainmaker.tests.factory_helper as fh
-from rainmaker.db.main import init_db, SyncFile, Download
+
+from rainmaker.db.main import init_db, SyncFile, Download, Resolution
+from rainmaker.db import observers
+
 
 
 def test_download_update_observer():
     # should contact and start download
-    #assert False
-    pass
+    db = init_db()
+    sync = fh.SyncRand(1)
+    host = fh.HostRand(sync, 1)
+    db.add(sync)
+    db.commit()
+    host_file = host.host_files[0]
+    d = Download.from_host_file(host_file, rel_path="test")
+    db.add(d)
+    db.commit()
 
 def test_sync_file_update_observer():
     # prep test
     db = init_db()
-    from rainmaker.db import observers
 
     sync = fh.Sync(1, fake=True)
     sync_file = fh.SyncFile(sync, 1, fake=True, is_dir=False)
@@ -42,7 +51,6 @@ def test_sync_file_update_observer():
 
     # Assert one version
     sync_file = db.query(SyncFile).first()
-    print('Version:', sync_file.version)
     assert sync_file.version == 1
     assert len(sync_file.vers) == 1
     

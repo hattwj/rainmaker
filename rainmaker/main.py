@@ -8,6 +8,7 @@ import rainmaker.db
 import rainmaker.tox
 import rainmaker.tasks
 import rainmaker.file_system
+import rainmaker.file_server
 
 class Application(object):
     version = rainmaker.version
@@ -51,3 +52,12 @@ class Application(object):
     @property
     def root_conf_path(self):
         return os.path.join(self.root, 'conf', self.conf_name)
+
+    __file_server = None
+    @property
+    def file_server(self):
+        if self.__file_server__ is None:
+            self.__file_server__ = rainmaker.file_server.FileServer()
+        return self.__file_server__
+
+Application = Application()   

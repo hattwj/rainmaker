@@ -1,8 +1,3 @@
-'''
-    Initialize database
-    Run migrations
-    Configure models
-'''
 import os
 
 from sqlalchemy import create_engine, ForeignKey, UniqueConstraint, desc, event
@@ -10,12 +5,12 @@ from sqlalchemy import Column, Integer, Text, String, Binary, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref, validates, sessionmaker, object_mapper
 from sqlalchemy.orm.attributes import get_history
-#from sqlalchemy.pool import StaticPool
+from sqlalchemy.pool import StaticPool
 
 import ujson
 
 from rainmaker import utils
-from rainmaker.db.serializers import FileParts, Versions
+from rainmaker.db.serializers import FileParts, Versions, NeededParts
  
 Base = declarative_base()
 engine = None
@@ -344,6 +339,15 @@ class Download(RainBase):
     @property
     def is_complete(self):
         return self.needed_parts.complete
+
+    @classmethod
+    def from_host_file(klass, host_file, **kwargs):
+        dlo = klass(**kwargs)
+        dlo.host_id = host_file.host_id
+        dlo.sync_id = host_file.host.sync_id
+        dlo.needed_parts.from_host_file(host_file)
+        dlo.file_parts.from_host_file(host_file)
+        return dlo
     
 class Resolution(RainBase):
         
