@@ -41,9 +41,8 @@ def get_downloads(db, resolutions):
         # Add to download pool
         if r.state == THEIRS_CHANGED:
             _add_download(r)
-    db.commit()
             
-Resolution = namedtuple("Resolution", "status state sync_file host_file")
+#Resolution = namedtuple("Resolution", "status state sync_file host_file")
 
 def get_resolutions(db, host):
     """ compare sync paths and find conflicts/updates"""
@@ -52,8 +51,11 @@ def get_resolutions(db, host):
     resolutions = []
     while len(sync_files) > 0 or len(host_files) > 0:
         # resolve differences
-        resolution = resolve_files(sync_files, host_files)
-        resolutions.append(resolution)
+        r = resolve_files(sync_files, host_files)
+        r.host_id = host_id
+        r.sync_id = sync_id
+        resolutions.append(r)
+    get_downloads(db, resolutions)
     return resolutions
 
 def resolve_files(sync_files, host_files):
@@ -62,8 +64,10 @@ def resolve_files(sync_files, host_files):
     s_query, h_query = query_targets(sync_files, host_files)
     direction = resolution_direction(s_query, h_query)
     state = file_state(s_query.head, h_query.head) 
-    return Resolution(status=direction, state=state, sync_file=s_query.head, host_file=h_query.head)
-
+    return Resolution(status=direction, 
+            state=state, sync_file=s_query.head,
+            host_file=h_query.head)
+    
 def file_state(sync_file, host_file):
     '''Check file state'''
     if host_file is None or sync_file is None:

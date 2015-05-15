@@ -344,7 +344,7 @@ class Download(RainBase):
     @property
     def is_complete(self):
         return self.needed_parts.complete
-
+    
 class Resolution(RainBase):
         
     # Resolution State Constants
@@ -378,10 +378,12 @@ class Resolution(RainBase):
 
     sync_file_id = Column(Integer, ForeignKey("sync_files.id"), index=True)
     sync_file_ver = Column(Integer)
+    sync_file = relationship('SyncFile', backref=backref('resolutions'))
     
     host_file_id = Column(Integer, ForeignKey("host_files.id"), index=True)
     host_file_ver = Column(Integer)
+    host_file = relationship('HostFile', backref=backref('resolutions'))
     
-    res_state = Column(Integer)
-    res_status = Column(Integer)
+    state = Column(Integer, nullable=False)
+    status = Column(Integer, nullable=False)
 

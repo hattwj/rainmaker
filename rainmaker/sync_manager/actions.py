@@ -27,9 +27,9 @@ def sync_with_host(db, host, send):
 
         # get array of params as array of dictionaries
         sf_params =  event.aget('sync_files').require(*file_params).val()
-        recv_sync_files(db, host, sf_params)
          
         if sf_params:
+            recv_sync_files(db, host, sf_params)
             params['page'] += 1
             send('list_sync_files', params, reply=_recv_files)
         else:
@@ -44,7 +44,7 @@ def sync_with_host(db, host, send):
             return
         # run resolver
         resolutions = resolver.get_resolutions(db, host)
-        resolver.store_resolutions(db, resolutions)
+        db.commit()
 
     _start()
 
@@ -65,12 +65,12 @@ def recv_sync_files(db, host, params):
     for hf in host_files:
         attrs = sdict.pop(hf.rid)
         hf.update(**attrs)
+        db.add(hf)
     # create
     for k, sf in sdict.items():
         hf = HostFile(**sf)
         host.host_files.append(hf)
     # commit
-    db.add(host_files)
     db.add(host)
     db.commit()
 

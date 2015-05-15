@@ -57,7 +57,10 @@ def test_resolution():
     r.sync = sync
     r.host = host
     r.host_file = host.host_files[0]
-    r.sync_file = sync.sync_files[0] 
+    r.sync_file = sync.sync_files[0]
+    r.status = Resolution.THEIRS_CHANGED
+    r.state = Resolution.DELETED
+
     db.add(r)
     db.commit()
     return db

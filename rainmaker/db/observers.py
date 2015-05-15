@@ -11,10 +11,12 @@ from sqlalchemy import event
 from rainmaker.db.main import SyncFile, Download
 #from rainmaker.db.serializers import ValidationError
 
+# 
 def _on_sync_file_save(mapper, connection, target):
     '''
-        listen for the 'before_update' event"
+        listen for the 'save' events"
     '''
+    print('observer;;', target)
     if target.file_parts.changed:
         target.fparts = target.file_parts.dump()
     if target.id is not None:
@@ -22,10 +24,12 @@ def _on_sync_file_save(mapper, connection, target):
         target.version += 1
         target.ver_data = target.vers.dump()
 
+# 
+print('Yup')
 event.listens_for(SyncFile, 'before_update', _on_sync_file_save)
 event.listens_for(SyncFile, 'before_insert', _on_sync_file_save)
 
-
+# 
 def _on_download_save(mapper, connection, target):
     "listen for the 'before_update' event"
     if target.file_parts.changed:
@@ -33,14 +37,8 @@ def _on_download_save(mapper, connection, target):
     if target.needed_parts.changed:
         target.nparts = target.needed_parts.dump()
 
-# standard style
+# load listeners
 event.listens_for(Download, 'before_update', _on_download_save)
 event.listens_for(Download, 'before_insert', _on_download_save)
-
-
-def _on_start_download(mapper, connection, target):
-    pass
-
-event.listens_for(Download, 'after_insert', _on_start_download)
 
 
