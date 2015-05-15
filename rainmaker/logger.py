@@ -1,6 +1,7 @@
 import logging
 from rainmaker.utils import Object
 
+# Log level codes
 levels = {
     'debug': logging.DEBUG,
     'info': logging.INFO,
@@ -8,6 +9,8 @@ levels = {
     'error': logging.ERROR,
     'none': logging.NOTSET
 }
+
+# Log styles
 styles = [
     '%(message)s',
     '%(message)s',
@@ -16,14 +19,16 @@ styles = [
     '%(name)-12s %(levelname)-8s %(message)s'
 ]
 
+# Log verbosity
 verbosity = {
     'Rainmaker': 0,
-    'rainmaker_app.console': 0,
-    'rainmaker_app.debug_node': 0,
-    'rainmaker_app.db.config': 0,
-    'rainmaker_app.lib.net.start_tls': 0,
-    'rainmaker_app.lib.net.clients': 0,
-    'rainmaker_app.lib.net.udp_multicast': 0,
+    'rainmaker.tasks': 0,
+    'rainmaker.console': 0,
+    'rainmaker.debug_node': 0,
+    'rainmaker.db.config': 0,
+    'rainmaker.lib.net.start_tls': 0,
+    'rainmaker.lib.net.clients': 0,
+    'rainmaker.lib.net.udp_multicast': 0,
     'Tests': 4,
     'rainmaker_app.lib.fs_actions': 0,
     'AppLoop': 1,
@@ -43,7 +48,7 @@ verbosity = {
 
 config = Object(
     init_done=False,
-    level='warn', 
+    level='info', 
     verbosity=0,
     date_style= '%Y-%m-%d-%H-%M-%S',
     log_file_style= '%(message)s'

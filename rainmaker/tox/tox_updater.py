@@ -9,12 +9,14 @@ import time
 import threading
 
 from rainmaker.tox import tox_env
+import rainmaker.logger
+log = rainmaker.logger.create_log(__name__)
 
 def spin(stop=threading.Event):
     if stop is None:
         return
 
-    print("|", end="")
+    log.info("|", end="")
     while True:
         for c in "/-\\|":
             if stop.is_set():
@@ -25,7 +27,7 @@ def spin(stop=threading.Event):
             time.sleep(0.1)
 
 def download():
-    print("Downloading")
+    log.info("Contacting %s..." % tox_env.NODES_URL)
     stop = threading.Event()
     spinner = threading.Thread(target=spin, args=(stop,))
     spinner.start()
@@ -34,7 +36,7 @@ def download():
         request = urllib.request.urlopen(tox_env.NODES_URL)
         raw_page = request.read().decode("utf-8")
     except Exception as e:
-        print("Couldn't download", e.traceback)
+        log.info("Couldn't download", e.traceback)
         stop.set()
         return
     
@@ -48,7 +50,7 @@ def fetch(raw_page=None):
     if raw_page is None:
         raw_page = download()
 
-    print("Parsing")
+    log.info("Parsing")
 
     # Get rid of everything around the table
     raw_table = raw_page[raw_page.find("<table"):raw_page.find("</table")]
@@ -80,7 +82,7 @@ def fetch(raw_page=None):
         status = raw_table[raw_table.find("<td>") + 4:raw_table.find("</td>") - 1]
         raw_table = raw_table[raw_table.find("</td></tr>")+5:]
 
-        # print(ipv4, ipv6, port, key, name, location, status)
+        # log.info(ipv4, ipv6, port, key, name, location, status)
         node_list.append((ipv4, int(port), key))
-    print("Success")
+    log.info("Success")
     return node_list

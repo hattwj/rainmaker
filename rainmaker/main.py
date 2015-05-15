@@ -10,6 +10,7 @@ import rainmaker.tasks
 import rainmaker.file_system
 import rainmaker.file_server
 
+
 class Application(object):
     version = rainmaker.version
     fs_log = rainmaker.file_system.FsActions()
@@ -20,8 +21,7 @@ class Application(object):
     conf_root = os.path.abspath(os.path.join(root,'conf'))
     
     # User config paths
-    user_root = os.path.expanduser('~')
-    user_dir = '.rainmaker'
+    user_dir = os.path.join(os.path.expanduser('~'), '.config', 'rainmaker')
     db_name = 'rainmaker.sqlite'
     conf_name = 'config.yml'
     
@@ -30,19 +30,16 @@ class Application(object):
     
     # runtime flags
     start_console = False
-    # start_tcp = True
-    # start_udp = True
     start_tox = True
-
     stopping = False
 
     def __init__(self, **kwargs):
         # accepts kwargs to configure
-        for k, v in kwargs:
+        for k, v in kwargs.items():
             setattr(self, k, v)
      
     @property
-    def user_db_path(self):
+    def db_path(self):
         return os.path.join(self.user_dir, self.db_name)
     
     @property
@@ -60,4 +57,3 @@ class Application(object):
             self.__file_server__ = rainmaker.file_server.FileServer()
         return self.__file_server__
 
-Application = Application()   

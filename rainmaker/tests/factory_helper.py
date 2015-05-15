@@ -21,7 +21,6 @@ def FileParts(a_file):
         pos += 1
     a_file.fparts = fp.dump()
     
-
 def Files(root, count=10, size=2):
     '''
         create many random files
@@ -54,7 +53,7 @@ def Sync(count=1, fake=False):
     syncs = []
 
     for x in range(0, count):
-        root = os.path.join(Application.user_root, str(random.random()))
+        root = os.path.join(Application.user_dir, str(random.random()))
         if not fake:
             fs.mkdir(root)
         sync = db.Sync()

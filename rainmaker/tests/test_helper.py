@@ -12,15 +12,15 @@ temp_root = os.path.abspath(
         '..',
         '..',
         'tmp'))
-user_root = os.path.join(temp_root, 'user_root')
-Application.user_root = user_root
+user_dir = os.path.join(temp_root, 'user_dir')
+Application.user_dir = user_dir
 fs = FsActions()
 fs.mkdir(temp_root)
-fs.mkdir(user_root)
+fs.mkdir(user_dir)
 
 def clean_temp_dir():
-    fs.rmdir(user_root)
-    fs.mkdir(user_root)
+    fs.rmdir(user_dir)
+    fs.mkdir(user_dir)
 
 # Application file loader
 def load(path, abspath=False):
