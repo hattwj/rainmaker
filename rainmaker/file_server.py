@@ -3,6 +3,74 @@ from threading import Thread, Lock
 from time import sleep
 from concurrent.futures import ThreadPoolExecutor
 
+from threading import Lock
+from rainmaker.db.serializers import FileParts
+class DownloadManager():
+    chunk_size = FileParts.chunk_size
+
+    def __init__(self, host_file):
+        self.file_size = host_file.file_size
+        self.complete = False
+        self.lock = Lock() 
+        fparts = host_file.file_parts
+        self.parts_needed = [idx for idx, v in fparts.iteritems()]
+
+    @property
+    def incoming_path(self):
+        '''
+            Temp path of file
+        '''
+        return self.path + '.part'
+
+    @property
+    def path(self):
+        '''
+            Target path of file
+        '''
+        return os.path.join(self.host_file.host.sync.path, self.host_file.rel_path)
+    
+    @property
+    def path_dir(self):
+        return os.path_dir(self.path)
+
+    def gen_file(self):
+        '''
+            Generate blank file
+        '''
+        path = self.path
+        if self.host_file.is_dir:
+            if not os.isdir(path):
+                os.mkdirs(path)
+            self.complete = True
+            return
+        
+        ipath = self.incoming_path
+        
+        if not os.is_dir(self.path_dir):
+            os.make_dirs(self.path_dir)
+        
+        if os.path.exists(ipath):
+            return
+        
+        with open(ipath, "wb") as out:
+            out.truncate(self.file_size)
+    
+    def recv(self, pos, data):
+        chunk_size = self.host_file.file_parts.pos_len(pos)
+        chunk = self.chunks.get(pos)
+        chunk = data if chunk is None else chunk + data
+        if len(chunk) == chunk_size:
+            self.check_part(pos, chunk)
+            self.write_chunk(pos, chunk)
+
+    def write_chunk(self, pos, data):
+        with open(self.incoming_path, 'ab') as out:
+            out.seek(pos*self.chunk_size)
+            out.write(data)
+            self.received_part(pos)
+
+    def received_part(self, pos):
+        self.parts_needed.remove(pos)
 
 class FileTransfers():
     def __init__(self):
@@ -16,6 +84,8 @@ class FileServer():
     '''
     MAX_THREADS = 10
     running = False
+    
+    #download_manager = DownloadManager()
 
     def __init__(self):
         self.e_send = ThreadPoolExecutor(max_workers=self.MAX_THREADS)
@@ -294,76 +364,6 @@ class FileSender():
         if self._last_offset is not None:
             self._offset = self._last_offset
             self.f.seek(self._last_offset)
-
-from threading import Lock
-from rainmaker.db.serializers import FileParts
-class DownloadManager():
-    chunk_size = FileParts.chunk_size
-
-    def __init__(self, host_file):
-        self.file_size = host_file.file_size
-        self.complete = False
-        self.lock = Lock() 
-        fparts = host_file.file_parts
-        self.parts_needed = [idx for idx, v in fparts.iteritems()]
-
-    @property
-    def incoming_path(self):
-        '''
-            Temp path of file
-        '''
-        return self.path + '.part'
-
-    @property
-    def path(self):
-        '''
-            Target path of file
-        '''
-        return os.path.join(self.host_file.host.sync.path, self.host_file.rel_path)
-    
-    @property
-    def path_dir(self):
-        return os.path_dir(self.path)
-
-    def gen_file(self):
-        '''
-            Generate blank file
-        '''
-        path = self.path
-        if self.host_file.is_dir:
-            if not os.isdir(path):
-                os.mkdirs(path)
-            self.complete = True
-            return
-        
-        ipath = self.incoming_path
-        
-        if not os.is_dir(self.path_dir):
-            os.make_dirs(self.path_dir)
-        
-        if os.path.exists(ipath):
-            return
-        
-        with open(ipath, "wb") as out:
-            out.truncate(self.file_size)
-    
-    def recv(self, pos, data):
-        chunk_size = self.host_file.file_parts.pos_len(pos)
-        chunk = self.chunks.get(pos)
-        chunk = data if chunk is None else chunk + data
-        if len(chunk) == chunk_size:
-            self.check_part(pos, chunk)
-            self.write_chunk(pos, chunk)
-
-    def write_chunk(self, pos, data):
-        with open(self.incoming_path, 'ab') as out:
-            out.seek(pos*self.chunk_size)
-            out.write(data)
-            self.received_part(pos)
-
-    def received_part(self, pos):
-        self.parts_needed.remove(pos)
-
 
 #def files_controller(db, transport):
 #    recv_files = {}

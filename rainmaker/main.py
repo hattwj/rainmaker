@@ -14,6 +14,8 @@ import rainmaker.file_server
 class Application(object):
     version = rainmaker.version
     fs_log = rainmaker.file_system.FsActions()
+    file_server = rainmaker.file_server.FileServer()    
+
     device_name = 'unknown'
 
     # Application paths
@@ -49,11 +51,4 @@ class Application(object):
     @property
     def root_conf_path(self):
         return os.path.join(self.root, 'conf', self.conf_name)
-
-    __file_server = None
-    @property
-    def file_server(self):
-        if self.__file_server__ is None:
-            self.__file_server__ = rainmaker.file_server.FileServer()
-        return self.__file_server__
 

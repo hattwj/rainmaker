@@ -1,4 +1,7 @@
-from .sync_manager import SyncManager
+from rainmaker.sync_manager import SyncManager
+
+import rainmaker.logger
+log = rainmaker.logger.create_log(__name__)
 
 class SyncManager(object):
     '''

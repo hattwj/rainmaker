@@ -1,9 +1,12 @@
-from .tox_manager import ToxManager
-from .fs_manager import FsManager
-from .scan_manager import ScanManager
-from .sync_manager import SyncManager
+#from rainmaker.tox_manager import ToxManager
+#from rainmaker.fs_manager import FsManager
+#from rainmaker.scan_manager import ScanManager
+#from rainmaker.sync_manager import SyncManager
 
-class SyncManager(object):
+import rainmaker.logger
+log = rainmaker.logger.create_log(__name__)
+
+class SyncPathManager(object):
     '''
         Manage a single sync path
     '''
@@ -16,10 +19,12 @@ class SyncManager(object):
         self.sync = sync
         self.scan_manager = ScanManager(sync)
         self.scan_manager.on_complete = self.scan_complete
+    
+    def start(self):
         self.scan_manager.start()
 
     def scan_complete(self, scan_stats):
-        print('Scan Completed')
+        log.info('Scan Completed')
         self.ready = True
         self.sync_manager = SyncManager()
         self.tox_manager = ToxManager(self.sync)
@@ -32,9 +37,9 @@ class SyncManager(object):
         self.tox_manager.start()
 
     def on_tox_new_peer(self, peer):
-        print('New peer via tox')
+        log.info('New peer discovered via tox')
         self.sync_manager.add_peer(sync, peer)
 
     def on_tox_fs_event(self, fs_event):
-        print('Fs Event via tox')
+        log.info('Fs Event via tox')
 
