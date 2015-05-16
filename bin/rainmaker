@@ -2,12 +2,11 @@
 import sys
 import rainmaker.main
 import rainmaker.cli
-import rainmaker.tasks
 
 def main():
     config = rainmaker.cli.parse()
     rainmaker.main.Application.load(**config) 
-    rainmaker.main.Application.autorun()
+    rainmaker.main.Application.tasks.autorun()
 
 if __name__ == '__main__':
     sys.exit(main())

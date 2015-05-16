@@ -3,18 +3,10 @@
 '''
 import os
 
-import rainmaker
-import rainmaker.db
-import rainmaker.tox
-import rainmaker.tasks
 import rainmaker.file_system
 import rainmaker.file_server
-
-from rainmaker.db.main import init_db
-from rainmaker.tox.main import init_tox
-from rainmaker.sync_manager.main import init_sync
-
 import rainmaker.logger
+
 log = rainmaker.logger.create_log(__name__)
 
 class ApplicationClass(object):
@@ -41,6 +33,7 @@ class ApplicationClass(object):
     # runtime flags
     start_console = False
     start_tox = True
+    start_sync = True
     stopping = False
 
     def load(self, **kwargs):
@@ -60,22 +53,9 @@ class ApplicationClass(object):
     def root_conf_path(self):
         return os.path.join(self.root, 'conf', self.conf_name)
 
-    def autorun(self):
-        log.info("Starting rainmaker version: %s" % self.version)
-        log.info('Checking installation...')
-        # create user's config dir
-        if not os.path.isdir(self.user_dir):
-            did_install = True
-            self.fs_log.mkdir(self.user_dir) 
-            self.fs_log.touch(self.db_path)
-    
-        log.info('Initializing db...') 
-        self.db = init_db(self.db_path)
-    
-        log.info('Configuring Tox...')
-        init_tox(self.db)
-    
-        log.info('Initializing Sync Managers...')
-        init_sync(self.db)
 
 Application = ApplicationClass()
+import rainmaker.tasks
+Application.tasks = rainmaker.tasks
+
+

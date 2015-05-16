@@ -29,3 +29,22 @@
 # This is useful for tox and controllers
 from types import MethodType
 ```
+
+## Control access to database ##
+
+```python
+
+from concurrent.futures import ThreadPoolExecutor
+db_man = ThreadPoolExecutor(max_workers=1)
+db_man.submit(my_func)
+
+
+```
+
+## Application event counter ##
+
+Count events, not time
+    - Get latest time at startup
+    - Increment counter on event
+    - Set updated_at, created_at on save / update
+

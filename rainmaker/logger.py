@@ -25,12 +25,13 @@ verbosity = {
     'rainmaker.db.main': 0,
     'rainmaker.debug_node': 0,
     'rainmaker.file_system': 0,
+    'rainmaker.logger': 1,
     'rainmaker.main': 0,
     'rainmaker.sync_manager.main': 0,
     'rainmaker.sync_manager.scan_manager': 0,
     'rainmaker.tasks': 0,
     'rainmaker.tox.main': 0,
-    'rainmaker.tox.tox_updater': 0,
+    'rainmaker.tox.tox_updater': 0
 }
 
 config = Object(
