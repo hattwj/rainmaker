@@ -2,6 +2,7 @@
 #from rainmaker.fs_manager import FsManager
 #from rainmaker.scan_manager import ScanManager
 #from rainmaker.sync_manager import SyncManager
+from rainmaker.sync_manager.scan_manager import scan_sync
 
 import rainmaker.logger
 log = rainmaker.logger.create_log(__name__)
@@ -14,6 +15,17 @@ class SyncPathManager(object):
     tox_manager = None
     sync_manager = None
     ready = False
+
+    __spm__ = {}
+
+    @classmethod
+    def singleton(klass, sync):
+        spm = klass.__spm__.get(sync.id)
+        if spm:
+            return spm
+        spm = klass(sync)
+        klass.__spm__[sync.id] = spm
+        return spm
 
     def __init__(self, sync):
         self.sync = sync

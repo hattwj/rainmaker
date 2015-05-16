@@ -16,9 +16,13 @@ Rainmaker aims to provide a simple bidirectional file synchronization service. R
 * Still under heavy development
 
 
-See [TODO](TODO.md) for other notices
+See [TODO](TODO.md) for a list of things that need to be completed
+See [PLAN](PLAN.md) for an overview of how things are put together
+See [LICENSE](LICENSE.txt)
 
 ## Inspiration ##
+
+
 
 * [Tox] (https://github.com/Tox)
 * [Unison] (http://www.cis.upenn.edu/~bcpierce/unison/)
@@ -26,16 +30,17 @@ See [TODO](TODO.md) for other notices
 * [Watchdog] (http://packages.python.org/watchdog/)
 
 
-# Quick Start #
+## Quick Start ##
 
-## Ubuntu Dependencies ##
+
+### Ubuntu Dependencies ###
 
 ```bash
 # Compilation dependencies
 sudo apt-get install build-essential libtool autotools-dev automake checkinstall check git yasm
 ```
 
-## Compile Tox ##
+### Compile Tox ###
 
 ```bash
 # Compile and install libsodium
@@ -66,6 +71,13 @@ sudo pip3 install -r ./requirements.txt
 
 # ldconfig fix
 sudo ldconfig
+
+```
+
+### Developer Notes ###
+```bash
+# install application (in develop mode)
+sudo python3 ./setup.py install develop
 
 ```
 

@@ -13,14 +13,19 @@ temp_root = os.path.abspath(
         '..',
         'tmp'))
 user_dir = os.path.join(temp_root, 'user_dir')
+sync_root = os.path.join(temp_root, 'sync_root')
 Application.user_dir = user_dir
+
 fs = FsActions()
 fs.mkdir(temp_root)
+fs.mkdir(sync_root)
 fs.mkdir(user_dir)
 
 def clean_temp_dir():
     fs.rmdir(user_dir)
+    fs.rmdir(sync_root)
     fs.mkdir(user_dir)
+    fs.mkdir(sync_root)
 
 # Application file loader
 def load(path, abspath=False):
@@ -35,6 +40,7 @@ def load(path, abspath=False):
     return data
 
 def load_fixture(session, test_name, data):
+    ''' Load db records from yaml '''
     if not data:
         #print "%s has no data" % test_name
         return

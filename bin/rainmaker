@@ -6,8 +6,8 @@ import rainmaker.tasks
 
 def main():
     config = rainmaker.cli.parse()
-    app = rainmaker.main.Application(**config) 
-    rainmaker.tasks.autorun(app)
+    rainmaker.main.Application.load(**config) 
+    rainmaker.main.Application.autorun()
 
 if __name__ == '__main__':
     sys.exit(main())
