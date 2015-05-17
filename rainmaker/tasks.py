@@ -9,7 +9,6 @@ from rainmaker.sync_manager.main import init_sync
 import rainmaker.logger
 log = rainmaker.logger.create_log(__name__)
 
-from rainmaker.main import Application
 
 def autorun():
     log.info("Starting rainmaker version: %s" % Application.version)
