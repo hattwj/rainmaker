@@ -48,15 +48,16 @@ def Dirs(root, count=10):
         return cur_path
     return results
 
-def Sync(count=1, fake=False):
+def Sync(**kwargs):
     ''' create dir and return sync '''
     syncs = []
-
+    count = kwargs.pop('count')
+    fake = kwargs.pop('fake', None)
     for x in range(0, count):
         root = os.path.join(Application.user_dir, str(random.random()))
-        if not fake:
+        if fake is None:
             fs.mkdir(root)
-        sync = db.Sync()
+        sync = db.Sync(**kwargs)
         sync.path = root
         syncs.append(sync)
     if count==1:
@@ -128,13 +129,15 @@ def HostFile(host, count, **kwargs):
         return host_file
     return host_files
 
-def HostRand(sync, count=10):
+def HostRand(sync):
     host = Host(sync, 1)
     host_files = HostFile(host, count, is_dir=False)
     return host
 
-def SyncRand(count=10):
-    sync = Sync(1, fake=True)
+def SyncRand(**kwargs):
+    kwargs['fake'] = True
+    kwargs['count'] = 1
+    sync = Sync(**kwargs)
     sync_files = SyncFile(sync, count, is_dir=False, fake=True)
     return sync
 

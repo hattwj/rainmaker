@@ -10,29 +10,31 @@ import rainmaker.logger
 log = rainmaker.logger.create_log(__name__)
 
 
-def autorun():
-    log.info("Starting rainmaker version: %s" % Application.version)
+from rainmaker.main import Application
+
+
+def autorun(self):
+    log.info("Starting rainmaker version: %s" % self.version)
     log.info('Checking installation...')
     # create user's config dir
-    if not os.path.isdir(Application.user_dir):
+    if not os.path.isdir(self.user_dir):
         did_install = True
-        Application.fs_log.mkdir(Application.user_dir) 
-        Application.fs_log.touch(Application.db_path)
+        self.fs_log.mkdir(self.user_dir) 
+        self.fs_log.touch(self.db_path)
 
     log.info('Initializing db...') 
-    Application.db = init_db(Application.db_path)
+    self.db = rainmaker.db.main.init_db(self.db_path)
 
-    if Application.start_tox:
+    if self.start_tox:
         log.info('Configuring Tox...')
-        init_tox(Application.db)
+        rainmaker.tox.main.init_tox(self.db)
     else:
         log.info('Skipping Tox...')
 
-    if Application.start_sync:
+    if self.start_sync:
         log.info('Initializing Sync Managers...')
-        init_sync(Application.db)
+        rainmaker.sync_manager.main.init_sync(self.db)
     else:
         log.info('Skipping Sync auto start')
 
-def create_sync(path):
-    pass
+Application.autorun = autorun

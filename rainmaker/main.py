@@ -5,12 +5,17 @@ import os
 
 import rainmaker.file_system
 import rainmaker.file_server
-import rainmaker.tasks
-
 import rainmaker.logger
 log = rainmaker.logger.create_log(__name__)
 
 class Application(object):
+    '''
+        Application:
+            - FsLog
+            - FileServer
+            - Scanner
+            - Observer
+    '''
     version = rainmaker.version
 
     # Application singletons go here
@@ -37,9 +42,9 @@ class Application(object):
     start_sync = True
     stopping = False
     
-    def __init__(self):
-        self.tasks = rainmaker.tasks.setup(self)
-        
+    def __init__(self, **kwargs):
+        self.load(**kwargs)
+
     def load(self, **kwargs):
         # accepts kwargs to configure
         for k, v in kwargs.items():
@@ -57,4 +62,5 @@ class Application(object):
     def root_conf_path(self):
         return os.path.join(self.root, 'conf', self.conf_name)
 
+import rainmaker.tasks
 
