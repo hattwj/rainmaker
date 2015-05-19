@@ -101,7 +101,7 @@ def SyncWatch(session, sync):
                     SyncFile.sync_id    == sync.id,
                     SyncFile.does_exist == True).update({'stime_start':0})
     
-    eh =  EventHandler()
+    eh = EventHandler()
     observer.schedule(eh, sync.path, recursive = True)
     return eh
 

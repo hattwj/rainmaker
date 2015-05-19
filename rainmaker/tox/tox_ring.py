@@ -9,7 +9,6 @@ from time import sleep
 from pytox import Tox, OperationFailedError
 
 # local imports
-from rainmaker.main import Application
 from rainmaker.tox import tox_env
 from rainmaker.tox import tox_errors
 from rainmaker.net.sessions import ToxSessions, tox_auth_strategy 
@@ -245,4 +244,10 @@ def acts_as_primary_bot(tox):
     tox.primary = True
     # group chat room
     tox.base_group_id = tox.add_groupchat()
- 
+
+def PrimaryBot(app, sync):
+    pass
+
+def SyncBot(app, sync):
+    pass
+

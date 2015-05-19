@@ -3,6 +3,7 @@
 '''
 import os
 
+from rainmaker.sync_manager.sync_manager import SyncManager
 import rainmaker.file_system
 import rainmaker.file_server
 import rainmaker.logger
@@ -11,17 +12,26 @@ log = rainmaker.logger.create_log(__name__)
 class Application(object):
     '''
         Application:
+            - db
             - FsLog
             - FileServer
-            - Scanner
-            - Observer
+            - SyncManager
+                - create_sync
+                - do_sync
+                - sync_paths
+                    - Observer
+                    - Scanner
+                    - Tox
     '''
     version = rainmaker.version
-
-    # Application singletons go here
-    fs_log = rainmaker.file_system.FsActions()
-    file_server = rainmaker.file_server.FileServer()    
-
+    
+    def __init__(self, **kwargs):
+        # Application singletons go here
+        self.fs_log = rainmaker.file_system.FsActions()
+        self.file_server = rainmaker.file_server.FileServer()
+        self.sync_manager = SyncManager(self)
+    
+    db = None
     device_name = 'unknown'
 
     # Application paths

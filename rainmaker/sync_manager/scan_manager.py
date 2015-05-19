@@ -107,6 +107,7 @@ def scan_sync(session, sync):
     _scan()
     _check_for_deleted()
 
+
 def refresh_sync(session, sync):
     '''
         Check database for new files to scan
