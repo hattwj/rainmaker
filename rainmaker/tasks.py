@@ -4,14 +4,12 @@ import os
 
 from rainmaker.db.main import init_db
 from rainmaker.tox.main import init_tox
-from rainmaker.sync_manager.main import init_sync
 
 import rainmaker.logger
 log = rainmaker.logger.create_log(__name__)
 
 
 from rainmaker.main import Application
-
 
 def autorun(self):
     log.info("Starting rainmaker version: %s" % self.version)
@@ -33,7 +31,7 @@ def autorun(self):
 
     if self.start_sync:
         log.info('Initializing Sync Managers...')
-        rainmaker.sync_manager.main.init_sync(self.db)
+        self.sync_manager.start()
     else:
         log.info('Skipping Sync auto start')
 

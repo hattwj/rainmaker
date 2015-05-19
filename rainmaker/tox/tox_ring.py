@@ -11,6 +11,7 @@ from pytox import Tox, OperationFailedError
 # local imports
 from rainmaker.tox import tox_env
 from rainmaker.tox import tox_errors
+from rainmaker.net.controllers import register_controller_routes
 from rainmaker.net.sessions import ToxSessions, tox_auth_strategy 
 from rainmaker.net.state import StateMachine, RunLevel
 from rainmaker.net.events import EventHandler, EventError
@@ -127,8 +128,8 @@ def acts_as_connect_bot(tox):
         return run_level
 
     # connection state manager
-    tox.state_machine.add(tox.__conn_run_level__())
-    tox.state_machine.level_changed = tox.state_level_changed
+    tox.state_machine.add(__conn_run_level__())
+    tox.state_machine.level_changed = state_level_changed
 
 def acts_as_message_bot(tox):
     '''
@@ -245,9 +246,21 @@ def acts_as_primary_bot(tox):
     # group chat room
     tox.base_group_id = tox.add_groupchat()
 
-def PrimaryBot(app, sync):
-    pass
+DefaultBot = ToxBot
 
-def SyncBot(app, sync):
-    pass
+def PrimaryBot(*args, **kwargs):
+    tox = DefaultBot(*args, **kwargs)
+    acts_as_connect_bot(tox)
+    acts_as_message_bot(tox)
+    acts_as_primary_bot(tox)
+    register_controller_routes(db, tox)
+    return tox
 
+def SyncBot(*args, **kwargs):
+    tox = DefaultBot(*args, **kwargs)
+    acts_as_connect_bot(tox)
+    acts_as_message_bot(tox)
+    acts_as_sync_bot(tox)
+    register_controller_routes(db, tox)
+    #acts_as_server_bot(tox)
+    return tox

@@ -24,10 +24,11 @@ class Application(object):
                     - Tox
     '''
     version = rainmaker.version
+    fs_log = rainmaker.file_system.FsActions()
     
     def __init__(self, **kwargs):
+        self.load(**kwargs)
         # Application singletons go here
-        self.fs_log = rainmaker.file_system.FsActions()
         self.file_server = rainmaker.file_server.FileServer()
         self.sync_manager = SyncManager(self)
     
@@ -52,9 +53,6 @@ class Application(object):
     start_sync = True
     stopping = False
     
-    def __init__(self, **kwargs):
-        self.load(**kwargs)
-
     def load(self, **kwargs):
         # accepts kwargs to configure
         for k, v in kwargs.items():
@@ -72,5 +70,5 @@ class Application(object):
     def root_conf_path(self):
         return os.path.join(self.root, 'conf', self.conf_name)
 
+# injects tasks into Application
 import rainmaker.tasks
-

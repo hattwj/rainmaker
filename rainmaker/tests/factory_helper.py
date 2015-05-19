@@ -135,9 +135,9 @@ def HostRand(sync):
     return host
 
 def SyncRand(**kwargs):
-    kwargs['fake'] = True
-    kwargs['count'] = 1
+    kwargs['fake'] = kwargs.get('fake', True)
+    kwargs['count'] = kwargs.get('count', 1)
     sync = Sync(**kwargs)
-    sync_files = SyncFile(sync, count, is_dir=False, fake=True)
+    sync_files = SyncFile(sync, kwargs['count'], is_dir=False, fake=kwargs['fake'])
     return sync
 

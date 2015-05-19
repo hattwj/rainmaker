@@ -9,6 +9,7 @@ from twisted.internet import defer
 from rainmaker.tox import tox_updater, tox_env
 #from rainmaker.main import Application
 from rainmaker.db.main import ToxServer
+from rainmaker.tox.tox_ring import SyncBot, PrimaryBot
 import rainmaker.logger
 log = rainmaker.logger.create_log(__name__)
 
@@ -40,8 +41,4 @@ def init_tox(session, **opts):
         exit()
     for ts in tox_servers:
         tox_env.add_server(ts.ipv4, ts.port, ts.pubkey)
-
-def ToxFactory(sync):
-
-    
-
+     

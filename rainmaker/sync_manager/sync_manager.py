@@ -5,7 +5,9 @@ log = rainmaker.logger.create_log(__name__)
 from warnings import warn
 from queue import Queue
 
+from rainmaker.net.controllers import register_controller_routes
 from rainmaker.tox.tox_ring import PrimaryBot, SyncBot
+from rainmaker.db.main import Sync
 
 class FsManager(object):
     def __init__(self, app, sync):
@@ -31,6 +33,9 @@ class ToxManager(object):
         # create bots
         self.primary_bot = PrimaryBot(sync, data=sync.tox_primary_blob)
         self.sync_bot = SyncBot(sync, primary=self.primary_bot, data=sync.tox_sync_blob)
+        register_controller_routes(app.db, self.primary_bot)
+        register_controller_routes(app.db, self.sync_bot)
+
         self.sync_bot.on_stop = self.__on_stop__
 
     def start(self):
@@ -92,13 +97,13 @@ class SyncManager(object):
         self.syncs = {}
         self.app = app
     
-    def autostart(self):
+    def start(self):
         syncs = self.app.db.query(Sync).all()
         for sync in syncs:
             spm = self.add_sync(sync)
         
     def add_sync(self, sync):
-        spm = SyncPathManager(sync)
+        spm = SyncPathManager(self.app, sync)
         spm.setup()
         self.syncs[sync.id] = spm
         return spm

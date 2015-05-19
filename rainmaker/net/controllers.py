@@ -3,12 +3,12 @@ from rainmaker.net.sessions import controller_requires_auth
 from rainmaker.db.main import Sync, SyncFile, Host, HostFile
 from rainmaker.db import views
 
-def register_controllers(session, router, sync):
-    auth_controller(session, router, sync.id)
-    utils_controller(session, router, sync.id)
-    sync_files_controller(session, router, sync.id)
-    host_files_controller(session, router, sync.id)
-    hosts_controller(session, router, sync.id)
+def register_controller_routes(db, transport):
+    auth_controller(db, transport)
+    utils_controller(db, transport)
+    sync_files_controller(db, transport)
+    host_files_controller(db, transport)
+    hosts_controller(db, transport)
 
 def paginate(q, page, attrs=None, page_size=200):
     '''Paginate results of query'''
