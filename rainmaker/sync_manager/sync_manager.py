@@ -10,12 +10,13 @@ from rainmaker.tox.tox_ring import PrimaryBot, SyncBot
 from rainmaker.db.main import Sync
 
 class FsManager(object):
-    def __init__(self, app, sync):
-        self.app = app
-        self.sync = sync
+    def __init__(self, spm):
+        self.sync_path_manager = spm
+        self.app = spm.sync_manager.app
+        self.sync = spm.sync
 
     def start(self):
-        self.watcher = SyncWatch(self.app, self.sync)
+        self.watcher = SyncWatch(self.app.db, self.sync)
 
 class ToxManager(object):
     '''
@@ -25,16 +26,23 @@ class ToxManager(object):
         - starts tox
         - switches to primary if primary missing
     '''
-    def __init__(self, app, sync):
+    def __init__(self, spm):
+        self.sync_path_manager = spm
+        self.app = spm.app
         # assign vars
+        sync = spm.sync
         self.sync = sync
         self.stopping = False
         
         # create bots
-        self.primary_bot = PrimaryBot(sync, data=sync.tox_primary_blob)
-        self.sync_bot = SyncBot(sync, primary=self.primary_bot, data=sync.tox_sync_blob)
-        register_controller_routes(app.db, self.primary_bot)
-        register_controller_routes(app.db, self.sync_bot)
+        self.primary_bot = PrimaryBot(sync,
+                tox_manager=self,
+                data=sync.tox_primary_blob)
+        self.sync_bot = SyncBot(sync, 
+                tox_manager=self,
+                primary=self.primary_bot, data=sync.tox_sync_blob)
+        register_controller_routes(self.app.db, self.primary_bot)
+        register_controller_routes(self.app.db, self.sync_bot)
 
         self.sync_bot.on_stop = self.__on_stop__
 
@@ -68,26 +76,52 @@ class ToxManager(object):
         '''
         pass 
 
+    def add_friend(self, tox, addr):
+        '''
+        '''
+        ptox = self.primary_bot
+
+        def _do_auth(event):
+            nonce = event.val('nonce')
+            passwd_hash = ptox.sessions.get_hash(addr, nonce)
+            params = {'pk': ptox.get_address(), 'passwd_hash': passwd_hash}
+            tox.trigger('create_session', 
+                    params=params, reply=_check_auth)  
+            _do_auth.ran = True
+
+        def _check_auth(event):
+            assert event.status == 'ok'
+            _check_auth.ran = True
+        
+        args = {'pk': addr}
+        tox.trigger('new_session', params=args, reply=_do_auth)
+
 from rainmaker.sync_manager.scan_manager import scan_sync, refresh_sync
 class SyncPathManager(object):
     '''
         Manage a single sync path
     '''
 
-    def __init__(self, app, sync):
-        self.app = app
+    def __init__(self, manager, sync):
+        self.sync_manager = manager
+        self.app = manager.app
         self.sync = sync
-        self.fs_manager = FsManager(app, sync)
-        self.tox_manager = ToxManager(app, sync)
+        self.fs_manager = FsManager(self)
+        self.tox_manager = ToxManager(self)
     
     def start(self): 
-        log.info('Starting scan of: %s' % self.sync.path)
-        scan_sync(self.sync)
-        log.info('Scan completed of: %s' % self.sync.path)
-        log.info(scan_stats)
+        self.scan()
         self.ready = True
+        log.info('Done scanning')
         self.fs_manager.start()
         self.tox_manager.start()
+
+    def scan(self):
+        log.info('Starting scan of: %s' % self.sync.path)
+        stats = scan_sync(self.app.db, self.sync)
+        log.info('Scan completed of: %s' % self.sync.path)
+        log.info(stats)
+
 
 class SyncManager(object):
     '''
@@ -103,8 +137,8 @@ class SyncManager(object):
             spm = self.add_sync(sync)
         
     def add_sync(self, sync):
-        spm = SyncPathManager(self.app, sync)
-        spm.setup()
+        spm = SyncPathManager(self, sync)
+        spm.start()
         self.syncs[sync.id] = spm
         return spm
         

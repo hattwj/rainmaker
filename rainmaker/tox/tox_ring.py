@@ -17,6 +17,8 @@ from rainmaker.net.state import StateMachine, RunLevel
 from rainmaker.net.events import EventHandler, EventError
 from rainmaker.net.msg_buffer import MsgBuffer
 
+import rainmaker.logger
+log = rainmaker.logger.create_log(__name__)
 
 '''
     - Ring func, pass in sync
@@ -31,17 +33,17 @@ class ToxBase(object):
     running = False
     was_connected = False
     ever_connected = False
-    _bootstrap = None
     _sync = None
     sessions = None
     base_group_id = None
 
-    def __init__(self, sync, data=None, primary=None):
+    def __init__(self, sync, data=None, primary=None, tox_manager=None):
         super(ToxBase, self).__init__()
         if data:
             self.load(data)
         self.sync = sync
-        self._primary = primary
+        self.primary = primary
+        self.tox_manager = tox_manager
         self.router = EventHandler(self, auth_strategy=tox_auth_strategy)
         self.events = EventHandler(self)
         self.state_machine = StateMachine()
@@ -75,23 +77,18 @@ class ToxBase(object):
 
 class ToxBot(Tox, ToxBase):
     
-    def __init__(self, sync=None, data=None, primary=None):
+    def __init__(self, *args, **kwargs):
         Tox.__init__(self)
-        ToxBase.__init__(self, sync, data=data, primary=primary)
+        ToxBase.__init__(self, *args, **kwargs)
         self.sessions = ToxSessions(self)
 
 def acts_as_connect_bot(tox):
     '''
         Manage tox connection state
     '''
- 
-    def bootstrap():
-        if not tox._bootstrap: 
-            tox._bootstrap = tox_env.random_server()
-        return tox._bootstrap
-
+     
     def state_level_changed(name, code, prev_code):
-        print('%s: %s %s' % (tox.__class__.__name__, StateMachine.ACTION_NAMES[code], name)) 
+        log.info('%s: %s %s' % (tox.__class__.__name__, StateMachine.ACTION_NAMES[code], name)) 
         ename = '%s_%s' % (name, StateMachine.ACTION_NAMES[code])
         tox.events.trigger(ename)
 
@@ -101,30 +98,33 @@ def acts_as_connect_bot(tox):
             - threaded to constantly check tox.do
             - check for shut down
         '''
+        
+        def _start():
+            ip, port, pubk = tox_env.random_server()
+            tox.bootstrap_from_address(ip, port, pubk)
+        
+        def _stop():
+            pass
+        
+        def _valid():
+            return tox.isconnected()
+        
+        
+        name = 'tox_connection'
+        run_level = RunLevel(name, _start, _stop, _valid, 30)
+         
         def _tox_do():
-            do = tox.tox.do
+            do = tox.do
             while True:
                 do()
                 sleep(0.04)
                 if not run_level.should_run:
                     break
         
-        def _start():
-            ip, port, pubk = tox.bootstrap 
-            tox.bootstrap_from_address(ip, port, pubk)
-        
-        def _stop():
-            tox._bootstrap = None
-        
-        def _valid():
-            return tox.isconnected()
-        
         _tox_thread = Thread(target=_tox_do)
         _tox_thread.daemon = True
         _tox_thread.start()
         
-        name = 'tox_connection'
-        run_level = RunLevel(name, _start, _stop, _valid, 30)
         return run_level
 
     # connection state manager
@@ -191,9 +191,8 @@ def acts_as_message_bot(tox):
     tox.on_friend_request = on_friend_request
     tox.send = send
 
-def acts_as_search_bot(tox, primary):
-    tox.primary = primary
-    paddr = primary.get_address()
+def acts_as_search_bot(tox):
+    primary = tox.primary
 
     def __search_run_level__():  
         # ran when level starts
@@ -201,7 +200,7 @@ def acts_as_search_bot(tox, primary):
             '''Start tox search'''
             #self.__search_tries_left -= 1
             if len(tox.get_friendlist()) == 0:
-                tox.add_friend(paddr, auth_msg)
+                tox.tox_manager.add_friend(tox, primary.get_address())
         
         # ran when level stops
         def _stop():
@@ -226,11 +225,9 @@ def acts_as_search_bot(tox, primary):
         return RunLevel('tox_search', _start, _stop, _valid, 40)
 
     def on_group_invite(friend_num, gtype, grp_pubkey):
-        print('Joining group: %s' % gtype)
+        log.info('Joining group: %s' % gtype)
         group_id = tox.join_groupchat(friend_num, grp_pubkey)
     
-    assert tox.primary is None
-    tox.primary = False
     tox.state_machine.add(__search_run_level__())
     tox.on_group_invite = on_group_invite
 
@@ -241,8 +238,7 @@ def acts_as_primary_bot(tox):
         - hand off on shutdown
         - Inherited base functions
     '''
-    assert tox.primary is None
-    tox.primary = True
+    tox.primary = tox
     # group chat room
     tox.base_group_id = tox.add_groupchat()
 
@@ -250,17 +246,14 @@ DefaultBot = ToxBot
 
 def PrimaryBot(*args, **kwargs):
     tox = DefaultBot(*args, **kwargs)
+    acts_as_primary_bot(tox)
     acts_as_connect_bot(tox)
     acts_as_message_bot(tox)
-    acts_as_primary_bot(tox)
-    register_controller_routes(db, tox)
     return tox
 
 def SyncBot(*args, **kwargs):
     tox = DefaultBot(*args, **kwargs)
     acts_as_connect_bot(tox)
     acts_as_message_bot(tox)
-    acts_as_sync_bot(tox)
-    register_controller_routes(db, tox)
-    #acts_as_server_bot(tox)
+    acts_as_search_bot(tox)
     return tox

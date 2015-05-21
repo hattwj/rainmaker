@@ -4,11 +4,11 @@ from rainmaker.main import Application
 from rainmaker.db.main import Sync
 from rainmaker.tox import tox_ring
 
-def AutoApp(apath):
+def AutoApp(apath, **kwargs):
     user_dir = test_helper.user_dir+str(apath)
     sync_path = os.path.join(test_helper.sync_root, 'kitchen_sync'+ str(apath))
-
-    app = Application(user_dir=user_dir)
+    kwargs['user_dir'] = user_dir
+    app = Application(**kwargs)
     app.fs_log.mkdir(sync_path)
     sync = fh.SyncRand(path=sync_path, fake=False)
     app.autorun()
@@ -29,6 +29,6 @@ def tear_down():
 
 def test_simple_workflow():
     print("\n\n")
-    app1 = AutoApp('1')
-    app2 = AutoApp('2')
+    app1 = AutoApp('1', device_name='app1')
+    app2 = AutoApp('2', device_name='app2')
     

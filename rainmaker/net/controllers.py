@@ -4,7 +4,7 @@ from rainmaker.db.main import Sync, SyncFile, Host, HostFile
 from rainmaker.db import views
 
 def register_controller_routes(db, transport):
-    auth_controller(db, transport)
+    tox_auth_controller(db, transport)
     utils_controller(db, transport)
     sync_files_controller(db, transport)
     host_files_controller(db, transport)

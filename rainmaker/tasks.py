@@ -4,12 +4,16 @@ import os
 
 from rainmaker.db.main import init_db
 from rainmaker.tox.main import init_tox
+from rainmaker.sync_manager import fs_manager
 
 import rainmaker.logger
 log = rainmaker.logger.create_log(__name__)
 
 
 from rainmaker.main import Application
+
+log.info('Initializing fs...')
+fs_manager.init()
 
 def autorun(self):
     log.info("Starting rainmaker version: %s" % self.version)
@@ -22,7 +26,7 @@ def autorun(self):
 
     log.info('Initializing db...') 
     self.db = rainmaker.db.main.init_db(self.db_path)
-
+    
     if self.start_tox:
         log.info('Configuring Tox...')
         rainmaker.tox.main.init_tox(self.db)
