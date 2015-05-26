@@ -71,4 +71,6 @@ class Application(object):
         return os.path.join(self.root, 'conf', self.conf_name)
 
 # injects tasks into Application
-import rainmaker.tasks
+from rainmaker import tasks
+Application.init = tasks.init
+Application.start = tasks.start

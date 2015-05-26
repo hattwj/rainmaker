@@ -65,3 +65,5 @@ def load_fixture(session, test_name, data):
             session.add(record)
     session.commit()
 
+
+      

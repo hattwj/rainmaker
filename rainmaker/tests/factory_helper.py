@@ -4,12 +4,14 @@ import os
 import rainmaker.db.main as db
 from rainmaker.db import serializers
 
+from rainmaker.utils import rand_str
 from rainmaker.file_system import FsActions
 from rainmaker.main import Application
 from rainmaker.sync_manager import scan_manager
 
+
 fs = FsActions()
-msize = 2*10**7
+msize = 10**6
 
 def FileParts(a_file):
     fsize = a_file.file_size
@@ -21,7 +23,7 @@ def FileParts(a_file):
         pos += 1
     a_file.fparts = fp.dump()
     
-def Files(root, count=10, size=2):
+def Files(root, count=10):
     '''
         create many random files
         return their paths
@@ -29,10 +31,10 @@ def Files(root, count=10, size=2):
     results = []
     fs.mkdir(root)
     for n in range(0, count):
-        cur_path = os.path.join(root, str(random.random()) )
+        cur_path = os.path.join(root, str(random.randint(0, msize)) )
+        data = rand_str(random.randint(1, msize))
         with open(cur_path, 'w') as f:
-            for x in range(0, size):
-                f.write(str(random.randint(0, msize)))
+            f.write(data)
         results.append(cur_path)
     if count==1:
         return cur_path
@@ -41,7 +43,7 @@ def Files(root, count=10, size=2):
 def Dirs(root, count=10):
     results = []
     for n in range(0, count):
-        cur_path = os.path.join(root, str(random.random()) )
+        cur_path = os.path.join(root, str(random.randint(0, msize)) )
         fs.mkdir(cur_path)
         results.append(cur_path)
     if count==1:
@@ -53,8 +55,9 @@ def Sync(**kwargs):
     syncs = []
     count = kwargs.pop('count')
     fake = kwargs.pop('fake', None)
+    path = kwargs.pop('path', Application.user_dir)
     for x in range(0, count):
-        root = os.path.join(Application.user_dir, str(random.random()))
+        root = os.path.join(path, str(random.randint(0, msize)))
         if fake is None:
             fs.mkdir(root)
         sync = db.Sync(**kwargs)
@@ -71,7 +74,7 @@ def SyncFile(sync, count, **kwargs):
     for x in range(0, count):
         is_dir = kwargs.get('is_dir', bool(random.getrandbits(1)))
         if fake:
-            path = os.path.join(sync.path, str(random.random()) )
+            path = os.path.join(sync.path, str(random.randint(0, msize)) )
         elif is_dir:
             path = Dirs(sync.path, 1) 
         else:
@@ -137,7 +140,14 @@ def HostRand(sync):
 def SyncRand(**kwargs):
     kwargs['fake'] = kwargs.get('fake', True)
     kwargs['count'] = kwargs.get('count', 1)
+    file_count = kwargs.pop('file_count', 10)
     sync = Sync(**kwargs)
-    sync_files = SyncFile(sync, kwargs['count'], is_dir=False, fake=kwargs['fake'])
+    sync_files = SyncFile(sync, file_count, is_dir=False, fake=kwargs['fake'])
     return sync
+
+import rainmaker.tests.test_helper
+import rainmaker.tox.main
+def ToxServers():
+    tox_html = rainmaker.tests.test_helper.load('fixtures/tox_nodes.html')
+    return rainmaker.tox.main.html_to_tox_servers(tox_html)
 

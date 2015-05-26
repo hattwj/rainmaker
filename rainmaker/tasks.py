@@ -9,13 +9,28 @@ from rainmaker.sync_manager import fs_manager
 import rainmaker.logger
 log = rainmaker.logger.create_log(__name__)
 
-
-from rainmaker.main import Application
-
 log.info('Initializing fs...')
 fs_manager.init()
 
-def autorun(self):
+def start(self):
+    if self.start_tox:
+        log.info('Configuring Tox...')
+        rainmaker.tox.main.init_tox(self.db)
+    else:
+        log.info('Skipping Tox...')
+
+    if self.start_sync:
+        log.info('%s initializing Sync Managers...' % self.device_name)
+        self.sync_manager.start()
+    else:
+        log.info('%s skipping sync auto start...' % self.device_name)
+
+from time import sleep
+def loop(self):
+    while self.running == True:
+        sleep(0.1)
+
+def init(self):
     log.info("Starting rainmaker version: %s" % self.version)
     log.info('Checking installation...')
     # create user's config dir
@@ -27,16 +42,3 @@ def autorun(self):
     log.info('Initializing db...') 
     self.db = rainmaker.db.main.init_db(self.db_path)
     
-    if self.start_tox:
-        log.info('Configuring Tox...')
-        rainmaker.tox.main.init_tox(self.db)
-    else:
-        log.info('Skipping Tox...')
-
-    if self.start_sync:
-        log.info('Initializing Sync Managers...')
-        self.sync_manager.start()
-    else:
-        log.info('Skipping Sync auto start')
-
-Application.autorun = autorun

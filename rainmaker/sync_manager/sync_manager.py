@@ -117,7 +117,7 @@ class SyncPathManager(object):
         self.tox_manager.start()
 
     def scan(self):
-        log.info('Starting scan of: %s' % self.sync.path)
+        log.info('%s starting scan of %s' % (self.app.device_name, self.sync.path))
         stats = scan_sync(self.app.db, self.sync)
         log.info('Scan completed of: %s' % self.sync.path)
         log.info(stats)

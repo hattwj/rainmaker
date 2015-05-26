@@ -36,7 +36,7 @@ def download():
         request = urllib.request.urlopen(tox_env.NODES_URL)
         raw_page = request.read().decode("utf-8")
     except Exception as e:
-        log.info("Couldn't download", e.traceback)
+        log.info("Couldn't download!")
         stop.set()
         return
     
@@ -49,6 +49,9 @@ def download():
 def fetch(raw_page=None):
     if raw_page is None:
         raw_page = download()
+    return parse_page(raw_page)
+
+def parse_page(raw_page):
 
     log.info("Parsing")
 

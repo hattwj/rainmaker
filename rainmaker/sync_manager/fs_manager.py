@@ -26,6 +26,9 @@ from watchdog.events import FileSystemEventHandler
 from rainmaker.db.main import SyncFile
 from rainmaker.sync_manager.scan_manager import refresh_sync, scan_dir, scan_file
 
+import rainmaker.logger
+log = rainmaker.logger.create_log(__name__)
+
 observer = None
 
 def SyncWatch(session, sync):
@@ -56,7 +59,7 @@ def SyncWatch(session, sync):
 
         """ File System Events """
         def on_moved(self, event):
-            #print('moved', event)
+            log.info('moved', event)
             sync_path = session.query(SyncFile).filter(
                 SyncFile.is_dir     == event.is_directory,
                 SyncFile.rel_path   == sync.rel_path(event.src_path),
@@ -66,7 +69,7 @@ def SyncWatch(session, sync):
             session.add(sync_path)
         
         def on_created(self, event):
-            #print('created')
+            log.info('created')
             sync_file = SyncFile(
                 is_dir     = event.is_directory,
                 rel_path   = sync.rel_path(event.src_path),
@@ -76,7 +79,7 @@ def SyncWatch(session, sync):
             
         def on_deleted(self, event):
             # find, mark deleted
-            #print('deleted', event)
+            log.info('deleted', event)
             sync_path = session.query(SyncFile).filter(
                 SyncFile.is_dir     == event.is_directory,
                 SyncFile.rel_path   == sync.rel_path(event.src_path),
@@ -94,7 +97,7 @@ def SyncWatch(session, sync):
         def on_modified(self, event):
             # find, check stime_start and possibly scan
             if not event.is_directory:
-                #print('modified', event)
+                log.info('modified', event)
                 sync_path = session.query(SyncFile).filter(
                     SyncFile.is_dir     == event.is_directory,
                     SyncFile.rel_path   == sync.rel_path(event.src_path),

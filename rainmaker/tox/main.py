@@ -19,19 +19,21 @@ def init_tox(session, **opts):
      
     # load server data
     if not tox_servers:
-        log.info('Attempting to download tox server contacts...')
+        log.info('Getting tox server contacts...')
+        data = opts.get('tox_html')
+        if data is None:
+            log.info('Downloading fresh server info...')
+            data = tox_updater.download()
+        else:
+            log.info('Loading cached server info...')
+
         # attempt to load
-        nodes = tox_updater.fetch(opts.get('tox_html'))
-        if not nodes:
+        if not data:
             log.error('Unable to find any nodes')
             exit()
-        for ipv4, port, pubkey in nodes:
-            server = ToxServer(ipv4=ipv4, 
-                port=port, pubkey=pubkey)
-            tox_servers.append(server)
-            session.add(server)
+        [session.add(ts) for ts in html_to_tox_servers(data)]
         session.commit()
-        log.info('Downloaded %s tox servers' % len(tox_servers))
+        log.info('Found %s tox servers' % len(tox_servers))
     else:
         log.info('%s tox servers loaded' % len(tox_servers))
     
@@ -41,4 +43,11 @@ def init_tox(session, **opts):
         exit()
     for ts in tox_servers:
         tox_env.add_server(ts.ipv4, ts.port, ts.pubkey)
-     
+
+def html_to_tox_servers(html):
+    tox_servers = []
+    for ipv4, port, pubkey in tox_updater.parse_page(html):
+        server = ToxServer(ipv4=ipv4, 
+            port=port, pubkey=pubkey)
+        tox_servers.append(server)
+    return tox_servers
