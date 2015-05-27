@@ -96,6 +96,10 @@ class ToxManager(object):
         args = {'pk': addr}
         tox.trigger('new_session', params=args, reply=_do_auth)
 
+    def ping(self, tox, addr):
+        params = {'pk': addr}
+        tox.trigger('ping', params=params)
+
 from rainmaker.sync_manager.scan_manager import scan_sync, refresh_sync
 class SyncPathManager(object):
     '''

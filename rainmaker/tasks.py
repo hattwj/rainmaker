@@ -25,11 +25,6 @@ def start(self):
     else:
         log.info('%s skipping sync auto start...' % self.device_name)
 
-from time import sleep
-def loop(self):
-    while self.running == True:
-        sleep(0.1)
-
 def init(self):
     log.info("Starting rainmaker version: %s" % self.version)
     log.info('Checking installation...')

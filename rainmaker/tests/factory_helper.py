@@ -147,7 +147,7 @@ def SyncRand(**kwargs):
 
 import rainmaker.tests.test_helper
 import rainmaker.tox.main
-def ToxServers():
+def ToxServers(sess):
     tox_html = rainmaker.tests.test_helper.load('fixtures/tox_nodes.html')
-    return rainmaker.tox.main.html_to_tox_servers(tox_html)
+    return rainmaker.tox.main.html_to_tox_servers(sess, tox_html)
 

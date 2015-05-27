@@ -12,7 +12,7 @@ def AutoApp(apath, **kwargs):
     app = Application(**kwargs)
     app.fs_log.mkdir(sync_path)
     app.init()
-    tox_servers = fh.ToxServers()
+    tox_servers = fh.ToxServers(app.db)
     [app.db.add(ts) for ts in tox_servers]
     sync = fh.SyncRand(path=sync_path, fake=False)
     app.db.add(sync)

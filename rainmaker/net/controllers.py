@@ -23,7 +23,7 @@ def tox_auth_controller(db, tox):
     '''
     sessions = tox.sessions
     router = tox.router
-    sync = tox.sync
+    sync_id = tox.sync_id
 
     @router.responds_to('new_session')
     def _cmd_new_session(event):
@@ -42,9 +42,9 @@ def tox_auth_controller(db, tox):
             return
         host = db.query(Host).filter(
             Host.pubkey==pk, 
-            Host.sync_id==sync.id).first() 
+            Host.sync_id==sync_id).first() 
         if not host:
-            host = Host(pubkey=pk, sync_id=sync.id, device_name=dname)
+            host = Host(pubkey=pk, sync_id=sync_id, device_name=dname)
             db.add(host)
             db.commit()
         sessions.put(pk, 'host', host)
@@ -69,11 +69,11 @@ def sync_files_controller(db, transport):
     '''
     router = transport.router
     sessions = transport.sessions
-    sync = transport.sync
+    sync_id = transport.sync_id
     
     @router.responds_to('get_last_changed')
     def __cmd_get_last_changed(event):
-        last = views.sync_last_changed(db, sync.id)
+        last = views.sync_last_changed(db, sync_id)
         event.reply('ok', {'last_changed': last})
 
     @router.responds_to('get_sync_file')
@@ -81,7 +81,7 @@ def sync_files_controller(db, transport):
         ''' Handle get sync file command '''
         sync_file_id = int(event.val('sync_file_id'))
         sync_file = db.query(SyncFile).filter(
-            SyncFile.sync_id == sync.id,
+            SyncFile.sync_id == sync_id,
             SyncFile.id == sync_file_id).first()
         if sync_file:
             event.reply('ok', sync_file.to_dict(*file_params))
@@ -95,7 +95,7 @@ def sync_files_controller(db, transport):
         since = int(params.get('since', 0))
         page = int(params.get('page', 0))
         q = db.query(SyncFile).filter(
-            SyncFile.sync_id == sync.id,
+            SyncFile.sync_id == sync_id,
             SyncFile.updated_at >= since)
         sync_files = paginate(q, page, attrs=file_params)
         event.reply('ok', {'sync_files':sync_files})
@@ -106,13 +106,13 @@ def file_parts_controller(db, transport):
     '''
     router = transport.router
     sessions = transport.sessions
-    sync = transport.sync
+    sync_id = transport.sync_id
 
     @router.responds_to('last_changed')
     def _cmd_last_changed(event):
         fid = event.val('fid')
         host = sessions.get(fid, 'host') 
-        stime, htime = views.last_changed(sync.id, host.id)
+        stime, htime = views.last_changed(sync_id, host.id)
 
     @router.responds_to('list_file_parts')
     def _cmd_list_file_parts(event):
@@ -122,7 +122,7 @@ def file_parts_controller(db, transport):
         id = int(params.get('sync_file_id', 0))
         q = db.query(SyncPart).filter(
             SyncPart.updated_at >= since,
-            Sync.id == sync.id)
+            Sync.id == sync_id)
         if id:
             q.filter(SyncPart.sync_file_id == id)
 
@@ -136,7 +136,7 @@ def hosts_controller(db, transport):
     '''
     router = transport.router
     sessions = transport.sessions
-    sync = transport.sync
+    sync_id = transport.sync_id
 
     @router.responds_to('update_host')
     def _cmd_update_host(event):
@@ -145,10 +145,10 @@ def hosts_controller(db, transport):
         pubkey = p['pubkey']
         device_name = p['device_name']
         host = db.query(Host).filter(
-                Host.sync_id == sync.id,
+                Host.sync_id == sync_id,
                 Host.pubkey == pubkey).first()
         if not host:
-            host = Host(sync_id=sync.id, pubkey=pubkey)
+            host = Host(sync_id=sync_id, pubkey=pubkey)
         host.device_name = device_name
         db.add(host)
         db.commit()
@@ -160,7 +160,7 @@ def hosts_controller(db, transport):
         since = int(params.get('since', 0))
         page = int(params.get('page', 0))
         q = db.query(Host).filter(
-            Host.sync_id == sync.id,
+            Host.sync_id == sync_id,
             Host.updated_at >= since)
         hosts = paginate(q, page)
         event.reply('ok', {'hosts': hosts})
@@ -174,7 +174,7 @@ def host_files_controller(db, transport):
     '''
     router = transport.router
     sessions = transport.sessions
-    sync = transport.sync
+    sync_id = transport.sync_id
 
     host_file_params = ['rid', 'file_hash', 'file_size', 'is_dir',
         'rel_path', 'does_exist', 'version', 'ver_data']
@@ -185,7 +185,7 @@ def host_files_controller(db, transport):
         q = db.query(HostPart).filter(
             HostPart.sync_file_id == id,
             HostPart.updated_at >= since).filter(
-            Sync.id == sync.id)
+            Sync.id == sync_id)
         file_parts = paginate(q, page)
 
 
@@ -227,5 +227,4 @@ def host_files_controller(db, transport):
             event.reply('ok', host_file.to_dict())
         else:
             event.reply('not found')
-
 

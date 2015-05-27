@@ -13,23 +13,26 @@ from rainmaker import utils
 from rainmaker.db.serializers import FileParts, Versions, NeededParts
  
 Base = declarative_base()
-engine = None
-session = None
+#engine = None
+#Session = None
 
 ###
 # Database Init
-def init_db(location=':memory:', echo=False):
-    global engine
-    global session
+def init_db(location=':memory:', echo=False, app=None):
+    #global engine
+    #global Session
     engine = create_engine('sqlite:///%s' % location, 
-            #connect_args={'check_same_thread':False}, 
+            connect_args={'check_same_thread':False}, 
             #poolclass=StaticPool,
             echo=echo)
     Session = sessionmaker(bind=engine)
-    session = Session()
+    db = Session()
     Base.metadata.bind = engine
     Base.metadata.create_all()
-    return session
+    if app is not None:
+        app.engine = engine
+        app.session = Session
+    return db
 
 class RainBase(Base):
     '''Default class for tables '''
@@ -186,7 +189,7 @@ class SyncFile(RainBase):
 class ToxServer(RainBase):
     __tablename__ = 'tox_servers'
     id = Column(Integer, primary_key=True)
-    ipv4 = Column(Text, nullable=False)
+    ipv4 = Column(Text, nullable=False, unique=True)
     pubkey = Column(Text, nullable=False)
     port = Column(Integer, nullable=False)
     fails = Column(Integer, default=0, nullable=False)

@@ -33,7 +33,6 @@ class ToxBase(object):
     running = False
     was_connected = False
     ever_connected = False
-    _sync = None
     sessions = None
     base_group_id = None
 
@@ -41,7 +40,7 @@ class ToxBase(object):
         super(ToxBase, self).__init__()
         if data:
             self.load(data)
-        self.sync = sync
+        self.sync_id = sync.id
         self.primary = primary
         self.tox_manager = tox_manager
         self.router = EventHandler(self, auth_strategy=tox_auth_strategy)
@@ -198,6 +197,7 @@ def acts_as_search_bot(tox):
         # ran when level starts
         def _start():
             '''Start tox search'''
+            log.info('SearchBot starting...')
             #self.__search_tries_left -= 1
             if len(tox.get_friendlist()) == 0:
                 tox.tox_manager.add_friend(tox, primary.get_address())
@@ -217,7 +217,7 @@ def acts_as_search_bot(tox):
                 try:
                     # try to reach friends
                     for fid in tox.get_friendlist():
-                        tox.fsend(fid, 'ping')
+                        tox.tox_manager.ping(tox, fid)
                 except OperationFailedError as e:
                     pass
                 return False

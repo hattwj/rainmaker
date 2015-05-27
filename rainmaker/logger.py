@@ -31,6 +31,7 @@ verbosity = {
     'rainmaker.sync_manager.scan_manager': 0,
     'rainmaker.tasks': 0,
     'rainmaker.tox.main': 0,
+    'rainmaker.tox.tox_ring': 0,
     'rainmaker.tox.tox_updater': 0
 }
 
