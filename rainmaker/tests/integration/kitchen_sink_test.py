@@ -17,20 +17,30 @@ def AutoApp(apath, **kwargs):
     sync = fh.SyncRand(path=sync_path, fake=False)
     app.db.add(sync)
     app.db.commit()
+    
+    app.sync_manager.add_sync(sync)
+    
     return app
 
-def setup():
-    pass
-
-def tear_down():
-    pass
-    #test_helper.clean_temp_dir()
 from time import sleep
 def test_simple_workflow():
     print("\n\n")
     app1 = AutoApp('app1')
-    app1.start()
+    app2 = AutoApp('app2')
+
+    sm1 = app1.sync_manager.syncs[0]
+    sm1.tox_manager.start_primary = True
+    sm2 = app2.sync_manager.syncs[0]
+    sm2.tox_manager.start_primary = True
+
+    tpb = app1.sync_manager.syncs[0].tox_manager.primary_bot.save()
+    app2.sync_manager.syncs[0].tox_manager.primary_bot.load(tpb)
+    print(sm1.tox_manager.sync_bot.get_address())
+    print(sm2.tox_manager.sync_bot.get_address())
+    print(sm1.tox_manager.primary_bot.get_address())
+    print(sm2.tox_manager.primary_bot.get_address())
+    sm1.start()
+    sm2.start()
     while True:
         sleep(0.1)
-    #app2 = AutoApp('2', device_name='app2')
-    #app1.sync_manager.syncs[0].primary_bot.
+

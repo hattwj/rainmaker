@@ -26,6 +26,8 @@ class ToxManager(object):
         - starts tox
         - switches to primary if primary missing
     '''
+    start_primary = False
+
     def __init__(self, spm):
         self.sync_path_manager = spm
         self.app = spm.app
@@ -50,10 +52,13 @@ class ToxManager(object):
         '''
             Kick off manager
         '''
+        log.info('ToxManager: start! %s' % self.sync.path )
         self.stopping = False 
         # start searching for primary node
         self.sync_bot.start()
-          
+        if self.start_primary:
+            self.primary_bot.start()
+
     def stop(self):
         '''
             Shut down manager
@@ -80,6 +85,8 @@ class ToxManager(object):
         '''
         '''
         ptox = self.primary_bot
+        print('myaddr: ',tox.get_address())
+        print('theirs: ',addr)
 
         def _do_auth(event):
             nonce = event.val('nonce')
@@ -91,6 +98,7 @@ class ToxManager(object):
 
         def _check_auth(event):
             assert event.status == 'ok'
+            print('Success!'*4)
             _check_auth.ran = True
         
         args = {'pk': addr}
@@ -126,26 +134,20 @@ class SyncPathManager(object):
         log.info('Scan completed of: %s' % self.sync.path)
         log.info(stats)
 
-
 class SyncManager(object):
     '''
         Manage all syncs
     '''
     def __init__(self, app):
-        self.syncs = {}
+        self.syncs = []
         self.app = app
-    
-    def start(self):
-        syncs = self.app.db.query(Sync).all()
-        for sync in syncs:
-            spm = self.add_sync(sync)
         
     def add_sync(self, sync):
         spm = SyncPathManager(self, sync)
-        spm.start()
-        self.syncs[sync.id] = spm
+        self.syncs.append(spm)
         return spm
-        
-    def host_sync(self, host):
-        self.app.db.submit(sync_with_host, self.app.db, host.sync, host)
+       
+    def sync_with_host(self, host):
+        db = self.app.Session()
+        sync_with_host(db, host.sync, host)
 

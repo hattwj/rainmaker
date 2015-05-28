@@ -65,9 +65,16 @@ class ToxSessions(object):
         self.valid_pks = set()
         self._store = LStore()
         self._temp_store = LStore(30)
-        _, self.secret = tox.primary.get_keys()
-        self.pk = tox.get_address()
         self.tox = tox
+    
+    @property
+    def pk(self):
+        return self.tox.get_address()
+
+    @property
+    def secret(self):
+        _, secret = self.tox.primary.get_keys()
+        return secret
 
     def get_nonce(self, pk):
         ''' get/generate nonce for client '''

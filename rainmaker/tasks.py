@@ -13,11 +13,6 @@ log.info('Initializing fs...')
 fs_manager.init()
 
 def start(self):
-    if self.start_tox:
-        log.info('Configuring Tox...')
-        rainmaker.tox.main.init_tox(self.db)
-    else:
-        log.info('Skipping Tox...')
 
     if self.start_sync:
         log.info('%s initializing Sync Managers...' % self.device_name)
@@ -35,5 +30,11 @@ def init(self):
         self.fs_log.touch(self.db_path)
 
     log.info('Initializing db...') 
-    self.db = rainmaker.db.main.init_db(self.db_path)
-    
+    self.db = rainmaker.db.main.init_db(self.db_path, app=self)
+
+    if self.start_tox:
+        log.info('Configuring Tox...')
+        rainmaker.tox.main.init_tox(self.db)
+    else:
+        log.info('Skipping Tox...')
+

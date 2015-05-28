@@ -31,7 +31,8 @@ def init_db(location=':memory:', echo=False, app=None):
     Base.metadata.create_all()
     if app is not None:
         app.engine = engine
-        app.session = Session
+        app.Session = Session
+        app.db = db
     return db
 
 class RainBase(Base):
