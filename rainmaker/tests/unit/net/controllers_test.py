@@ -15,13 +15,13 @@ class MockTox(ToxBot):
 def do_prep():
     ''' Gen variables for test '''
     db = init_db()
-    sync = Sync(1, fake=True)
+    sync = Sync(fake=True)
     db.add(sync)
     db.commit()
     primary = MockTox(sync)
     tox1 = MockTox(sync, primary=primary)
     tox2 = MockTox(sync, primary=primary)
-    return (db, primary, tox1, tox2)
+    return (db, primary, sync, tox1, tox2)
 
 def auto_auth(db, tox1, tox2, twice=True):
     ''' Auth two tox against each other '''
@@ -62,7 +62,7 @@ def sim_send(tox1, tox2, cmd, params, func):
     assert _reply.ran == True
 
 def test_auth_controller_authenticates():
-    db, primary, tox1, tox2 = do_prep()
+    db, primary, sync, tox1, tox2 = do_prep()
     auto_auth(db, tox1, tox2)
     
 def test_utils_controller_can_ping_pong():
@@ -70,7 +70,7 @@ def test_utils_controller_can_ping_pong():
         _recv_pong.ran = True
         assert event.status == 'pong'
     _recv_pong.ran = False
-    db, primary, tox1, tox2 = do_prep()
+    db, primary, sync, tox1, tox2 = do_prep()
     utils_controller(db, tox1)
     tox1.trigger('ping', reply=_recv_pong)
     assert _recv_pong.ran == True
@@ -78,29 +78,30 @@ def test_utils_controller_can_ping_pong():
 def test_sync_files_controller_can_list_and_get():
     def _recv_list(event):
         sync_files = event.val('sync_files')
+        print(event)
         if len(sync_files) > 0 and _recv_list.page < 10:
             params = {'since': 0, 'page': _recv_list.page + 1}
             _recv_list.page += 1
             sim_send(tox1, tox2, 'list_sync_files', params, _recv_list)
 
     def _recv_get(event):
+        print(event)
         assert event.val('id') == fsfid
     
     _recv_list.page = 1 
-    db, primary, tox1, tox2 = do_prep()
-    sync = Sync(1, fake=True)
+    db, primary, sync, tox1, tox2 = do_prep()
     sync_files = SyncFile(sync, 1000, fake=True, is_dir=False) 
     db.add(sync)
     db.commit()
     fsfid = sync_files[0].id
-    tox1.sync = sync
-    tox2.sync = sync
+    print(sync.sync_files[0])
     sync_files_controller(db, tox1)
     assert_raises(AuthError, sim_send, tox1, tox2, 'list_sync_files', {}, _recv_list)
     assert_raises(AuthError, sim_send, tox1, tox2, 'get_sync_file', {}, _recv_get)
     auto_auth(db, tox1, tox2)
     sim_send(tox1, tox2, 'list_sync_files', {}, _recv_list)
-    sim_send(tox1, tox2, 'get_sync_file', {"sync_file_id": fsfid}, _recv_get)
+    #sim_send(tox1, tox2, 'get_sync_file', {"sync_file_id": fsfid}, _recv_get)
+    print('page: ', _recv_list.page)
     assert _recv_list.page == 5
 
 

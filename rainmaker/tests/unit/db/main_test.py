@@ -14,7 +14,7 @@ def test_sync_file_version_init():
     
 def test_rain_base_before_changes():
     session = init_db()
-    sync = factory_helper.Sync(1)
+    sync = factory_helper.Sync()
     sync_file = factory_helper.SyncFile(sync, 1)
     assert sync_file.before_changes()['sync_id'] == None
 
@@ -30,7 +30,7 @@ def test_sqlalchemy_property_assignment():
 
 def test_sync_delete_cascades():
     session = init_db()
-    sync = factory_helper.Sync(1)
+    sync = factory_helper.Sync()
     sync_file = factory_helper.SyncFile(sync, 1, fake=True, 
             file_size=98765 ,is_dir=False)
     host = factory_helper.Host(sync, 1)
@@ -52,8 +52,8 @@ def test_sync_delete_cascades():
 def test_resolution():
     db = init_db()
     r = Resolution()
-    sync = fh.SyncRand(1)
-    host = fh.HostRand(sync, 1)
+    sync = fh.SyncRand()
+    host = fh.HostRand(sync)
     r.sync = sync
     r.host = host
     r.host_file = host.host_files[0]

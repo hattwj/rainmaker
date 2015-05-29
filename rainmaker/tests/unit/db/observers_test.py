@@ -8,8 +8,8 @@ from rainmaker.db import observers
 def test_download_update_observer():
     # should contact and start download
     db = init_db()
-    sync = fh.SyncRand(1)
-    host = fh.HostRand(sync, 1)
+    sync = fh.SyncRand()
+    host = fh.HostRand(sync)
     db.add(sync)
     db.commit()
     host_file = host.host_files[0]
@@ -21,7 +21,7 @@ def test_sync_file_update_observer():
     # prep test
     db = init_db()
 
-    sync = fh.Sync(1, fake=True)
+    sync = fh.Sync(fake=True)
     sync_file = fh.SyncFile(sync, 1, fake=True, is_dir=False)
     
     # Save changes

@@ -3,6 +3,10 @@ from rainmaker.net.sessions import controller_requires_auth
 from rainmaker.db.main import Sync, SyncFile, Host, HostFile
 from rainmaker.db import views
 
+import rainmaker.logger
+log = rainmaker.logger.create_log(__name__)
+
+
 def register_controller_routes(db, transport):
     tox_auth_controller(db, transport)
     utils_controller(db, transport)
@@ -57,6 +61,10 @@ def utils_controller(db, transport):
     def _cmd_ping(event):
         event.reply('pong')
 
+    @router.responds_to('pong')
+    def _cmd_pong(event):
+        log.info('Pong received')
+
 file_params = ['id', 'file_hash', 'file_size', 'is_dir',
     'rel_path', 'does_exist', 'version', 'ver_data', 'updated_at']
 
@@ -92,13 +100,14 @@ def sync_files_controller(db, transport):
     def _cmd_list_sync_files(event):
         ''' Get many sync files '''
         params = event.allow('page', 'since').val()
+        print('params', params)
         since = int(params.get('since', 0))
         page = int(params.get('page', 0))
         q = db.query(SyncFile).filter(
             SyncFile.sync_id == sync_id,
             SyncFile.updated_at >= since)
         sync_files = paginate(q, page, attrs=file_params)
-        event.reply('ok', {'sync_files':sync_files})
+        event.reply('ok', {'sync_files': sync_files})
  
 @controller_requires_auth
 def file_parts_controller(db, transport):

@@ -27,6 +27,7 @@ verbosity = {
     'rainmaker.file_system': 0,
     'rainmaker.logger': 1,
     'rainmaker.main': 0,
+    'rainmaker.net.controllers': 0,
     'rainmaker.sync_manager.main': 0,
     'rainmaker.sync_manager.scan_manager': 0,
     'rainmaker.tasks': 0,

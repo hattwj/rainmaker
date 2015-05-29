@@ -2,11 +2,11 @@ from nose.tools import assert_raises
 from rainmaker.tox.tox_ring import ToxBot
 from rainmaker.net.events import Event
 from rainmaker.net.sessions import ToxSessions, AuthError, require_auth
-from rainmaker.db.main import init_db
+from rainmaker.db.main import init_db, Sync
 
 class MockTox(ToxBot):
     def __init__(self, primary=None):
-        super(MockTox, self).__init__(None, primary=primary)
+        super(MockTox, self).__init__(Sync(), primary=primary)
     
 
 def test_session_will_authenticate_and_enforce_auth():

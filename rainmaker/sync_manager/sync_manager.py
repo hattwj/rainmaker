@@ -85,8 +85,6 @@ class ToxManager(object):
         '''
         '''
         ptox = self.primary_bot
-        print('myaddr: ',tox.get_address())
-        print('theirs: ',addr)
 
         def _do_auth(event):
             nonce = event.val('nonce')
@@ -98,13 +96,13 @@ class ToxManager(object):
 
         def _check_auth(event):
             assert event.status == 'ok'
-            print('Success!'*4)
             _check_auth.ran = True
         
         args = {'pk': addr}
         tox.trigger('new_session', params=args, reply=_do_auth)
 
     def ping(self, tox, addr):
+        log.info('Pinging...')
         params = {'pk': addr}
         tox.trigger('ping', params=params)
 

@@ -3,9 +3,11 @@ from pytox import OperationFailedError
 from rainmaker.tests import test_helper
 from rainmaker.tox.tox_ring import ToxBase, ToxBot, acts_as_message_bot, \
         acts_as_connect_bot, acts_as_search_bot
+from rainmaker.tests import factory_helper as fh
 
 def test_toxbot_multiple_inheritance_is_good():
-    tox = ToxBot(None)
+    
+    tox = ToxBot(fh.Sync())
     assert_raises(OperationFailedError, tox.send_message, 1, 'hi')
     gg = tox.group_message_send(1, 'hi')
     # weird, why must we print the result?
@@ -15,7 +17,7 @@ def test_toxbot_multiple_inheritance_is_good():
     assert_raises(NotImplementedError, tox.send, 1, 'hi', fid=1)
 
 def test_base_tox_interface_has_blank_methods():
-    tox = ToxBase(None)
+    tox = ToxBase(fh.Sync(fake=True))
     assert_raises(NotImplementedError, tox.send, 'hi')
     assert_raises(NotImplementedError, tox.send, 1, 'hi', fid=1)
 
@@ -55,7 +57,7 @@ def dict_append(adict, key, val):
     adict[key] = arr
 
 def test_acts_as_message_bot_can_send_large_msgs():
-    tox = MockTox()
+    tox = MockTox(fh.Sync(fake=True))
     gmsgs = tox._g_msgs
     fmsgs = tox._f_msgs
     acts_as_message_bot(tox)
@@ -79,8 +81,8 @@ def test_event_messages_and_replies_should_pass_through_transport():
         assert event.val() == {'hi': 55, 'gid':None, 'fid':1}
     cmd_test.ran = False
     cmd_rtest.ran = False
-    t1 = MockTox()
-    t2 = MockTox()
+    t1 = MockTox(fh.Sync(fake=True))
+    t2 = MockTox(fh.Sync(fake=True))
     t2.register('hello_world', cmd_test)
     acts_as_message_bot(t1)
     acts_as_message_bot(t2)

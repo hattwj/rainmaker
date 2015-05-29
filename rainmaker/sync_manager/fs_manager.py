@@ -69,7 +69,7 @@ def SyncWatch(session, sync):
             session.add(sync_path)
         
         def on_created(self, event):
-            log.info('created')
+            log.info('created: %s' % event.src_path)
             sync_file = SyncFile(
                 is_dir     = event.is_directory,
                 rel_path   = sync.rel_path(event.src_path),
@@ -79,7 +79,7 @@ def SyncWatch(session, sync):
             
         def on_deleted(self, event):
             # find, mark deleted
-            log.info('deleted', event)
+            log.info('deleted: %s' % event.src_path)
             sync_path = session.query(SyncFile).filter(
                 SyncFile.is_dir     == event.is_directory,
                 SyncFile.rel_path   == sync.rel_path(event.src_path),
@@ -97,7 +97,7 @@ def SyncWatch(session, sync):
         def on_modified(self, event):
             # find, check stime_start and possibly scan
             if not event.is_directory:
-                log.info('modified', event)
+                log.info('modified: %s' % event.src_path)
                 sync_path = session.query(SyncFile).filter(
                     SyncFile.is_dir     == event.is_directory,
                     SyncFile.rel_path   == sync.rel_path(event.src_path),

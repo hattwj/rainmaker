@@ -1,6 +1,6 @@
 from time import sleep
 
-from rainmaker.tests import test_helper
+from rainmaker.tests import test_helper, factory_helper
 from rainmaker.db.main import init_db
 from rainmaker.tox import tox_ring, tox_env, main
 
@@ -14,9 +14,11 @@ def test_can_find_primary_node():
     session = init_db()
     tox_html = test_helper.load('fixtures/tox_nodes.html')
     main.init_tox(session, tox_html=tox_html)
-
-    pb = tox_ring.PrimaryBot()
-    sb = tox_ring.SyncBot(pb)
+    sync = factory_helper.Sync(fake=True)
+    session.add(sync)
+    session.commit()
+    pb = tox_ring.PrimaryBot(sync)
+    sb = tox_ring.SyncBot(sync, pb)
     pb.sync_bot = sb
     sb.events.register('tox_search_completed', on_tox_event)
     pb._bootstrap = sb.bootstrap

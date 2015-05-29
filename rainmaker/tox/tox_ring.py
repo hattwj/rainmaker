@@ -99,6 +99,7 @@ def acts_as_connect_bot(tox):
         '''
         
         def _start():
+            log.info('ConnectBot start')
             ip, port, pubk = tox_env.random_server()
             tox.bootstrap_from_address(ip, port, pubk)
         
@@ -119,7 +120,7 @@ def acts_as_connect_bot(tox):
                 sleep(0.04)
                 if not run_level.should_run:
                     break
-        
+        log.info('ConnectBot thread')
         _tox_thread = Thread(target=_tox_do)
         _tox_thread.daemon = True
         _tox_thread.start()

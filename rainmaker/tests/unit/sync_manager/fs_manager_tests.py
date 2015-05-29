@@ -17,8 +17,7 @@ def test_can_watch_single_sync():
     dirs = factory_helper.Dirs(sync.path, 2)
     for d in dirs:
         sleep(0.5)
-        factory_helper.Files(d, 1)
-    
+        factory_helper.Files(d, 1)    
     fs.rmdir(dirs[0])
     sleep(0.5)
     watch.commit()

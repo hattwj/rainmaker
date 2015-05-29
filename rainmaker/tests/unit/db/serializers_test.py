@@ -21,7 +21,7 @@ def test_file_parts_can_put_get_dump_load():
 
 def test_needed_parts_can_dump_load():
     # Setup
-    sync = Sync(1, fake=True)
+    sync = Sync(fake=True)
     host = Host(sync, 1)
     host_file = HostFile(host, 1, is_dir=False) 
     np = NeededParts()
@@ -35,7 +35,7 @@ def test_needed_parts_can_dump_load():
     
 def test_needed_parts_can_copy_host_file():
     # Setup
-    sync = Sync(1, fake=True)
+    sync = Sync(fake=True)
     host = Host(sync, 1)
     host_file = HostFile(host, 1, is_dir=False)
     
@@ -57,7 +57,7 @@ def test_needed_parts_can_copy_host_file():
 
 def test_needed_parts_can_copy_host_dir():
     # Setup
-    sync = Sync(1, fake=True)
+    sync = Sync(fake=True)
     host = Host(sync, 1)
     host_file = HostFile(host, 1, is_dir=True)
     

@@ -53,11 +53,11 @@ def Dirs(root, count=10):
 def Sync(**kwargs):
     ''' create dir and return sync '''
     syncs = []
-    count = kwargs.pop('count')
+    count = kwargs.pop('count', 1)
     fake = kwargs.pop('fake', None)
     path = kwargs.pop('path', Application.user_dir)
     for x in range(0, count):
-        root = os.path.join(path, str(random.randint(0, msize)))
+        root = os.path.join(path, str(random.randint(0, msize*99999999)))
         if fake is None:
             fs.mkdir(root)
         sync = db.Sync(**kwargs)
@@ -74,7 +74,7 @@ def SyncFile(sync, count, **kwargs):
     for x in range(0, count):
         is_dir = kwargs.get('is_dir', bool(random.getrandbits(1)))
         if fake:
-            path = os.path.join(sync.path, str(random.randint(0, msize)) )
+            path = os.path.join(sync.path, str(random.randint(0, msize*9999999)) )
         elif is_dir:
             path = Dirs(sync.path, 1) 
         else:
@@ -132,7 +132,7 @@ def HostFile(host, count, **kwargs):
         return host_file
     return host_files
 
-def HostRand(sync):
+def HostRand(sync, count=10):
     host = Host(sync, 1)
     host_files = HostFile(host, count, is_dir=False)
     return host
