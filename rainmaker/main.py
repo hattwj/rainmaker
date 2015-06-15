@@ -74,3 +74,4 @@ class Application(object):
 from rainmaker import tasks
 Application.init = tasks.init
 Application.start = tasks.start
+Application.init_tox = tasks.init_tox

@@ -1,4 +1,5 @@
 # Todo Items:
+- check rcode locked to specific address
 
 - Interactive console
     - Add / remove syncs from command line

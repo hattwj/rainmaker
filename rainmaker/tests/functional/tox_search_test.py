@@ -3,68 +3,62 @@ from time import sleep
 from rainmaker.tests import test_helper, factory_helper
 from rainmaker.db.main import init_db
 from rainmaker.tox import tox_ring, tox_env, main
+from rainmaker.net.events import Event
 
-def test_can_find_primary_node(): 
-    
-    def on_tox_event(event):
-        status['fired'] = True
-        sb.stop()
 
-    status = {'fired': False}
-    session = init_db()
+def tox_setup():
+    DbConn = init_db()
     tox_html = test_helper.load('fixtures/tox_nodes.html')
+    session = DbConn()
     main.init_tox(session, tox_html=tox_html)
     sync = factory_helper.Sync(fake=True)
     session.add(sync)
     session.commit()
-    pb = tox_ring.PrimaryBot(sync)
-    sb = tox_ring.SyncBot(sync, pb)
+    pb = tox_ring.PrimaryBot(DbConn, sync)
+    sb = tox_ring.SyncBot(DbConn, sync, primary=pb)
+    return pb, sb
+
+
+def test_basic_auth():
+    pb, sb = tox_setup()
+    sbsess = sb.sessions.get_session(pb.get_address())
+    pbsess = pb.sessions.get_session(sb.get_address())
+    vpb = pbsess.get_hash(sbsess.nonce)
+    vsb = sbsess.get_hash(pbsess.nonce)
+    assert pbsess.authenticate(vsb)
+    assert sbsess.authenticate(vpb)
+
+def test_can_find_and_transmit(): 
+    
+    def _on_primary_found(event):
+        _on_primary_found.fired = True
+        sb.actions.trigger('handshake', 
+                params={'addr': pb.get_address()}, reply=_on_auth)
+
+    def _on_auth(event):
+        assert event.status == 'ok'
+        sb.send('large_msg', data={'msg':'123456789'*999}, addr=pb.get_address())
+
+    def _on_large_message(event):
+        _on_large_message.fired = True
+        assert event.val('msg') == '123456789' * 999
+        sb.stop()
+    
+    _on_primary_found.fired = False
+    _on_large_message.fired = False
+
+    pb, sb = tox_setup()
     pb.sync_bot = sb
-    sb.events.register('tox_search_completed', on_tox_event)
-    pb._bootstrap = sb.bootstrap
+    sb.actions.register('tox_search_completed', _on_primary_found)
+    pb.router.register('large_msg', _on_large_message)
+
     d = sb.start()
     dd = pb.start()
-    #sleep(40)
     d.join()
     pb.stop()
     dd.join()
-    assert status['fired'] ==  True
-
-def test_can_transmit_large_messages(): 
+    assert _on_primary_found.fired == True
+    assert _on_large_message.fired == True
+ 
     
-    def on_large_message(event):
-        status['fired'] = True
-        do_large() 
-    
-    def on_tox_event(event):
-        do_large()
-
-    def do_large():
-        status['fired'] = True
-        status['exp'] += 0.1
-        msg = tox_ring.Event('large', bb='b'*int(10*status['exp']))
-        pid = sb.get_friendlist()[0]
-        sb.send_message(pid, msg.serialize())
-
-    status = {
-            'fired': False,
-            'exp': 0
-        }
-    session = init_db()
-    tox_html = test_helper.load('fixtures/tox_nodes.html')
-    main.init_tox(session, tox_html=tox_html)
-
-    pb = tox_ring.PrimaryBot()
-    sb = tox_ring.SyncBot(pb)
-    pb.sync_bot = sb
-    sb.events.register('tox_search_completed', on_tox_event)
-    pb.router.register('large', on_large_message)
-    sb.router.register('large', on_large_message)
-    d = sb.start()
-    dd = pb.start()
-    #sleep(40)
-    d.join()
-    pb.stop()
-    dd.join()
-    assert status['fired'] ==  True
 

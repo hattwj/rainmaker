@@ -18,22 +18,23 @@ Base = declarative_base()
 
 ###
 # Database Init
-def init_db(location=':memory:', echo=False, app=None):
+def init_db(location=':memory:', echo=False):
     #global engine
     #global Session
     engine = create_engine('sqlite:///%s' % location, 
             connect_args={'check_same_thread':False}, 
             #poolclass=StaticPool,
             echo=echo)
-    Session = sessionmaker(bind=engine)
-    db = Session()
+    DbConn = sessionmaker(bind=engine)
+    #db = Session
     Base.metadata.bind = engine
     Base.metadata.create_all()
-    if app is not None:
-        app.engine = engine
-        app.Session = Session
-        app.db = db
-    return db
+    #if app is not None:
+    #    app.engine = engine
+    #    app.Session = Session
+    #    app.db = db
+    #return db
+    return DbConn
 
 class RainBase(Base):
     '''Default class for tables '''

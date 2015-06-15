@@ -20,6 +20,7 @@ from rainmaker.net.msg_buffer import MsgBuffer
 import rainmaker.logger
 log = rainmaker.logger.create_log(__name__)
 
+
 '''
     - Ring func, pass in sync
     - Dont subclass Tox, proxy it instead
@@ -44,14 +45,14 @@ class ToxBase(object):
         self.primary = primary
         self.tox_manager = tox_manager
         self.router = EventHandler(self, auth_strategy=tox_auth_strategy)
-        self.events = EventHandler(self)
+        self.actions = EventHandler(self)
         self.state_machine = StateMachine()
         self.msg_buffer = MsgBuffer()
         self.register = self.router.register
         self.trigger = self.router.trigger
 
     def start(self):
-        self.state_machine.start()
+        return self.state_machine.start()
 
     def stop(self):
         self.state_machine.stop()
@@ -68,6 +69,10 @@ class ToxBase(object):
     @property
     def primary(self):
         return self._primary if self._primary else self
+    
+    @property
+    def is_primary(self):
+        return self.primary == self
 
     @primary.setter
     def primary(self, val):
@@ -89,7 +94,7 @@ def acts_as_connect_bot(tox):
     def state_level_changed(name, code, prev_code):
         log.info('%s: %s %s' % (tox.__class__.__name__, StateMachine.ACTION_NAMES[code], name)) 
         ename = '%s_%s' % (name, StateMachine.ACTION_NAMES[code])
-        tox.events.trigger(ename)
+        tox.actions.trigger(ename)
 
     def __conn_run_level__():
         '''
@@ -99,17 +104,22 @@ def acts_as_connect_bot(tox):
         '''
         
         def _start():
-            log.info('ConnectBot start')
+            msg = 'PrimaryBot' if tox.is_primary else 'SyncBot'
+            log.info('%s starting' % msg)
             ip, port, pubk = tox_env.random_server()
             tox.bootstrap_from_address(ip, port, pubk)
-        
+            if not tox.is_primary and _start.first_run:
+                tox.actions.trigger('add_primary')
+                _start.first_run = False
+        _start.first_run = True
+
         def _stop():
-            pass
+            msg = 'PrimaryBot' if tox.is_primary else 'SyncBot'
+            log.info('%s stopping' % msg)
         
         def _valid():
             return tox.isconnected()
-        
-        
+         
         name = 'tox_connection'
         run_level = RunLevel(name, _start, _stop, _valid, 30)
          
@@ -142,32 +152,46 @@ def acts_as_message_bot(tox):
     send_buffer = tox.msg_buffer.send
     recv_buffer = tox.msg_buffer.recv
      
-    def send(cmd, data=None, fid=None, \
+    def send(cmd, data=None, fid=None, addr=None, \
             gid=None, status=None, reply=None):
         '''
             Broadcast event
         '''
-        rcode = router.temp(reply, 30) if reply else 0
-        for msg in send_buffer(rcode, cmd, status, data):
+        assert (fid is not None) or (gid is not None) or (addr is not None)
+        
+        if addr:
+            assert fid is None
+            assert gid is None
+            fid = tox.get_friend_id(addr)
             if fid is None:
-                gid = tox.base_group_id if gid is None else gid
+                print('NEW FID: ', tox.add_friend_norequest(addr))
+                fid = tox.get_friend_id(addr)
+                assert fid is not None
+        # wait 30 seconds max for reply
+        rcode = router.temp(reply, 30) if reply else 0
+        # send message
+        for msg in send_buffer(rcode, cmd, status, data):
+            if gid:
                 tox.group_message_send(gid, msg) 
             else:
                 tox.send_message(fid, msg)
-    
+
     def on_friend_request(pk, msg):
         '''
             Pass to authenticate
         '''
-        for rcode, cmd, status, params in recv_buffer(msg, rcode=pk):
-            params['pk'] = pk
-            session = tox.sessions.new(pk)
-            tox.trigger('authenticate', params=params, session=session)
+        print('Friend Request')
+        
+        #for rcode, cmd, status, params in recv_buffer(msg, rcode=pk):
+        #    params['pk'] = pk
+        #    session = tox.sessions.new(pk)
+        #    tox.trigger('authenticate', params=params, session=session)
 
     def on_friend_message(fid, msg):
         '''
             A friend has sent a message
         '''
+        print('friend message')
         on_message(None, fid, msg)
 
     def on_message(gid, fid, msg):
@@ -197,33 +221,41 @@ def acts_as_search_bot(tox):
     def __search_run_level__():  
         # ran when level starts
         def _start():
-            '''Start tox search'''
+            '''
+                Start tox search
+                - send a request to friend primary
+            '''
             log.info('SearchBot starting...')
             #self.__search_tries_left -= 1
             if len(tox.get_friendlist()) == 0:
-                tox.tox_manager.add_friend(tox, primary.get_address())
-        
+                tox.actions.trigger('add_primary')
+
         # ran when level stops
         def _stop():
+            log.info('SearchBot stopping...')
             #if self.__search_tries_left <= 0:
             #    self.state_machine.stop()
             pass
 
         # Periodic check to see if level is valid
         def _valid():
-            if tox.get_friend_connection_status(0):
+            fid = tox.get_friend_id(tox.primary.get_address())
+            if tox.get_friend_connection_status(fid):
                 #self.__search_tries_left = 2
                 return True
             else:
                 try:
                     # try to reach friends
+                    pass
                     for fid in tox.get_friendlist():
-                        tox.tox_manager.ping(tox, fid)
+                        print('search validation')
+                        addr = tox.get_client_id(fid)
+                        tox.actions.trigger('ping', {'addr':  addr})
                 except OperationFailedError as e:
                     pass
                 return False
         
-        return RunLevel('tox_search', _start, _stop, _valid, 40)
+        return RunLevel('tox_search', _start, _stop, _valid, 40, rate=5)
 
     def on_group_invite(friend_num, gtype, grp_pubkey):
         log.info('Joining group: %s' % gtype)
@@ -242,19 +274,27 @@ def acts_as_primary_bot(tox):
     tox.primary = tox
     # group chat room
     tox.base_group_id = tox.add_groupchat()
-
+    
+'''
+    Alias ToxBot to allow debug / testing
+'''
 DefaultBot = ToxBot
 
-def PrimaryBot(*args, **kwargs):
-    tox = DefaultBot(*args, **kwargs)
-    acts_as_primary_bot(tox)
+def PrimaryBot(DbConn, sync, **kwargs):
+    '''
+        Primary Bot
+    '''
+    tox = DefaultBot(sync, **kwargs)
     acts_as_connect_bot(tox)
     acts_as_message_bot(tox)
+    acts_as_primary_bot(tox)
+    register_controller_routes(DbConn, tox)
     return tox
 
-def SyncBot(*args, **kwargs):
-    tox = DefaultBot(*args, **kwargs)
+def SyncBot(DbConn, sync, **kwargs):
+    tox = DefaultBot(sync, **kwargs)
     acts_as_connect_bot(tox)
     acts_as_message_bot(tox)
     acts_as_search_bot(tox)
+    register_controller_routes(DbConn, tox)
     return tox

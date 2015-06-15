@@ -12,8 +12,8 @@ def AutoApp(apath, **kwargs):
     app = Application(**kwargs)
     app.fs_log.mkdir(sync_path)
     app.init()
-    tox_servers = fh.ToxServers(app.db)
-    [app.db.add(ts) for ts in tox_servers]
+    app.init_tox(tox_html=test_helper.load('fixtures/tox_nodes.html'))
+    fh.ToxServers(app.db)
     sync = fh.SyncRand(path=sync_path, fake=False)
     app.db.add(sync)
     app.db.commit()
@@ -29,9 +29,7 @@ def test_simple_workflow():
     app2 = AutoApp('app2')
 
     sm1 = app1.sync_manager.syncs[0]
-    sm1.tox_manager.start_primary = True
     sm2 = app2.sync_manager.syncs[0]
-    sm2.tox_manager.start_primary = True
 
     tpb = app1.sync_manager.syncs[0].tox_manager.primary_bot.save()
     app2.sync_manager.syncs[0].tox_manager.primary_bot.load(tpb)
@@ -39,7 +37,7 @@ def test_simple_workflow():
     print(sm2.tox_manager.sync_bot.get_address())
     print(sm1.tox_manager.primary_bot.get_address())
     print(sm2.tox_manager.primary_bot.get_address())
-    sm1.start()
+    sm1.start(start_primary=True)
     sm2.start()
     while True:
         sleep(0.1)

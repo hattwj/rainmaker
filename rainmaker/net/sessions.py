@@ -55,71 +55,73 @@ from rainmaker.utils import rand_str
 
 class ToxSessions(object):
     '''
-        Sessions for individual client
+        Sessions for individual server
         - gen challenge per pk
         - gen response per pk, nonce
     '''
 
     def __init__(self, tox):
-        self.valid_fids = set()
         self.valid_pks = set()
-        self._store = LStore()
-        self._temp_store = LStore(30)
+        self._temp_store = LStore(40)
         self.tox = tox
     
     @property
-    def pk(self):
-        return self.tox.get_address()
-
-    @property
     def secret(self):
         _, secret = self.tox.primary.get_keys()
-        return secret
+        return secret[:64]
 
-    def get_nonce(self, pk):
-        ''' get/generate nonce for client '''
-        key = 'nonce:%s' % pk
+    @property
+    def addr(self):
+        return self.tox.get_address()[:64]
 
-        def _new_nonce():
-            return rand_str(40)
+    def get_session(self, addr=None, fid=None):
+        assert fid is not None or addr is not None
+        addr = addr if addr is not None else self.tox.get_client_id(fid)
+        addr = addr[:64]
+        def _new_session():
+            return Session(self.addr, addr, self.secret)
+        key = addr
+        for session in self._temp_store.yget(key, _new_session):
+            return session
+    
+    def valid_fid(self, fid):
+        return self.get_session(self.tox.get_client_id(fid)).valid
 
-        for nonce in self._temp_store.yget(key, _new_nonce):
-            return nonce
+NONCE_LEN = 40
 
-    def get_hash(self, pk, nonce):
-        ''' get/generate hash to submit for authentication''' 
-        key = 'hash:%s%s' % (pk, nonce)
-        def _new_hash():
-            passwd = '%s%s%s' % (self.secret, self.pk, nonce)
-            return bcrypt_sha256.encrypt(passwd)
-        for hashed_pass in self._temp_store.yget(key, _new_hash):
-            return hashed_pass
+class Session():
+    '''
+        Session for single client
+        - recv nonce, send hash = get_hash(peer_nonce)
+        - send nonce, recv hash = authenticate(_hash)
+        - enc/dec secret + peer_addr + my_nonce
+    '''
+    def __init__(self, addr, peer_addr, secret):
+        self.addr = addr
+        self.peer_addr = peer_addr
+        self.secret = secret
+        self._phash = None
+        self.valid = False
+        self.nonce = rand_str(40)
 
-    def authenticate(self, pk, _hash):
+    def get_hash(self, peer_nonce):
+        if len(str(peer_nonce)) < NONCE_LEN:
+            raise AuthError('Nonce too short')
+        #if self._phash is None:
+        passwd = '%s%s%s' % (self.secret, self.addr, peer_nonce)
+        self._phash = bcrypt_sha256.encrypt(passwd)
+        return self._phash
+     
+    def authenticate(self, _hash):
         '''
             Authenticate client
         '''
-        nonce = self.get_nonce(pk)
-        passwd = self.secret + pk + nonce
+        passwd = '%s%s%s' % (self.secret, self.peer_addr, self.nonce)
+
         try:
-            valid = bcrypt_sha256.verify(passwd, _hash)
+            self.valid = bcrypt_sha256.verify(passwd, _hash)
         except ValueError as e:
-            valid = False
-        if valid and pk not in self.valid_pks: 
-            self._store.put(pk, LStore())
-            xfid = self.tox.add_friend_norequest(pk)
-            self.valid_fids.add(xfid)
-            self.valid_pks.add(pk)
-        return valid
-
-    def valid_fid(self, fid):
-        return fid in self.valid_fids
+            log.error('Auth Error: from %s' % self.peer_addr)
+            self.valid = False
+        return self.valid
     
-    def valid_pk(self, pk):
-        return fid in self.valid_pks
-        
-    def put(self, pk, key, obj):
-        self._store.get(pk).put(key, obj)
-
-    def get(self, pk, key):
-        return self._store.get(pk).get(key)

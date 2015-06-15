@@ -32,9 +32,10 @@ def init(self):
     log.info('Initializing db...') 
     self.db = rainmaker.db.main.init_db(self.db_path, app=self)
 
+def init_tox(self, tox_html=None):
     if self.start_tox:
         log.info('Configuring Tox...')
-        rainmaker.tox.main.init_tox(self.db)
+        rainmaker.tox.main.init_tox(self.db, tox_html=tox_html)
     else:
         log.info('Skipping Tox...')
 

@@ -26,7 +26,6 @@ class ToxManager(object):
         - starts tox
         - switches to primary if primary missing
     '''
-    start_primary = False
 
     def __init__(self, spm):
         self.sync_path_manager = spm
@@ -48,16 +47,17 @@ class ToxManager(object):
 
         self.sync_bot.on_stop = self.__on_stop__
 
-    def start(self):
+    def start(self, start_primary=False):
         '''
             Kick off manager
         '''
+        
         log.info('ToxManager: start! %s' % self.sync.path )
         self.stopping = False 
-        # start searching for primary node
-        self.sync_bot.start()
-        if self.start_primary:
+        if start_primary:
+            print('Primary'*30)
             self.primary_bot.start()
+        self.sync_bot.start()
 
     def stop(self):
         '''
@@ -119,12 +119,10 @@ class SyncPathManager(object):
         self.fs_manager = FsManager(self)
         self.tox_manager = ToxManager(self)
     
-    def start(self): 
+    def start(self, start_primary=False): 
         self.scan()
-        self.ready = True
-        log.info('Done scanning')
         self.fs_manager.start()
-        self.tox_manager.start()
+        self.tox_manager.start(start_primary)
 
     def scan(self):
         log.info('%s starting scan of %s' % (self.app.device_name, self.sync.path))

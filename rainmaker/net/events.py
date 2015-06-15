@@ -47,6 +47,17 @@ class ParamsBase(object):
             raise EventError('Required key missing: %s' % key) from e
         except TypeError as e:
             raise EventError('Bad type on val: %s' % type(self.data)) from e
+    
+    def pluck(self, *keys):
+        '''
+            Return an array of required vals
+        '''
+        try:
+            return [self.data[x] for x in keys]
+        except KeyError as e:
+            raise EventError('Required key missing: %s' % x) from e
+        except TypeError as e:
+            raise EventError('Bad type on val: %s' % type(self.data)) from e
 
     def _val(self, key=None, cls=None):
         if key is not None:
@@ -66,7 +77,6 @@ class ParamsBase(object):
             if k in adict:
                 result[k] = adict[k]
         return result
-
 
 class Params(ParamsBase):
     '''

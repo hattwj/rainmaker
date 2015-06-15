@@ -32,14 +32,12 @@ def init_tox(session, **opts):
             log.error('Unable to find any nodes')
             exit()
         tox_servers = html_to_tox_servers(session, data)
-        [session.add(ts) for ts in tox_servers] 
-        session.commit()
         log.info('Found %s tox servers' % len(tox_servers))
     else:
         log.info('%s tox servers loaded' % len(tox_servers))
     
     tox_servers = session.query(ToxServer).all()   
-    if not tox_servers:
+    if len(tox_servers) == 0:
         log.error('Unable to find any valid nodes')
         exit()
     for ts in tox_servers:
@@ -53,5 +51,7 @@ def html_to_tox_servers(sess, html):
             server = ToxServer(ipv4=ipv4)
         server.port=port
         server.pubkey=pubkey
+        sess.add(server)
         tox_servers.append(server)
+    sess.commit()
     return tox_servers

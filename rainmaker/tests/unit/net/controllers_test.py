@@ -94,14 +94,11 @@ def test_sync_files_controller_can_list_and_get():
     db.add(sync)
     db.commit()
     fsfid = sync_files[0].id
-    print(sync.sync_files[0])
     sync_files_controller(db, tox1)
     assert_raises(AuthError, sim_send, tox1, tox2, 'list_sync_files', {}, _recv_list)
     assert_raises(AuthError, sim_send, tox1, tox2, 'get_sync_file', {}, _recv_get)
     auto_auth(db, tox1, tox2)
     sim_send(tox1, tox2, 'list_sync_files', {}, _recv_list)
-    #sim_send(tox1, tox2, 'get_sync_file', {"sync_file_id": fsfid}, _recv_get)
-    print('page: ', _recv_list.page)
     assert _recv_list.page == 5
 
 
