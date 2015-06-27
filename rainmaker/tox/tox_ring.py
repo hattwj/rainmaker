@@ -164,12 +164,13 @@ def acts_as_message_bot(tox):
             assert gid is None
             fid = tox.get_friend_id(addr)
             if fid is None:
-                print('NEW FID: ', tox.add_friend_norequest(addr))
+                log.info('NEW FID: %s' % tox.add_friend_norequest(addr))
                 fid = tox.get_friend_id(addr)
                 assert fid is not None
         # wait 30 seconds max for reply
         rcode = router.temp(reply, 30) if reply else 0
         # send message
+        log.debug('Sending: %s' % cmd)
         for msg in send_buffer(rcode, cmd, status, data):
             if gid:
                 tox.group_message_send(gid, msg) 
@@ -180,8 +181,7 @@ def acts_as_message_bot(tox):
         '''
             Pass to authenticate
         '''
-        print('Friend Request')
-        
+        log.info('Friend Request')
         #for rcode, cmd, status, params in recv_buffer(msg, rcode=pk):
         #    params['pk'] = pk
         #    session = tox.sessions.new(pk)
@@ -191,7 +191,7 @@ def acts_as_message_bot(tox):
         '''
             A friend has sent a message
         '''
-        print('friend message')
+        log.info('Friend Message')
         on_message(None, fid, msg)
 
     def on_message(gid, fid, msg):
@@ -226,36 +226,27 @@ def acts_as_search_bot(tox):
                 - send a request to friend primary
             '''
             log.info('SearchBot starting...')
-            #self.__search_tries_left -= 1
             if len(tox.get_friendlist()) == 0:
                 tox.actions.trigger('add_primary')
 
         # ran when level stops
         def _stop():
             log.info('SearchBot stopping...')
-            #if self.__search_tries_left <= 0:
-            #    self.state_machine.stop()
-            pass
 
         # Periodic check to see if level is valid
         def _valid():
             fid = tox.get_friend_id(tox.primary.get_address())
             if tox.get_friend_connection_status(fid):
-                #self.__search_tries_left = 2
                 return True
             else:
                 try:
                     # try to reach friends
-                    pass
-                    for fid in tox.get_friendlist():
-                        print('search validation')
-                        addr = tox.get_client_id(fid)
-                        tox.actions.trigger('ping', {'addr':  addr})
+                    addr = tox.primary.get_address()
+                    tox.actions.trigger('ping', {'addr':  addr})
                 except OperationFailedError as e:
-                    pass
-                return False
-        
-        return RunLevel('tox_search', _start, _stop, _valid, 40, rate=5)
+                    log.debug('SearchBot ping error')
+                return False        
+        return RunLevel('tox_search', _start, _stop, _valid, 50, rate=5)
 
     def on_group_invite(friend_num, gtype, grp_pubkey):
         log.info('Joining group: %s' % gtype)
@@ -263,6 +254,19 @@ def acts_as_search_bot(tox):
     
     tox.state_machine.add(__search_run_level__())
     tox.on_group_invite = on_group_invite
+
+'''
+    Acts as sync bot
+    - query online friends for:
+        - new hosts
+        - new files
+    - check for conflicts
+    - Download file
+        - File transfers require app object
+        - Tox has app?
+        - Controller has app?
+        - Tox has optional app and errors otherwise
+'''
 
 def acts_as_primary_bot(tox):
     '''

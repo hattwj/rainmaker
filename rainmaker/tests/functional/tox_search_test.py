@@ -4,7 +4,7 @@ from rainmaker.tests import test_helper, factory_helper
 from rainmaker.db.main import init_db
 from rainmaker.tox import tox_ring, tox_env, main
 from rainmaker.net.events import Event
-
+from rainmaker.net.sessions import require_auth
 
 def tox_setup():
     DbConn = init_db()
@@ -28,24 +28,33 @@ def test_basic_auth():
     assert pbsess.authenticate(vsb)
     assert sbsess.authenticate(vpb)
 
-def test_can_find_and_transmit(): 
+def test_can_find_primary_then_authenticate_and_transmit(): 
     
     def _on_primary_found(event):
         _on_primary_found.fired = True
         sb.actions.trigger('handshake', 
-                params={'addr': pb.get_address()}, reply=_on_auth)
+                params={'addr': pb.get_address()}, 
+                reply=_on_auth)
 
     def _on_auth(event):
         assert event.status == 'ok'
         sb.send('large_msg', data={'msg':'123456789'*999}, addr=pb.get_address())
+        sb.send('secure_ping', addr= pb.get_address(),
+                reply=_on_spong)
 
+    @require_auth
     def _on_large_message(event):
         _on_large_message.fired = True
         assert event.val('msg') == '123456789' * 999
         sb.stop()
     
+    @require_auth
+    def _on_spong(event):
+        _on_spong.fired = True
+
     _on_primary_found.fired = False
     _on_large_message.fired = False
+    _on_spong.fired = False
 
     pb, sb = tox_setup()
     pb.sync_bot = sb
@@ -59,6 +68,7 @@ def test_can_find_and_transmit():
     dd.join()
     assert _on_primary_found.fired == True
     assert _on_large_message.fired == True
+    assert _on_spong.fired == True
  
     
 

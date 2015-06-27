@@ -10,6 +10,7 @@ log = rainmaker.logger.create_log(__name__)
 def register_controller_routes(DbConn, transport):
     tox_auth_controller(DbConn, transport)
     utils_controller(DbConn, transport)
+    secure_utils_controller(DbConn, transport)
     sync_files_controller(DbConn, transport)
     host_files_controller(DbConn, transport)
     hosts_controller(DbConn, transport)
@@ -117,6 +118,18 @@ def utils_controller(DbConn, transport):
     def _cmd_pong(event):
         log.info('Pong received')
 
+@controller_requires_auth
+def secure_utils_controller(DbConn, transport):
+    router = transport.router
+    
+    @transport.router.responds_to('secure_ping')
+    def _cmd_ping(event):
+        event.reply('secure_pong')
+
+    @transport.router.responds_to('secure_pong')
+    def _cmd_pong(event):
+        log.info('Pong received')
+
 file_params = ['id', 'file_hash', 'file_size', 'is_dir',
     'rel_path', 'does_exist', 'version', 'ver_data', 'updated_at']
 
@@ -173,7 +186,7 @@ def file_parts_controller(DbConn, transport):
     def _cmd_last_changed(event):
         fid = event.val('fid')
         host = sessions.get(fid, 'host') 
-        stime, htime = views.last_changed(sync_id, host.id)
+        stime, htime = views.last_changed(db, sync_id, host.id)
 
     @router.responds_to('list_file_parts')
     def _cmd_list_file_parts(event):
@@ -249,7 +262,6 @@ def host_files_controller(DbConn, transport):
             Sync.id == sync_id)
         file_parts = paginate(q, page)
 
-
     @router.responds_to('put_host_file')
     def _cmd_put_host_file(event):
         ''' Handle put file command '''
@@ -288,4 +300,87 @@ def host_files_controller(DbConn, transport):
             event.reply('ok', host_file.to_dict())
         else:
             event.reply('not found')
+
+MAX_XFERS = 10
+from rainmaker.net.file_server import FileSender, FileReceiver
+
+@controller_requires_auth
+def files_controller(DbConn, tr):
+    sync_id = tox.sync_id
+
+    _e_recv = ThreadPoolExecutor(max_workers=MAX_XFERS)
+    _e_send = ThreadPoolExecutor(max_workers=MAX_XFERS)
+    
+    _downloads = {}
+    _uploads = {}
+    
+    @tox.router.responds_to('get_file')
+    def _cmd_get_file(event):
+        '''
+            Lookup sync_file and init
+        '''
+        def _run():
+            xfer.run()
+            _uploads.pop(key)
+        
+        fid = event.val('fid')
+        sync_file_id = event.val('sync_file_id')
+        parts = event.aget('parts').val()
+        db = DbConn()
+        sync_file = db.query(SyncFile).filter(SyncFile.sync_id==sync_id,
+                SyncFile.id == sync_file_id).first()
+        db.close()
+
+        xfer = FileSender(tr, fid, sync_file, parts)
+        _uploads[key] = xfer
+        _e_send.submit(_run)
+        event.reply('ok', data={'key': key})
+        
+    @tox.actions.responds_to('get_file')
+    def _action_get_file(event):
+        '''
+            Lookup host_file, send request to hosts
+        '''
+        def _run():
+            xfer.run()
+            _downloads.pop(key)
+        xfer = FileReceiver(tox, fid, host_file, parts)
+        _downloads[key] = xfer
+        _e_send.submit(_run)
+        event.reply('ok', data={'key': key})
+
+    def _on_file_send_request(friendId, file_no, file_size, filename):
+        '''
+            A user is requesting a file
+            Check to see if file/parts needed
+            - does a receiver exist?
+                - accept
+        '''
+        xfer = _uploads.get(key)
+        if xfer:
+            xfer.on_file_send_request(data)
+        # else trigger 404
+    
+    def _on_file_data(friendId, file_no, data):
+        '''
+            Send data to receiver
+        '''
+        xfer = _downloads.get(key)
+        if xfer:
+            xfer.on_file_data(friendId, file_no, data)
+    
+    def _on_file_control(friendId, receive_send, file_no, ctrl, data):
+        '''
+            Notify sender/receiver
+            - does a xfer exist?
+                - receiver?
+                    - data add parts
+        '''
+        xfer = _downloads.get(key) if receive_send else _uploads.get(key)
+        if xfer:
+            xfer.on_file_control(ctrl, data)
+     
+    tr.on_file_send_request = _on_file_send_request
+    tr.on_file_data = _on_file_data
+    tr.on_file_control = _on_file_control
 

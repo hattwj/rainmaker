@@ -16,10 +16,10 @@ def require_auth(func):
     '''
         Authorization decorator for event responders
     '''
-    def _require_auth(transport, event):
-        if not transport.router.auth_strategy:
+    def _require_auth(event):
+        if not event.transport.router.auth_strategy:
             raise AuthConfigError('No Strategy defined')
-        _func = transport.router.auth_strategy(transport, func)
+        _func = event.transport.router.auth_strategy(event.transport, func)
         return _func(event)
     return _require_auth
 

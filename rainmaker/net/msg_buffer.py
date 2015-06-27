@@ -91,6 +91,7 @@ class MsgBuffer(object):
             # yield complete message
             self._rbuff.pop(rcode)
             cmd, status, params = self.decoder(_data)
+            params = {} if params is None else params
             yield (rcode, cmd, status, params)
             
                 

@@ -5,7 +5,7 @@ import os
 
 from rainmaker.sync_manager.sync_manager import SyncManager
 import rainmaker.file_system
-import rainmaker.file_server
+import rainmaker.net.file_server
 import rainmaker.logger
 log = rainmaker.logger.create_log(__name__)
 
@@ -29,7 +29,7 @@ class Application(object):
     def __init__(self, **kwargs):
         self.load(**kwargs)
         # Application singletons go here
-        self.file_server = rainmaker.file_server.FileServer()
+        self.file_server = rainmaker.net.file_server.FileServer()
         self.sync_manager = SyncManager(self)
     
     db = None

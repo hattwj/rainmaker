@@ -4,7 +4,10 @@ import ujson
 class Serializer(object):
     data = None
     _changed = False
-    
+    verify_format = False
+    _load = None
+    _dump = None
+
     def __init__(self, data=None, on_change=None):
         self._on_change = on_change
         self.load(data)
@@ -14,16 +17,32 @@ class Serializer(object):
             Populate from json string
         '''
         self.changed = False if data else True
-        self.data = ujson.loads(data) if data else []
-    
+        data = ujson.loads(data) if data else []
+        if self._load:
+            self.data = []
+            self._load(data)
+        else:
+            self.data = data
+
+    def __verify_format(self):
+        '''
+            verify structure of loaded data
+        '''
+        raise NotImplementedError('Implemented by subclass')
+
     def dump(self):
         '''
             Dump changes and mark self as not changed
         '''
         self.changed = False
+        if self._dump:
+            return ujson.dumps(self._dump())
         return ujson.dumps(self.data)
     
     def clear(self):
+        '''
+            Wipe contents
+        '''
         self.changed = True
         self.data = []
 
@@ -57,7 +76,9 @@ class Serializer(object):
     @property
     def changed(self):
         '''
-            Have we changed?
+            Have we changed since:
+            - last time dump was called
+            - or init/load happened?
         '''
         return self._changed
 
@@ -78,7 +99,7 @@ class Versions(Serializer):
         self.cls = cls
         self.sort_f = sort
         self.on_change = on_change
-        super(Versions, self).__init__(data)
+        super().__init__(data)
     
     @property
     def objects(self):
@@ -109,12 +130,36 @@ class Versions(Serializer):
         self._objects = None
         self.data = []
 
+class FilePiece():
+    
+    def __init__(self, pmd5, padler, poffset, plen):
+        self.pmd5 = pmd5
+        self.padler = padler
+        self.poffset = poffset
+        self.plen = plen
+
+    def dump(self):
+        return [self.pmd5, self.padler, self.poffset, self.plen]
+
+class NeededPiece(FilePiece):
+    
+    def __init__(self, pmd5, padler, poffset, plen, pdone):
+        self.pdone = pdone
+        super().__init__(pmd5, padler, poffset, plen)
+
+    def dump(self):
+        return [self.pmd5, self.padler, self.poffset, self.plen, self.pdone]
+
 class FileParts(Serializer):
     chunk_size = 2*10**5
-    def __init__(self, *args, **kwargs):
-        super(FileParts, self).__init__(*args, **kwargs)
+
+    IDX_ADLER = 0
+    IDX_MD5 = 1
+
+    def __init__(self, data=None, on_change=None):
+        super().__init__(data, on_change)
  
-    def put(self, pos, adler_v, md5_v):
+    def put(self, pmd5, padler, poffset, plen):
         '''
             Put data for next part
         '''
@@ -123,64 +168,114 @@ class FileParts(Serializer):
             self.data = self.data[:pos]
         elif len(self.data) < pos:
             raise IndexError('Position not ready')
+        fp = FilePiece(pmd5, padler, poffset, plen)
         self.data.append([adler_v, md5_v])
+    
+    def _load(self, data):
+        for x in data:
+            self.data.append(FilePiece(*x))
 
     def get_adler(self, pos):
         if len(self.data) > pos:
-            return self.data[pos][0]
+            return self.data[pos].padler
         return None
    
     def from_host_file(self, host_file):
         '''
             Import settings from host_file
         '''
-        self.data = host_file.file_parts.data
-        self.changed = True
+        self.load(host_file.file_parts.data)
         self._complete = None
 
+from rainmaker.file_system import hash_chunk
 
 class NeededParts(Serializer):
     '''
         An Array of parts needed for download
     '''
- 
-    def __init__(self, *args, **kwargs):
-        super(NeededParts, self).__init__(*args, **kwargs)
-        self._complete = None
+    
+    chunk_size = FileParts.chunk_size
+    
+    _complete = None
+    _num_incomplete = 0
 
-    def from_host_file(self, host_file):
+    @classmethod
+    def from_file_parts(klass, file_parts):
         '''
             Import settings from host_file
         '''
-        data = host_file.file_parts.data
-        self.data = [False for x in data]
-        self.changed = True
-        self._complete = None
+        nparts = klass()
+        data = file_parts.data
+        for args in data:
+            file_piece = NeededPiece(*args)
+            nparts._append(file_piece)
+        return nparts
 
-    def part_received(self, pos):
-        '''
-            Mark one part as completed
-        '''
-        self.data[pos] = True
-        self.changed = True
-        self._complete = None
+    def __init__(self, data=None, on_change=None):
+        super().__init__(data, on_change)
+        self.__count_incomplete__()
     
-    def is_part_complete(self, pos):
+    def __count_incomplete__(self):
         '''
-            check to see if this part is complete
+            Count number of incomplete chunks
         '''
-        return self.data[pos]
+        if len(self.data) == 0:
+            return
+        self._num_incomplete = 0  
+        for fpiece in self.data:
+            if fpiece.pdone == False:
+                self._num_incomplete += 1  
+    
+    def _load(self, data):
+        for args in data:
+            self._append(*args)
+    
+    def _dump(self):
+        return [x.dump() for x in self.data]
 
-    @property
-    def parts_range(self):
-        return range(0, self.parts_count)
+    def _append(self, *args):
+        '''
+            Add needed chunk
+        '''
+        fpiece = NeededPiece(*args)
+        self.data.append(fpiece)
+        if not fpiece.pdone:
+            self._num_incomplete += 1
+        self.changed = True
+
+    def yield_chunk(self, pos, chunk):
+        '''
+            - validate chunk
+            - mark  as completed
+        '''
+        try:
+            fpiece = self.data[pos]
+        except IndexError as e:
+            yield 'We don\'t need that part, index error.'
+            return
+        except TypeError as e:
+            yield "List indecies must be Integer: %s" % pos
+            return
+        if fpiece.pdone == True:
+            yield 'We already have that part'
+            return
+        if fpiece.plen != len(chunk):
+            yield 'Part length mismatch'
+            return
+        if hash_chunk(chunk) != fpiece.pmd5:
+            yield 'Part hash mismatch'
+            return
+
+        yield None
+
+        # we only get this far if write went ok
+        self.data[pos].pdone = True
+        self._num_incomplete -= 1
+        self.changed = True
 
     @property
     def complete(self):
         '''
             Check to see if all parts are complete
         '''
-        if self._complete is not None:
-            return self._complete
-        self._complete = not (False in self.data)
-        return self._complete
+        return self._num_incomplete == 0

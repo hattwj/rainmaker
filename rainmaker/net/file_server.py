@@ -2,9 +2,10 @@ from pytox import Tox
 from threading import Thread, Lock
 from time import sleep
 from concurrent.futures import ThreadPoolExecutor
-
 from threading import Lock
 from rainmaker.db.serializers import FileParts
+from rainmaker.net.utils import LStore
+
 class DownloadManager():
     chunk_size = FileParts.chunk_size
 
@@ -87,12 +88,12 @@ class FileServer():
     
     #download_manager = DownloadManager()
 
-    def __init__(self):
+    def __init__(self, tr):
         self.e_send = ThreadPoolExecutor(max_workers=self.MAX_THREADS)
         self.e_recv = ThreadPoolExecutor(max_workers=self.MAX_THREADS)
-        self.transports = {}
-        self.running = True
+        self.tr = tr
     
+    #
     def register_transport(self, tr):
         '''
             Register transport with server
@@ -106,6 +107,7 @@ class FileServer():
             xfer = self.xfers.find_file(key, friendId, filename)
             if xfer:
                 xfer.on_file_send_request(data)
+            # else trigger 404
         
         def _on_file_data(friendId, file_no, data):
             '''
@@ -145,7 +147,7 @@ class FileServer():
             try:
                 fm.setup()
             except OSError:
-                print('Err accessing file')
+                log.error('Error accessing file: %s' % sync_file.path)
                 return
             while fm.has_parts() and self.running:
                 try:
@@ -154,7 +156,7 @@ class FileServer():
                     fm.rewind()
                     sleep(1)
                 except OSError:
-                    print('Read error while sending')
+                    log.error('Read error while sending: %s' % sync_file.path)
                     break
             fm.tear_down()
         fm = FileSender(tr, fid, sync_file, parts)
@@ -162,12 +164,12 @@ class FileServer():
         return job
     
     def download(self, tr, host_file):
-        path = os.path.join(host_file.host.sync.path, host_file.rel_path)
+        path = host_file.local_path
         self.path = path + '.part'
         if host_file.is_dir:
             if not os.path.exist(path):
                 os.mkdir(path)
-                return
+            return
         gen_file(path, host_file.file_size)
         with self.lock:
             download = self.downloads.get(sync_file.path)
@@ -194,57 +196,48 @@ XferStat = namedtuple('XferStat', 'recv xfer job record')
 
 class FileReceiver():
     '''
-        - DB observer/controller:
-            - abort recv on change
-            - Check and run resolver on controller signal
-            - init recv requests with server
-        - FileServer:
-            Parameters:
-                None
-            Methods:
-            - transport register
-                - forward file control events to... 
-                    - DownloadInit
-            - manage transfer counts, threadpool
-            - init and manage file sends - FileSender
-            - init and manage file recs - FileReceiver
-                - add parts if new notification comes (db)
-            - DownloadInit (new class)
-                - handle rec file locks
-                    - single file can only have single receiver
-                - register receiver with server
-                    - lock for file
-                    - or return current receiver
-                - check for temp file exist
-                    - create blank file
-                    - or copy existing template file
-                - create receiver and return
-        Parameters:
-            - DownloadManager
-        Properties:
-            - parts dict of Array/Class/NamedTuple
-                - FileRecStat 
-                - started, complete, length, part_no, data
-        Methods:
-        - stop:
-            - Stop receiving data
-        
-        Handlers:
-        - on_file_control
-            - part complete
-                - send to download manager
-                - Notify manager if out of parts
-            - part_incoming
-                - Accept if needed
-                - create buffer
-        - on_file_data
-            - check for buffer
-            - buffer piece
     '''
-    def __init__(self, tr, host_file, part_stats):
+    def __init__(self, tr, download):
         self.tr = tr
-        self.host_file = host_file
-        self.part_stats = part_stats
+        self.download = download
+        # File write lock
+        self.lock = Lock()
+        # current file position
+        self.__pos = 0
+        # wait up to n seconds for chunk to complete
+        self.__chunks = LStore(300)
+    
+    def setup(self):
+        # Prepare to receive file
+        pass
+
+    def on_file_data(self, fid, data):
+        # Check to see if part wanted
+            # return if not wanted
+        # Buffer chunk
+
+        # Chunk complete?
+            # return if not complete
+        # Write to disk
+        self.__write_chunk__(self, fid, chunk)
+        
+
+    def __write_chunk__(self, fid, chunk):
+        # check chunk against expected md5
+        self.__chunk_check_md5(chunk_id, chunk)
+        # Seek if were not there yet
+        offset = self.__offset_by_fid[fid]
+        if self.__pos != offset:
+            self.f.seek(offset)
+            self.__pos = offset
+        # Write data
+        self.f.write(chunk)
+        # Save position
+        self.__offset_by_fid[fid] += len(chunk)
+        # mark chunk as completed 
+
+    def on_file_control(self, fid, ctrl, data):
+        pass
 
 class FileSender():
     '''
@@ -269,7 +262,28 @@ class FileSender():
         self.chunk_size = sync_file.chunk_size
         self.parts = sorted(parts)
 
-    def setup(self):
+    def run(self):
+        '''
+            Control logic goes here
+        '''
+        try:
+            self.__setup__()
+        except OSError:
+            log.error('Error accessing file: %s' % self.sync_file.path)
+            return
+        while self.has_parts() and self.running:
+            try:
+                self.__send_part__()
+            except Tox.OperationFailedError:
+                self.__rewind__()
+                sleep(1)
+            except OSError:
+                log.error('Read error while sending: %s' % self.sync_file.path)
+                break
+        self.__tear_down__()
+
+
+    def __setup__(self):
         '''
             Notify that we will send a file
         '''
@@ -277,7 +291,7 @@ class FileSender():
         self.file_no = self.tr.new_file_sender(self.fid, self.parts_size(),
             self.sync_path.rel_path)
     
-    def parts_size(self):
+    def __parts_size__(self):
         '''
             Calculate total amount of data to send
         '''
@@ -290,7 +304,7 @@ class FileSender():
                 total += self.chunk_size
         return total
 
-    def tear_down(self):
+    def __tear_down__(self):
         '''
             Send signal that file send complete
         '''
@@ -304,13 +318,13 @@ class FileSender():
         '''
         return len(self.parts) > 0
     
-    def part_sent(self, idx):
+    def __part_sent__(self, idx):
         '''
             Remove part from list
         '''
         self.parts.remove(idx)
 
-    def send_part(self):
+    def __send_part__(self):
         '''
             Send pieces of part until sent
         '''
@@ -326,11 +340,11 @@ class FileSender():
                 break
             self.tr.file_send_data(self.fid, self.file_no, data)
         # Signal part send complete
-        self.part_sent(part_no)
+        self.__part_sent__(part_no)
         self.tr.file_send_control(self.fid, 0, self.file_no,
                 Tox.FILECONTROL_FINISHED, 'end:%s' % part_no)
 
-    def get_data(self, chunk_size, part):
+    def __get_data__(self, chunk_size, part):
         '''
             Get data from a part, increment counters
         '''
@@ -357,7 +371,7 @@ class FileSender():
         self._offset = len(data) + self._offset
         return data
     
-    def rewind(self):
+    def __rewind__(self):
         '''
             Rewind to previous offset position
         '''
@@ -430,4 +444,3 @@ class FileSender():
 #    transport.on_file_send_request = on_file_send_request
 #    transport.on_file_control = on_file_control
 #    transport.on_file_data = on_file_data
-#

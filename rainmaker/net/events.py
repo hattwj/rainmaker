@@ -126,9 +126,10 @@ class Event(Params):
     '''
     _attrs = ['name', 'status', 'rcode']
     def __init__(self, name, params=None, status=None, reply=None, error=None, \
-            source=None, rcode=0, session=None):
+            source=None, rcode=0, session=None, transport=None):
         super(Event, self).__init__(params)
         self.session = session
+        self.transport = transport
         self.name = name
         self.status = status if status else 'ok'
         self.source = source
@@ -161,8 +162,8 @@ class EventHandler(object):
     '''
         Listen for events and call registered functions
     '''
-    def __init__(self, parent=None, queue=False, auth_strategy=None):
-        self.parent = parent
+    def __init__(self, transport=None, queue=False, auth_strategy=None):
+        self.transport = transport
         self.__cmds__ = LStore()
         self.queue = Queue() if queue else None
         self.__auth_strategy_on = False
@@ -173,9 +174,10 @@ class EventHandler(object):
         '''
             Call all functions for event name
         '''
-        source = source if source else self.parent
+        source = source 
         event = Event(name, params=params, status=status, reply=reply, \
-            error=error, source=source, rcode=rcode, session=session)
+            error=error, source=source, rcode=rcode, session=session, 
+            transport=self.transport)
         try:
             funcs = self.__cmds__[event.name]
         except KeyError as e: 
@@ -226,7 +228,7 @@ class EventHandler(object):
         '''
         if self.__auth_strategy_on:
             if self.auth_strategy:
-                func = self.auth_strategy(self.parent, func)
+                func = self.auth_strategy(self.transport, func)
             else:
                 raise AuthConfigError('No auth strategy specified for: %s' % name) 
         arr = self.__cmds__.get(name, [])

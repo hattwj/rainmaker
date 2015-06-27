@@ -4,9 +4,8 @@ TODO:
     try scandir plugin for better walk performance
 '''
 import os
-import hashlib
-import zlib
 
+from rainmaker.file_system import hash_file
 from rainmaker.db.main import Sync, SyncFile
 from rainmaker import utils
 
@@ -14,37 +13,6 @@ import rainmaker.logger
 log = rainmaker.logger.create_log(__name__)
 
 chunk_size = 200000
-
-def hash_file(sync_file, offset=0, n=0):
-    ''' Full hash of file, make callback on each round '''
-    parts = sync_file.file_parts
-    chunk_size = parts.chunk_size
-    adler = parts.get_adler(offset)
-    with open(sync_file.path, 'rb') as fh:
-        if offset:
-            fh.seek(offset*chunk_size)
-        # For every chunk
-        while True:
-            # Get a chunk of file data
-            data = fh.read(offset*chunk_size)
-            if not data:
-                break # End of file
-            # force sign of adler to signed int
-            adler = zlib.adler32(data, adler) & 0xffffffff
-            # Is this the expected adler value?
-            if parts.get_adler(offset) != adler:
-                # nope, calculate the md5
-                m = hashlib.md5()
-                m.update(data)
-                parts.put(offset, adler, m.hexdigest())
-            # update part_offset
-            offset += 1
-            # break if we've reached zero
-            n += 1
-            if n == offset:
-                break
-    scan_len = chunk_size*offset + len(data)
-    return (adler, scan_len)
 
 def scan(session):
     ''' Scan all syncs in DB '''

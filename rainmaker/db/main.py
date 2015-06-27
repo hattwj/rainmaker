@@ -13,27 +13,27 @@ from rainmaker import utils
 from rainmaker.db.serializers import FileParts, Versions, NeededParts
  
 Base = declarative_base()
-#engine = None
-#Session = None
 
+from contextlib import contextmanager
 ###
 # Database Init
 def init_db(location=':memory:', echo=False):
-    #global engine
-    #global Session
     engine = create_engine('sqlite:///%s' % location, 
             connect_args={'check_same_thread':False}, 
             #poolclass=StaticPool,
             echo=echo)
     DbConn = sessionmaker(bind=engine)
-    #db = Session
     Base.metadata.bind = engine
     Base.metadata.create_all()
-    #if app is not None:
-    #    app.engine = engine
-    #    app.Session = Session
-    #    app.db = db
-    #return db
+
+    @contextmanager
+    def yield_conn():
+        db = DbConn()
+        try:
+            yield db
+        finally:
+            db.close()
+    DbConn.yield_conn = yield_conn
     return DbConn
 
 class RainBase(Base):
@@ -286,6 +286,9 @@ class HostFile(RainBase):
         return self.__file_parts__
 
 class Download(RainBase):
+    '''
+        Holds download status of resolution
+    '''
     __tablename__ = 'downloads'
     __table_args__= (
         UniqueConstraint('sync_id', 'rel_path'),    
@@ -294,7 +297,7 @@ class Download(RainBase):
     sync_id = Column(Integer, ForeignKey("syncs.id"), nullable=False, index=True)
 
     # fk 
-    resolution_id = Column(Integer, ForeignKey("resolutions.id"), index=True)
+    #resolution_id = Column(Integer, ForeignKey("resolutions.id"), index=True, unique=True)
     
     # path
     rel_path = Column(Text, nullable=False, index=True)
@@ -309,7 +312,6 @@ class Download(RainBase):
     complete = Column(Boolean, default=False)
 
     # file part hashes
-    fparts = Column(Text)
     nparts = Column(Text)
 
     @property
@@ -323,13 +325,6 @@ class Download(RainBase):
             self.__needed_parts__ = NeededParts(self.nparts)
         return self.__needed_parts__
     
-    __file_parts__ = None
-    @property
-    def file_parts(self):
-        if self.__file_parts__ is None:
-            self.__file_parts__ = FileParts(self.fparts)
-        return self.__file_parts__
-
     # temp val for holding full path
     _path = None
     
@@ -344,18 +339,11 @@ class Download(RainBase):
     @property
     def is_complete(self):
         return self.needed_parts.complete
-
-    @classmethod
-    def from_host_file(klass, host_file, **kwargs):
-        dlo = klass(**kwargs)
-        dlo.host_id = host_file.host_id
-        dlo.sync_id = host_file.host.sync_id
-        dlo.needed_parts.from_host_file(host_file)
-        dlo.file_parts.from_host_file(host_file)
-        return dlo
-    
+ 
 class Resolution(RainBase):
-        
+    '''
+        Holds resolution status between sync_file and host_file
+    '''
     # Resolution State Constants
     RES_ERROR       = 9 # Error during resolution
     CONFLICT_MINE   = 7 # Decided to keep mine
@@ -376,7 +364,7 @@ class Resolution(RainBase):
     __tablename__ = 'resolutions'
     id = Column(Integer, primary_key=True) 
     # Add relationships
-    download = relationship('Download', uselist=False, backref='resolution')
+    #download = relationship('Download', uselist=False, backref='resolution')
 
     sync_id = Column(Integer, ForeignKey("syncs.id"), nullable=False, index=True)
     sync = relationship('Sync', backref=backref('resolutions', cascade='all, delete-orphan'))
