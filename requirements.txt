@@ -8,4 +8,4 @@ ujson==1.33
 sqlalchemy==0.9.9
 passlib==1.6.2
 bcrypt==1.1.1
-twisted==15.1.0
+twisted==22.1.0
